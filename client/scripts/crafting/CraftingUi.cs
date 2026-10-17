@@ -14,7 +14,7 @@ namespace LifeGame;
 public partial class CraftingUi : CanvasLayer
 {
     // True while a minigame or the search box wants the keyboard, so walking pauses.
-    public bool CapturesInput => minigame != null || grid.Typing;
+    public bool CapturesInput => minigame != null || CraftGrid.Focused != null;
     // True while the panel is up (ui/Panels.cs reads it, so the G prompt steps aside).
     public bool PanelOpen => panel.Visible;
     public event Action<string>? Notice;
@@ -39,10 +39,11 @@ public partial class CraftingUi : CanvasLayer
         Layer = 3; // above the HUD (Layer 2), so open panels cover prompts and rings
         panel = Card(Vector2.Zero);
         var style = (StyleBoxFlat)panel.GetThemeStylebox("panel");
-        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.82f);
+        // The shared window look (ui/Ui.cs).
+        style.BgColor = Ui.Frame;
         style.ContentMarginTop = style.ContentMarginBottom = 14;
         style.ContentMarginLeft = style.ContentMarginRight = 18;
-        style.SetCornerRadiusAll(12); // the build menu's frame (Hud.Panel)
+        style.SetCornerRadiusAll(Ui.Corner);
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 10);
         box.AddChild(Text("Crafting", 20));
@@ -77,6 +78,8 @@ public partial class CraftingUi : CanvasLayer
         panel.GrowHorizontal = Control.GrowDirection.Both;
         panel.GrowVertical = Control.GrowDirection.Both;
         root.AddChild(panel);
+        // Another centre window opening closes this one (D-283); a minigame in progress keeps going.
+        Panels.Centre(this, () => { panel.Visible = false; reopenAfterMinigame = false; grid.ClearSearch(); });
         progressPanel.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
         progressPanel.GrowHorizontal = Control.GrowDirection.Both;
         progressPanel.Position = new Vector2(-150, -130);
@@ -118,6 +121,7 @@ public partial class CraftingUi : CanvasLayer
     // it steps that many categories along).
     public void Open(int onTier)
     {
+        Panels.Opening(this);
         panel.Visible = true;
         Refresh();
         grid.NextCategory(onTier);
@@ -128,6 +132,7 @@ public partial class CraftingUi : CanvasLayer
     public void Toggle()
     {
         if (minigame != null) return;
+        if (!panel.Visible) Panels.Opening(this);
         panel.Visible = !panel.Visible;
         if (!panel.Visible) grid.ClearSearch();
         Refresh();
@@ -441,7 +446,7 @@ public partial class CraftingUi : CanvasLayer
         job = j;
         jobStartLocal = Time.GetTicksMsec() / 1000.0;
         jobSeconds = (j.FinishAt.MicrosecondsSinceUnixEpoch - j.StartedAt.MicrosecondsSinceUnixEpoch) / 1_000_000.0;
-        progressLabel.Text = Processes.Find(j.ProcessId)?.Doing + "...";
+        progressLabel.Text = Processes.Find(j.ProcessId)?.Doing + "..." + (CraftGrid.Held?.Id == j.ProcessId ? "   (holding: again when done)" : "");
         progressPanel.Visible = true;
     }
 
@@ -463,6 +468,26 @@ public partial class CraftingUi : CanvasLayer
             if (def.Outcome == Outcome.Item) Finished?.Invoke(def, def.Makes, j.Quality);
         }
         Refresh();
+        Repeat(def, j.Failed);
+    }
+
+    // Holding a card down makes another each time one finishes (CraftGrid.Held): only work
+    // with no hands-on step left to play, and it stops on a failure or when the next would
+    // fall short (Missing says why).
+    void Repeat(ProcessDef def, bool failed)
+    {
+        if (CraftGrid.Held?.Id != def.Id) return;
+        float? skipped = null;
+        if (def.Minigame != Minigame.None) SkipMinigame(def, ref skipped);
+        bool handsOn = def.Minigame != Minigame.None && skipped == null;
+        string? missing = Missing(def);
+        if (failed || handsOn || missing != null)
+        {
+            if (!failed && !handsOn) Notice?.Invoke(missing!);
+            CraftGrid.StopHolding();
+            return;
+        }
+        Begin(def);
     }
 
     // --- Minigames --------------------------------------------------------

@@ -49,6 +49,18 @@ public partial class CraftGrid : VBoxContainer
         return "Other";
     }
 
+    // Hold to repeat (D-283 follow-up; Justin's hold-to-repeat ask): the recipe whose card is
+    // held down, in any grid. CraftingUi starts it again each time a job of it finishes, while
+    // the mouse stays down, it still needs no hands-on step, and there is enough for another.
+    public static ProcessDef? Held { get; private set; }
+
+    public override void _Input(InputEvent e)
+    {
+        if (Held != null && e is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: false }) Held = null;
+    }
+
+    public static void StopHolding() => Held = null;
+
     // The cards in the order they are shown; number keys 1 to 9 pick from these.
     public List<ProcessDef> Shown { get; private set; } = new();
 
@@ -62,6 +74,8 @@ public partial class CraftGrid : VBoxContainer
         top.AddChild(tabs);
         search.AddThemeFontSizeOverride("font_size", 14);
         search.TextChanged += _ => Refresh();
+        search.FocusEntered += () => Focused = this;
+        search.FocusExited += () => { if (Focused == this) Focused = null; };
         top.AddChild(search);
         AddChild(top);
         grid.AddThemeConstantOverride("h_separation", 10);
@@ -70,8 +84,10 @@ public partial class CraftGrid : VBoxContainer
         AddChild(scroll);
     }
 
-    // The search box holds the keyboard while you type in it.
+    // The search box holds the keyboard while you type in it; Focused is whichever grid's
+    // box has it (the C menu's or a station's), so walking can pause for either.
     public bool Typing => search.HasFocus();
+    public static CraftGrid? Focused { get; private set; }
 
     // Screenshots (--screenshot-craft): --screenshot-craft-search=axe types into the search
     // box, and --screenshot-craft-hover pins the first can't-make card's hover text beside it,
@@ -132,6 +148,8 @@ public partial class CraftGrid : VBoxContainer
         if (!all.Contains(category)) category = all.FirstOrDefault(c => Recipes().Any(p => CategoryOf(p) == c && Missing(p) == null)) ?? all.FirstOrDefault() ?? "";
         string query = search.Text.Trim();
 
+        // One category needs no tabs (a station's few recipes).
+        tabs.Visible = all.Count > 1;
         foreach (var child in tabs.GetChildren()) { tabs.RemoveChild(child); child.QueueFree(); }
         foreach (var c in all)
         {
@@ -192,7 +210,9 @@ public partial class CraftGrid : VBoxContainer
         card.AddThemeStyleboxOverride("pressed", hover);
         card.Modulate = new Color(1, 1, 1, ready ? 1f : 0.45f);
         card.TooltipText = Describe(def, missing);
-        card.Pressed += () => Make(def);
+        // Acts on the press, so holding it down can repeat (Held).
+        card.ActionMode = BaseButton.ActionModeEnum.Press;
+        card.Pressed += () => { Held = def; Make(def); };
 
         var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         column.SetAnchorsPreset(LayoutPreset.FullRect);
