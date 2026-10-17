@@ -472,6 +472,11 @@ namespace LifeGame.Shared
             Progression.Effect(EffectKind.FireSeconds, firecraftRank);
         // Warmth falls off to nothing at this distance, in meters.
         public const float WarmthRadius = 5f;
+        // A stone-ringed hearth warms further (D-103: later hearths can be better; Justin's pick
+        // for building at night). Warmth still falls off linearly, so on a winter night a builder
+        // gains warmth out to about 7 m (a campfire: 4.4 m) and works without leaving it.
+        // House building's hearth implements FireWarmthRadiusHook to use this (survival-21).
+        public const float StoneRingWarmthRadius = 8f;
         // A burned-out fire leaves a cold hearth of stones and ash this long outside a
         // claim; inside one it stays while the claim stands (D-109). Lighting
         // a fire beside it rekindles it in place.
@@ -482,11 +487,11 @@ namespace LifeGame.Shared
         public const float Spacing = 1.5f;
 
         // 0 to 1: how warm a spot is from one burning fire.
-        public static float WarmthFrom(float fireX, float fireZ, float x, float z)
+        public static float WarmthFrom(float fireX, float fireZ, float x, float z, float radius = WarmthRadius)
         {
             float dx = x - fireX, dz = z - fireZ;
             float d = MathF.Sqrt(dx * dx + dz * dz);
-            return Math.Clamp(1f - d / WarmthRadius, 0f, 1f);
+            return Math.Clamp(1f - d / radius, 0f, 1f);
         }
     }
 
