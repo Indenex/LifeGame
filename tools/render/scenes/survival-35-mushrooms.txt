@@ -15,3 +15,8 @@ wait 12
 snap
 wait 6
 snap
+# The picked mushrooms in the bag (the camera is the puppet).
+wait 2
+key i
+burst 2 2
+key Escape
