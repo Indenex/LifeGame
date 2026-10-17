@@ -39,12 +39,12 @@ sql() { spacetimedb-cli sql --server "http://127.0.0.1:$port" lifegame "$1" >>"$
 sleep 45
 # The camera player is the newest one; give it 2 plant fiber (item 3).
 cam=$(spacetimedb-cli sql --server "http://127.0.0.1:$port" lifegame "SELECT identity, player_id FROM player" 2>/dev/null | grep -o '0x[0-9a-f]*' | tail -1)
-sql "INSERT INTO inventory_item (id, owner, item, quality, count) VALUES (0, $cam, 3, 50, 2)"
+sql "INSERT INTO inventory_item (id, owner, item, quality, count, wear) VALUES (0, $cam, 3, 50, 2, 0)"
 sleep 4
 snap                      # 1. the E prompt at the table
 key e; sleep 5; snap      # 3. too little fiber: amber line, Make greyed
 key Escape; sleep 2
-sql "INSERT INTO inventory_item (id, owner, item, quality, count) VALUES (0, $cam, 3, 50, 10)"
+sql "INSERT INTO inventory_item (id, owner, item, quality, count, wear) VALUES (0, $cam, 3, 50, 10, 0)"
 sleep 4
 key e; sleep 5; snap      # 2. enough fiber: counts and Make
 cat "$botlog" >>"$log"

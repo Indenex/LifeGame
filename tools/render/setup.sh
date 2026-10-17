@@ -19,7 +19,7 @@ if ! ls "$HOME"/tools/godot/*/Godot_v*_mono_linux.x86_64 >/dev/null 2>&1; then
   unzip -qo /tmp/godot.zip -d "$HOME/tools/godot"
 fi
 # Forward+ (what Justin sees) in software needs Mesa's Vulkan driver.
-if ! dpkg -s mesa-vulkan-drivers >/dev/null 2>&1 || ! command -v xvfb-run >/dev/null; then
-  apt-get update -q && apt-get install -y -q mesa-vulkan-drivers xvfb
+if ! dpkg -s mesa-vulkan-drivers >/dev/null 2>&1 || ! command -v xvfb-run >/dev/null || ! command -v xdotool >/dev/null; then
+  apt-get update -q && apt-get install -y -q mesa-vulkan-drivers xvfb xdotool imagemagick
 fi
 echo "render setup done"

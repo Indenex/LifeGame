@@ -1,13 +1,26 @@
 # ui-24 crafting menu with pictures (#489): panel, can't-make hover, search.
-# The camera is the puppet, so the menu shows its inventory. Preview flags open the panel.
+# The camera is the puppet, so the menu shows its inventory. C opens the panel.
+# Positions from 1280x720 stills: card 5 (can't make) at (362,432), search box (910,170).
 client-as-puppet
-client --time-of-day=0.45 --rain=0 --cloud=0.2 --screenshot-craft=1 --screenshot-craft-hover
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --debug-position=0,0
 wait 35
 give 6 1 60
 give 1 4 50
 give 2 1 50
 give 3 6 50
+wait 6
+keydown c
+wait 10
+keyup c
+burst 3 4
+mouse 362 432
 wait 5
 snap
-wait 2
+mouse 717 270
+wait 5
+snap
+click 910 170
+wait 3
+type axe
+wait 6
 snap
