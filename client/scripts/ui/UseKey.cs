@@ -24,6 +24,9 @@ public partial class UseKey : CanvasLayer
     float repeatTimer, alpha;
     readonly HoldRepeat hold = new();
     string? holdPrompt;
+    // The key cap's look, so it can glow while a held key repeats (HoldRepeat.Active).
+    StyleBoxFlat capStyle = null!;
+    float holdGlow, holdClock;
 
     public override void _Ready()
     {
@@ -34,7 +37,9 @@ public partial class UseKey : CanvasLayer
 
         var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         row.AddThemeConstantOverride("separation", 12);
-        row.AddChild(KeyCap("E", out keyLabel));
+        var cap = KeyCap("E", out keyLabel);
+        capStyle = (StyleBoxFlat)cap.GetThemeStylebox("panel");
+        row.AddChild(cap);
         Hud.Soft(verb, 18, 1f);
         verb.VerticalAlignment = VerticalAlignment.Center;
         row.AddChild(verb);
@@ -65,6 +70,15 @@ public partial class UseKey : CanvasLayer
             // The player's own Use key, if they moved it.
             keyLabel.Text = Controls.KeyFor("use") ?? "E";
         }
+
+        // While a held key repeats (Use, dig or pick up), the cap's rim and glow pulse warm, so
+        // you can see it will keep going; they ease back when it stops.
+        holdGlow = Mathf.MoveToward(holdGlow, HoldRepeat.Active ? 1f : 0f, dt * 5f);
+        holdClock += dt;
+        float pulse = holdGlow * (0.6f + 0.4f * Mathf.Sin(holdClock * 6f));
+        capStyle.BorderColor = new Color(Look.Cream, 0.8f).Lerp(new Color(1f, 0.82f, 0.5f, 1f), pulse);
+        capStyle.ShadowColor = new Color(0, 0, 0, 0.25f).Lerp(new Color(1f, 0.75f, 0.35f, 0.45f), pulse);
+        capStyle.ShadowSize = 5 + (int)(4 * pulse);
 
         // Fade rather than pop, so walking past things stays calm.
         alpha = Mathf.MoveToward(alpha, offer != null ? 1f : 0f, dt * 6f);
