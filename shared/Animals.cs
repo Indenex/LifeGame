@@ -57,6 +57,8 @@ namespace LifeGame.Shared
         public Item? Egg;
         public float EggDays;
         public byte EggCap;
+        // Settles for the night in a coop (or a sheltered spot) and comes out at dawn.
+        public bool Roosts;
 
         // The client's model plan ("sheep", "deer" or "hen") and the share of males that carry antlers.
         public string Model = "sheep";
@@ -104,7 +106,7 @@ namespace LifeGame.Shared
                 Walk = 0.7f, Trot = 1.3f, Run = 3.4f, Notice = 7f, CalmSpeed = 2.4f,
                 HomeRange = 7f, FleeAhead = 4f, WanderMin = 1f, WanderMax = 4f, WoodPref = 0f, Curious = true,
                 Meat = Item.RawChicken, MeatGrown = 1, MeatYoung = 1, Hide = null, Extra = Item.Feather,
-                Egg = Item.Egg, EggDays = 1.5f, EggCap = 3,
+                Egg = Item.Egg, EggDays = 1.5f, EggCap = 3, Roosts = true,
                 Model = "hen",
                 Herds = new[] { new AnimalHerdSpot(-8f, 7f, 4, 4f) },
             },

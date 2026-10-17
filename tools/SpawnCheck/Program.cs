@@ -239,6 +239,17 @@ Check(conn.Db.WorldClock.Iter().Any() && conn.Db.SeasonClock.Iter().Any(), "the 
     Probe(false, "boulder");
 }
 
+// "I'm stuck" puts the player on ground clear of trunks and boulders too (bugfix-47): we stand right
+// beside a boulder after the probe above.
+{
+    var ground = new BotGround(conn);
+    var before = MyPos()!;
+    conn.Reducers.Unstuck();
+    WaitFor(() => MyPos() is { } p && (p.X != before.X || p.Z != before.Z), 10, "the server moved us on unstuck");
+    var to = MyPos()!;
+    Check(Obstacles.PushOut(ground, 0.4f, to.X, to.Z, 0f) == (to.X, to.Z), $"unstuck left us clear of trunks and boulders ({to.X:F1}, {to.Z:F1})");
+}
+
 Console.WriteLine($"All spawn checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 conn.Disconnect();
 return 0;
