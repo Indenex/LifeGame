@@ -11,6 +11,8 @@ Justin (via PM): "Both, but make wading train swimming." Tool repair trains Tool
 ## Progress log
 - 2026-10-17 03:00: built. Skills: `swimming` (basic, trains the swim family: swim.wade and swim.float, constants Wading.WadeProcess and Wading.FloatProcess), `repair.tool` joins Toolmaking. Built-in processes swim.wade, swim.float and repair.tool in the journal table with hint lines and how-tos. Progression: SlowPaceFactor (renamed from CombatPaceFactor), IsSlow = combat + swimming; effects WadeSpeed 0.6 -> 0.75 and FloatSpeed 0.5 -> 0.7 (Ceiling constants). Wading.SpeedFactor(depth, swimmingRank = 0) uses them; rank 0 is exactly today's numbers. tools/ProgressionCheck covers the mappings, the slow pace and the wading effect. Hint harness 69/69 after the switch.
 
+- 2026-10-17 03:15: merged main (Bug fixes' #452 swim-1: Wading.WadeProcess/FloatProcess + Swimming.cs reporter); dropped my duplicate constants; swim.* marked not Watchable. Justin picked effect option 1 (wade 0.60->0.75, float 0.50->0.70).
+
 ## Open questions / blockers
 - Reporters: Crafting must report `Skills.Repair` ("repair.tool") from RepairTool; Bug fixes must report Wading.WadeProcess ("swim.wade", on the bed) and Wading.FloatProcess ("swim.float", afloat) from the wading movement (throttled, like move.run every ~20 s in water) and pass the player's Swimming rank into `Wading.SpeedFactor` (client Main.cs hook, Integration/Bug fixes).
 - Effect values are proposals for Justin via the PM.

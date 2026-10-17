@@ -15,8 +15,6 @@ namespace LifeGame.Shared
 
         // Deeper than this and the feet stop following the bed.
         public const float FloatDepth = 0.9f;
-        // Process ids for the Swimming skill (swim family): moving on the bed, and moving afloat.
-        public const string WadeProcess = "swim.wade", FloatProcess = "swim.float";
         // Walking speed left at FloatDepth, and once properly afloat, as fractions of full speed.
         public const float WadeFloor = 0.6f;
         public const float FloatSpeed = 0.5f;

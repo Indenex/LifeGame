@@ -157,7 +157,7 @@ namespace LifeGame.Shared
         }
 
         // Some things can't be picked up by watching someone else do them.
-        public static bool Watchable(string processId) => !processId.StartsWith("move.");
+        public static bool Watchable(string processId) => !processId.StartsWith("move.") && !processId.StartsWith("swim.");
 
         public static Specialization? Spec(string id)
         {
