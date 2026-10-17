@@ -153,4 +153,22 @@ public partial class Atmosphere
             : Forest.Density(World.CellOf(shot.ToX), World.CellOf(shot.ToZ)) > 0.45f ? Cue.ArrowWood : Cue.ArrowEarth,
             (from - to).Length() / ArrowSpeed, GetTree());
     }
+
+    // Sounds for the quick body actions (player_act): data cues (CueDefs) timed to the motion,
+    // played from where that player stands, so nearby players hear each other.
+    static CueDef? SoundOfAct(WorkMotion motion) => motion switch
+    {
+        WorkMotion.Drink => CueDefs.Drink,
+        WorkMotion.Eat => CueDefs.Eat,
+        WorkMotion.Pluck => CueDefs.Pluck,
+        WorkMotion.PickUp => CueDefs.PickUp,
+        _ => null,
+    };
+
+    void HearAct(DbConnection conn, PlayerAct act)
+    {
+        if (SoundOfAct((WorkMotion)act.Motion) is not { } def) return;
+        if (conn.Db.PlayerPos.PlayerId.Find(act.PlayerId) is not { } at) return;
+        Sfx.PlayBy(def, new Vector3(at.X, 0f, at.Z));
+    }
 }

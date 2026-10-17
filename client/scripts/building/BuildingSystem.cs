@@ -461,7 +461,47 @@ public partial class BuildingSystem : Node
         if (placing) UpdateGhost(dt);
         UpdateUse();
         UpdateWeathering(dt);
+        UpdateSeeThrough(dt);
         UpdatePrompt();
+    }
+
+    // Finished shelters cut away while the player is inside or behind them (D-168): roof gone
+    // from inside, camera-side walls faded, far walls solid.
+    void UpdateSeeThrough(float dt)
+    {
+        var camera = me.GetViewport()?.GetCamera3D();
+        foreach (var s in rows.Values)
+        {
+            if (!views.TryGetValue(s.Id, out var v)) continue;
+            var shape = ShapeOf(s);
+            bool inside = false, hides = false;
+            if (s.Complete && shape.RainCover > 0f && camera != null
+                && new Vector2(s.X - me.Position.X, s.Z - me.Position.Z).LengthSquared() < 25f * 25f)
+            {
+                inside = Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, me.Position.X, me.Position.Z, -0.2f);
+                hides = inside || Look.HidesPlayer(Footprint(s, shape, v.Position.Y), camera.GlobalPosition, me.Position);
+            }
+            if (hides || v.Fading) v.UpdateSeeThrough(inside, hides, camera?.GlobalPosition ?? Vector3.Zero, dt);
+        }
+    }
+
+    // How far the structure is cut away for the player right now, 0 solid to 1 fully clear
+    // (0 for a structure with no view). Doorway glows and the like fade with it.
+    public float SeeThroughOf(ulong structureId) => views.TryGetValue(structureId, out var v) ? v.SeeThroughAmount : 0f;
+
+    // The world-space box a shelter fills, roof included, for the see-through test.
+    static Aabb Footprint(Structure s, StructureShape shape, float ground)
+    {
+        float height = 3.7f * shape.Scale, eave = 0.5f * shape.Scale; // up to the ridge cap, and out past the eaves (homes are 1.25x, building-14)
+        float hx = (shape.Round ? shape.Radius : shape.HalfWidth) + eave, hz = (shape.Round ? shape.Radius : shape.HalfDepth) + eave;
+        float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
+        foreach (var (lx, lz) in new[] { (-hx, -hz), (hx, -hz), (-hx, hz), (hx, hz) })
+        {
+            var (wx, wz) = Structures.ToWorld(s.X, s.Z, s.Yaw, lx, lz);
+            minX = Mathf.Min(minX, wx); maxX = Mathf.Max(maxX, wx);
+            minZ = Mathf.Min(minZ, wz); maxZ = Mathf.Max(maxZ, wz);
+        }
+        return new Aabb(new Vector3(minX, ground - 0.5f, minZ), new Vector3(maxX - minX, height + 0.5f, maxZ - minZ));
     }
 
     void UpdateGhost(float dt)

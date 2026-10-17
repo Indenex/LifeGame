@@ -182,7 +182,16 @@ public sealed class SoundMix
     // Something that just happened to you: picked something up, ate, drank, got
     // better at a skill, learned something, a fire caught, set something down.
     // gain and pan (-1 left to 1 right) place it in the world, e.g. another player's jump.
-    public void Play(Cue cue, float gain = 1f, float pan = 0f) => cues.Trigger(cue, Math.Clamp(Fin(gain), 0f, 4f), Side(pan));
+    public void Play(CueDef def, float gain = 1f, float pan = 0f) => cues.Trigger(def, Math.Clamp(Fin(gain), 0f, 4f), Side(pan));
+
+    public void Play(Cue cue, float gain = 1f, float pan = 0f)
+    {
+        gain = Math.Clamp(Fin(gain), 0f, 4f);
+        pan = Side(pan);
+        // Cues that have been converted to data play from their CueDef.
+        if (CueDefs.ForCue(cue) is { } def) cues.Trigger(def, gain, pan);
+        else cues.Trigger(cue, gain, pan);
+    }
 
     // The work in your hands: its sound runs until Working(Work.None). WorkDone
     // closes it with a thunk, a snap if it failed, or a breath of flame for a drill.
@@ -1553,6 +1562,9 @@ public sealed class SoundMix
         sealed class Voice
         {
             public Cue Cue;
+            public CueDef? Def;                 // a data cue (CueDefs) instead of a Cue enum one
+            public float[]? Phases;             // per layer, for tones
+            public Lowpass[]? Hp, Lp;           // per layer, for noise
             public float Age, Pitch, Phase, Phase2, Gain = 1f, Pan;
             public BandPass Band;
             public Lowpass Low;
@@ -1563,6 +1575,17 @@ public sealed class SoundMix
             this.rate = rate;
             this.noise = noise;
             this.rng = rng;
+        }
+
+        // A cue defined as data: its layers are rendered by the generic voice below.
+        public void Trigger(CueDef def, float gain = 1f, float pan = 0f)
+        {
+            if (active.Count > 8) active.RemoveAt(0);
+            active.Add(new Voice
+            {
+                Def = def, Pitch = Range(rng, 0.96f, 1.04f), Gain = gain, Pan = Math.Clamp(pan, -1f, 1f),
+                Phases = new float[def.Layers.Length], Hp = new Lowpass[def.Layers.Length], Lp = new Lowpass[def.Layers.Length],
+            });
         }
 
         public void Trigger(Cue cue, float gain = 1f, float pan = 0f)
@@ -1594,6 +1617,36 @@ public sealed class SoundMix
             return sum;
         }
 
+        // One sample of a data cue: every layer that has started, as a noise band or a gliding tone.
+        float DefSample(Voice v, float t, float x, float dt)
+        {
+            float sum = 0f;
+            var layers = v.Def!.Layers;
+            for (int j = 0; j < layers.Length; j++)
+            {
+                var l = layers[j];
+                float u = t - l.Start;
+                if (u < 0f) continue;
+                float env = Math.Min(1f, u / l.Rise) * MathF.Exp(-u / l.Decay);
+                if (env < 0.0005f) continue;
+                float src;
+                if (l.Source == Src.Noise)
+                {
+                    // Between the cutoffs: low-pass at Hi, then take away what is below Lo.
+                    float body = v.Lp![j].Process(x, Lowpass.Coef(l.Hi, rate));
+                    src = body - v.Hp![j].Process(body, Lowpass.Coef(l.Lo, rate));
+                }
+                else
+                {
+                    float f = l.Hi + (l.Lo - l.Hi) * MathF.Exp(-u / l.Decay);
+                    v.Phases![j] += MathF.Tau * f * v.Pitch * dt;
+                    src = MathF.Sin(v.Phases[j]);
+                }
+                sum += src * env * l.Gain;
+            }
+            return sum;
+        }
+
         static float Burst(float t, float start, float decay) => t < start ? 0f : MathF.Min(1f, (t - start) / 0.004f) * MathF.Exp(-(t - start) / decay);
 
         public void Render(float[] l, float[] r, float[] sl, float[] sr, int n)
@@ -1603,11 +1656,16 @@ public sealed class SoundMix
             {
                 var v = active[k];
                 float pl = Pan(v.Pan, true) * 1.4142f, pr = Pan(v.Pan, false) * 1.4142f;
-                float length = v.Cue switch { Cue.SkillUp => 2.2f, Cue.Learn => 1.6f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, Cue.Crit => 0.7f, Cue.Jump => 0.3f, Cue.BowDraw => 0.8f, Cue.BowShot => 0.6f, Cue.ArrowWood => 0.5f, _ => 0.4f };
+                float length = v.Def != null ? v.Def.Length : v.Cue switch { Cue.SkillUp => 2.2f, Cue.Learn => 1.6f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, Cue.Crit => 0.7f, Cue.Jump => 0.3f, Cue.BowDraw => 0.8f, Cue.BowShot => 0.6f, Cue.ArrowWood => 0.5f, _ => 0.4f };
                 for (int i = 0; i < n; i++)
                 {
                     float t = v.Age, x = noise.Next(), s = 0f, send = 0f;
-                    switch (v.Cue)
+                    if (v.Def != null)
+                    {
+                        s = DefSample(v, t, x, dt);
+                        send = s * v.Def.Send;
+                    }
+                    else switch (v.Cue)
                     {
                         case Cue.Pickup:
                         {
@@ -1641,14 +1699,6 @@ public sealed class SoundMix
                             float open = Math.Min(1f, t / 0.35f);
                             float w = v.Low.Process(x, Lowpass.Coef(300f + 2500f * open, rate));
                             s = w * MathF.Sin(MathF.PI * Math.Min(1f, t / 0.9f)) * 0.24f;
-                            break;
-                        }
-                        case Cue.Place:
-                        {
-                            // Something set on the ground: a dull knock and a scuff.
-                            v.Phase += 2f * MathF.PI * 95f * v.Pitch * dt;
-                            float scuff = v.Low.Process(x, Lowpass.Coef(1200f, rate)) * Burst(t, 0f, 0.04f);
-                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.05f) * 0.13f + scuff * 0.12f;
                             break;
                         }
                         case Cue.Hit:

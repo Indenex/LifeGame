@@ -39,7 +39,7 @@ public static class Look
 
     public const float WaterLevel = -1.0f;
 
-    static Shader? paintedShader, ghostShader, grassShader;
+    static Shader? paintedShader, ghostShader, structureGhostShader, grassShader;
     static ShaderMaterial? ground, bark, rock, foliage, grass, grassTufts;
     static NoiseTexture2D? brush, detail, clouds;
 
@@ -123,9 +123,15 @@ public static class Look
         material == TreeFoliage ? treeFoliageGhost ??= Ghost(TreeFoliage) :
         material == TreeBark ? treeBarkGhost ??= Ghost(TreeBark) : null;
 
-    static ShaderMaterial Ghost(ShaderMaterial source)
+    // A see-through copy of any painted surface for a building to fade by hand: set its
+    // fade_override from 0 (solid) to 1 (clear) and swap it in for the solid one.
+    public static ShaderMaterial StructureGhost(ShaderMaterial source) => Ghost(source, StructureGhostShader);
+
+    static ShaderMaterial Ghost(ShaderMaterial source) => Ghost(source, GhostShader);
+
+    static ShaderMaterial Ghost(ShaderMaterial source, Shader shader)
     {
-        var ghost = new ShaderMaterial { Shader = GhostShader };
+        var ghost = new ShaderMaterial { Shader = shader };
         foreach (var uniform in source.Shader.GetShaderUniformList())
         {
             var name = new StringName(uniform.AsGodotDictionary()["name"].AsString());
@@ -326,6 +332,12 @@ public static class Look
         .Replace("render_mode cull_disabled;", "render_mode cull_back, depth_draw_always;")
         .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST"));
 
+    // A building's ghost: open faces stay visible as on the solid, and an opaque depth pass first,
+    // so a faded near wall can't hide a far wall that shares its mesh (a brick course, a daub ring).
+    static Shader StructureGhostShader => structureGhostShader ??= MakeShader(PaintedCode
+        .Replace("render_mode cull_disabled;", "render_mode cull_disabled, depth_prepass_alpha;")
+        .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST"));
+
     const string PaintedCode = """
             shader_type spatial;
             render_mode cull_disabled;
@@ -342,6 +354,20 @@ public static class Look
             uniform float bump = 1.0;
             uniform float cavity = 0.4;
             uniform bool see_through = false;
+            // Set on a ghost (never a solid) to fade it by hand, 0 solid to 1 clear, in place of the
+            // tree test: buildings drive it while the player is under their roof.
+            uniform float fade_override = -1.0;
+            // A building ghost cuts away like Project Zomboid (D-168). cut_mode 1 is a wall:
+            // it fades on the side facing the camera (cam_dir, flat, from the building's
+            // centre cut_origin to the camera) and stays solid on the far side. cut_mode 2
+            // is a roof: it clears as fade_override reaches 1, entirely or only round the player
+            // (cut_floor). 0 is the trees.
+            uniform float cut_mode = 0.0;
+            uniform vec3 cut_origin = vec3(0.0);
+            uniform vec2 cam_dir = vec2(0.0, 1.0);
+            // How much of a wall facing the camera (or of a roof) fades away from the player's
+            // circle: nearly all from inside, less (a wall) or none (a roof) from outside.
+            uniform float cut_floor = 0.85;
             // 1 on the ground material only: where puddles may gather after rain.
             uniform float puddles_ok = 0.0;
             global uniform vec3 player_position;
@@ -387,7 +413,7 @@ public static class Look
                 season_kind = INSTANCE_CUSTOM.w;
                 // Broadleaf canopies thin to nothing in winter and grow back in spring.
                 if (sway > 0.0 && season_kind > 0.5 && season_kind < 1.5) VERTEX *= 1.0 - 0.85 * leaf_drop();
-                fade = see_through ? fade_amount(MODEL_MATRIX, CAMERA_POSITION_WORLD) : 0.0;
+                fade = fade_override >= 0.0 ? fade_override : see_through ? fade_amount(MODEL_MATRIX, CAMERA_POSITION_WORLD) : 0.0;
                 // A tree or rock on a cell that was just cleared goes away instead of
                 // vanishing: trees topple slowly and settle into the ground, rocks sink.
                 // On a cell that comes back they grow in. Custom data: x when it started,
@@ -527,7 +553,18 @@ public static class Look
                 float window = 1.0 - smoothstep(0.09, 0.3, apart);
                 // Fully clear right around the player, so even several layers of
                 // canopy never hide them.
-                ALPHA = 1.0 - fade * (0.35 + 0.65 * window);
+                if (cut_mode > 1.5) {
+                    // cut_floor 1 clears the whole roof (player inside); 0 clears only the
+                    // circle round the player (player behind the building).
+                    ALPHA = 1.0 - fade * mix(cut_floor, 1.0, window);
+                } else if (cut_mode > 0.5) {
+                    vec2 out_dir = world_pos.xz - cut_origin.xz;
+                    float facing = smoothstep(0.05, 0.45, dot(normalize(out_dir + vec2(1e-4)), cam_dir));
+                    ALPHA = 1.0 - fade * facing * mix(cut_floor, 1.0, window);
+                } else {
+                    ALPHA = 1.0 - fade * (0.35 + 0.65 * window);
+                }
+                if (ALPHA < 0.04) discard;
             #endif
             }
 

@@ -32,6 +32,17 @@ public static class Sfx
 
     public static void Play(Cue cue) => scape?.Play(cue);
 
+    // A cue defined as data (CueDefs).
+    public static void Play(CueDef def) => scape?.Play(def);
+
+    // The same for something that happens at `where`: you (within 1.5 m of the listener) at full
+    // volume, others from their side, quieter with distance.
+    public static void PlayBy(CueDef def, Vector3 where)
+    {
+        if (new Vector3(where.X - listener.X, 0, where.Z - listener.Z).LengthSquared() < 1.5f * 1.5f) Play(def);
+        else if (Place(where, out float gain, out float pan)) scape?.Play(def, gain, pan);
+    }
+
     // A cue that happens somewhere in the world.
     public static void PlayAt(Cue cue, Vector3 worldPosition)
     {
