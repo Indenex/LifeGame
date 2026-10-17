@@ -235,7 +235,7 @@ public partial class Terrain : Node3D
         }
     }
 
-    Color TileColor(int x, int z, float top, bool? cleared = null)
+    Color TileColor(int x, int z, float top, bool? cleared = null, bool painted = true)
     {
         float lush = World.Noise(x, z, 14f, 31);
         var color = Look.GrassLow.Lerp(Look.GrassHigh, Mathf.Clamp(lush * 1.1f - 0.1f, 0f, 1f));
@@ -259,7 +259,11 @@ public partial class Terrain : Node3D
 
         if (cleared ?? IsCleared(x, z)) color = color.Lerp(Look.Earth, 0.6f);
 
-        return color.Lightened((Hash01(x, z, 7) - 0.5f) * 0.08f);
+        color = color.Lightened((Hash01(x, z, 7) - 0.5f) * 0.08f);
+        // The art-reference prototype: darker olive earth under thick grass, bare dirt
+        // on the trails (PaintedGround, --ground=painted).
+        if (PaintedGround.On && painted) color = PaintedGround.Ground(color, Landmarks.Trail(x, z));
+        return color;
     }
 
     static readonly Color LeafLitter = Look.Earth.Lerp(Look.LeafWarm, 0.25f);
@@ -453,7 +457,40 @@ public partial class Terrain : Node3D
                     float sz = (TileHeight(x, z + 1) - TileHeight(x, z - 1)) * 0.5f;
                     var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, (0.75f + Hash01(x, z, 42) * 0.5f) * (1f - 0.35f * density) * (1f - 0.45f * heath) * (1f - 0.5f * trail), 0), new Vector3(0, sz, 1));
                     var g = new Transform3D(slope, new Vector3(x, top, z));
-                    tufts!.Add((g, TileColor(x, z, top, cleared: false), custom));
+                    // The art-reference prototype tints the blades in the pack palette.
+                    var tuftColor = PaintedGround.On
+                        ? PaintedGround.Grass(TileColor(x, z, top, cleared: false, painted: false), World.Noise(x, z, 14f, 31))
+                        : TileColor(x, z, top, cleared: false);
+                    tufts!.Add((g, tuftColor, custom));
+                }
+
+                // The art-reference prototype: small mushrooms under the trees, twigs and
+                // the odd old stump scattered through the grass (PaintedGround).
+                if (PaintedGround.On && grassy && !shore && trail < 0.5f)
+                {
+                    float scatter = Hash01(x, z, 70);
+                    float mushrooms = 0.004f + 0.03f * density * (1f - heath), twigs = 0.01f + 0.02f * density, stumps = 0.0025f * edge;
+                    float stones = 0.012f + 0.025f * (1f - density), whiteFlowers = 0.035f * (1f - density) * (1f - heath);
+                    float px = x + 0.5f - Hash01(x, z, 71), pz = z + 0.5f - Hash01(x, z, 72);
+                    var spot = Plant(px, HeightAt(px, pz), pz, Hash01(x, z, 73) * Mathf.Tau, 0.8f + Hash01(x, z, 74) * 0.6f);
+                    if (scatter < mushrooms)
+                        landmarks.Put(PaintedGround.Card(PaintedGround.MushroomCards + Variant(x, z, 76, 4), 0.22f), PaintedGround.CardMaterial,
+                            (spot, Colors.White.Darkened(Hash01(x, z, 75) * 0.15f), custom));
+                    else if (scatter < mushrooms + 0.05f * (1f - density) * (1f - heath))
+                        landmarks.Put(PaintedGround.Card(PaintedGround.CloverCards + Variant(x, z, 77, 3), 0.3f), PaintedGround.CardMaterial,
+                            (spot, Colors.White.Darkened(Hash01(x, z, 75) * 0.15f), custom));
+                    else if (scatter < mushrooms + twigs)
+                        landmarks.Put(PaintedGround.Twig, Look.BarkSurface, (spot, Look.Bark.Lightened(Hash01(x, z, 75) * 0.15f), custom));
+                    else if (scatter < mushrooms + twigs + stumps)
+                        landmarks.Put(PropMeshes.Stump, Look.BarkSurface, (spot, Look.Bark.Darkened(Hash01(x, z, 75) * 0.1f), custom));
+                    // Small grey-violet stones half sunk in the grass (variant D's stone tone).
+                    else if (scatter < mushrooms + twigs + stumps + stones)
+                        landmarks.Put(PropMeshes.Rock(Variant(x, z, 78, PropMeshes.RockVariants)), Look.RockSurface,
+                            (spot.ScaledLocal(Vector3.One * (0.55f + Hash01(x, z, 79) * 0.45f)).Translated(Vector3.Down * 0.06f),
+                             (Look.Rock * new Color(0.92f, 0.9f, 1.08f)).Lightened(Hash01(x, z, 75) * 0.12f), custom with { B = 1f }));
+                    else if (scatter < mushrooms + twigs + stumps + stones + whiteFlowers)
+                        landmarks.Put(PaintedGround.Card(PaintedGround.FlowerCards + 1 + Variant(x, z, 80, 2), 0.5f), PaintedGround.CardMaterial,
+                            (spot, Colors.White, custom));
                 }
             }
 
@@ -465,10 +502,21 @@ public partial class Terrain : Node3D
         data.Add(pineMesh!, pines, Look.TreeFoliage);
         foreach (var ((mesh, material), items) in landmarks.Batches)
             data.Add(mesh, items, material, castShadow: material != Look.Grass);
-        if (tufts != null) data.Add(tuftMesh!, tufts, Look.GrassTufts, castShadow: false);
-        data.Add(Undergrowth.Fern, ferns, Look.Grass, castShadow: false);
+        if (PaintedGround.On)
+        {
+            // Justin: the old dense blade carpet stays the grass, restyled in painted
+            // tone bands; the pack's cards are only sparse accents in it.
+            if (tufts != null) data.Add(PaintedGround.BroadTuft, tufts, PaintedGround.GrassMaterial, castShadow: false);
+            data.Add(PaintedGround.Card(PaintedGround.FernCards, 0.75f), PaintedGround.Whiten(ferns), PaintedGround.CardMaterial, castShadow: false);
+            data.Add(PaintedGround.Card(PaintedGround.FlowerCards, 0.35f), PaintedGround.Whiten(flowers), PaintedGround.CardMaterial, castShadow: false);
+        }
+        else
+        {
+            if (tufts != null) data.Add(tuftMesh!, tufts, Look.GrassTufts, castShadow: false);
+            data.Add(Undergrowth.Fern, ferns, Look.Grass, castShadow: false);
+            data.Add(Undergrowth.Flowers, flowers, Look.Grass, castShadow: false);
+        }
         data.Add(Undergrowth.Reed, reeds, Look.Grass, castShadow: false);
-        data.Add(Undergrowth.Flowers, flowers, Look.Grass, castShadow: false);
         data.Add(Undergrowth.Bush, bushes, Look.Foliage);
     }
 

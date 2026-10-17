@@ -49,6 +49,21 @@ namespace LifeGame.Shared
             return h * keep + (0.1f + hills * 0.3f) * (1f - keep);
         }
 
+        // Whether cell (x, z) holds water, for anything that needs it on the server and
+        // the client alike (clay pipes' sources, filling pots). `depth` is how many
+        // DigSteps the cell has been dug (0 if never). All water is one flat plane, so
+        // `surface` is always World.WaterLevel; `flowing` tells a stream from a pond.
+        public static bool WaterAt(int x, int z, short depth, out float surface, out bool flowing)
+        {
+            surface = World.WaterLevel;
+            flowing = false;
+            if (World.BaseHeight(x, z) - depth * World.DigStep >= World.WaterLevel) return false;
+            // A stream's water reaches up to about 10 m from its line where the channel is
+            // widest; a pond within 12 m of a stream counts as part of it.
+            flowing = RiverDistance(x, z) < 12f;
+            return true;
+        }
+
         // Meters from the nearest stream's center line, for telling stream water from
         // pond water (the sound of running water, D-079). Exact within 26 m of a
         // stream; further out it may read short, but never under 26.

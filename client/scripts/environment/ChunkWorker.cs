@@ -105,6 +105,7 @@ public partial class Terrain
         _ = Undergrowth.Bush;
         foreach (var material in new Material[] { Look.Ground, Look.RockSurface, Look.Foliage, Look.TreeBark, Look.TreeFoliage, Look.Grass, Look.GrassTufts })
             _ = Look.GhostOf(material);
+        if (PaintedGround.On) PaintedGround.Prewarm();
     }
 
     // On the main thread: what chunk (cx, cz) needs from the server and the clock.

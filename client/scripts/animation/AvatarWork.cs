@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using LifeGame.Shared;
 using SpacetimeDB.Types;
 
@@ -14,7 +15,7 @@ public static class AvatarWork
     {
         conn.Db.MyCraftJob.OnInsert += (_, j) =>
         {
-            Start(me, j.ProcessId);
+            Start(me, j.ProcessId, conn);
             if (WorkMotions.For(j.ProcessId) == WorkMotion.Chop) FaceTree(me);
             // Station crafts turn you to the station you work at (D-098).
             else if (Processes.Find(j.ProcessId) is { Station: not StationKind.None } def
@@ -79,8 +80,11 @@ public static class AvatarWork
         avatar.Wear(PlayerModel.Feet, feet);
     }
 
-    static void Start(Avatar avatar, string? processId)
+    // conn only for your own avatar: your inventory says which tool you work with.
+    static void Start(Avatar avatar, string? processId, DbConnection? conn = null)
     {
         avatar.Work = WorkMotions.For(processId);
+        var (right, left) = HeldTools.For(processId, conn?.Db.MyInventory.Iter().Select(i => (i.Item, i.Quality)));
+        avatar.Hold(right, left);
     }
 }
