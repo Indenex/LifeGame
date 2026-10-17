@@ -16,7 +16,7 @@ Basic crafts (fire, stone tools, digging, cordage, clay preparation and the firs
 
 Some stations need wood from a felled tree, so you will want an axe early. Stations are built from the build menu and only inside a claim you have rights to. You work standing next to one, and it uses materials from what you carry, from storage close to it, and from the claim's shared storage.
 
-What you make goes into your bag. Things such as bricks, pots, jars, baskets and logs can then be set down on the ground.
+What you make goes into your bag. Things such as bricks, fired pots, storage jars, baskets and logs can be set down on the ground: drag one out of the bag (I) over the world, press its hotbar key, or take the "Place" prompt right after crafting it. A see-through outline follows the cursor and turns amber where it cannot go, such as water or steep ground. Click to set it down, turn it with T, Shift+T or the scroll wheel, and press Esc to put it back.
 
 ## Tools wear out
 Spears, axes, knives, digging sticks and bow drills wear down as you use them. The item shows when it is worn or nearly spent. A spent tool stays in your bag but stops working until you mend it at a repair table. Mending costs far less than making a new tool, but each repair lowers its quality a little. Stone flakes, hand axes and stations do not wear out.

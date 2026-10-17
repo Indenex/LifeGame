@@ -124,6 +124,7 @@ public partial class Atmosphere : Node3D
         Deer.Cry = sound.DeerCry;
         ReadySeasons();
         ReadyFronts();
+        ReadyGrade();
         ReadyStorms();
         ReadyHomes();
 
@@ -441,6 +442,8 @@ public partial class Atmosphere : Node3D
         env.FogLightColor = env.FogLightColor.Lerp(new Color(0.3f, 0.34f, 0.38f) * dim, 0.35f * storminess);
         env.GlowIntensity = 0.6f + 0.4f * (1f - daylight);
 
+        Grade(sunHeight, daylight, overcast);
+
         if (flash > 0.001f)
         {
             var bolt = new Color(0.75f, 0.8f, 1f);
@@ -599,6 +602,8 @@ public partial class Atmosphere : Node3D
             uniform float front_rain = 0.0;
             uniform float front_amount = 0.0;
             uniform float rainbow = 0.0;
+            // The prototype colour grade (AtmosphereGrade), 0 off.
+            uniform float grade = 0.0;
             // Thunderstorms (AtmosphereStorms): how stormy, and lightning inside
             // the clouds toward flash_dir.
             uniform float storm = 0.0;
@@ -669,6 +674,9 @@ public partial class Atmosphere : Node3D
                     cloud_col *= 1.0 - 0.5 * front_rain * upwind;
                     // Storm clouds hang heavy and dark, bruised blue-grey underneath.
                     cloud_col = mix(cloud_col, cloud_col * vec3(0.55, 0.6, 0.68), storm * smoothstep(0.3, 0.7, n));
+                    // With the grade on, clouds near a low sun glow with warm rims.
+                    float sun_low = smoothstep(-0.05, 0.05, sun_dir.y) * (1.0 - smoothstep(0.2, 0.45, sun_dir.y));
+                    cloud_col += sun_color * pow(s, 4.0) * (1.0 - smoothstep(0.35, 0.8, n)) * 1.4 * sun_low * grade;
                     col = mix(col, cloud_col, c * 0.9);
 
                     // Lightning lights the clouds from inside, brightest toward the strike.
