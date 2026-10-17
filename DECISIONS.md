@@ -1312,3 +1312,7 @@ Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, 
 ## D-321 — 2026-10-17 — Hotbar look: "Paper buttons"
 **Decision:** The hotbar is "Paper buttons": cream paper discs with a soft brown rim and shadow, the key number in brown Nunito, and a butter-gold ring on the item in hand (ui-45).
 **Who:** Justin, choosing "Paper buttons" (relayed by the PM; no direct quote).
+
+## D-322 — 2026-10-17 — Sitting and lying down are just a pose
+**Decision:** Sitting and lying down are "Just a pose", with no gameplay effect.
+**Who:** Justin, choosing "Just a pose" (relayed by the PM; no direct quote).
