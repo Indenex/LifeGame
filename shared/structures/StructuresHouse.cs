@@ -215,6 +215,29 @@ namespace LifeGame.Shared
                     },
                 },
             },
+                // A straw bed (building-23): a pole frame and a straw tick, wide enough for two. A sturdier rest spot than
+                // the woven mat and nothing more (resting is just a pose, Justin): same waking-place and lie-down rules,
+                // by data (RestSpots.cs). Claim-only.
+            new StructureDef
+            {
+                // 25: its StructureKind position, after Chest = 24 (a SpacetimeDB enum takes no explicit values).
+                Kind = 25,
+                Shape = new StructureShape
+                {
+                    Name = "Straw bed",
+                    Model = "Bed",
+                    Category = "Shelter",
+                    HalfWidth = 0.65f, HalfDepth = 1.0f,
+                    Clearance = 1.4f,
+                    Stages = new[] { "Frame", "Straw tick" },
+                    // Straw bed: Frame, Straw tick (more than the mat's 8 fiber, D-075)
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stick, 8u), (Item.Cordage, 2u) },
+                        new[] { (Item.Fiber, 12u) },
+                    },
+                },
+            },
         };
     }
 }

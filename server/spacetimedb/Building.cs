@@ -35,6 +35,8 @@ public enum StructureKind
     TemperingTrough,
     // House building: a wooden chest, after Crafting's devices (24; the enum position is the kind number).
     Chest,
+    // House building: a straw bed (25), a rest spot by data (RestSpots.cs).
+    Bed,
 }
 
 // One material a structure's current stage still needs.
