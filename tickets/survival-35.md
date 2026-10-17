@@ -1,9 +1,9 @@
 # survival-35: Mushrooms, a second wild food (forage as data)
 Lane: Survival
 Owner: Survival thread (session_01BMpUvVCwwzu1SEuBf16iFd)
-Status: in_review
-Branch: claude/survival-mushrooms (stacked on claude/survival-5zelch, #832)
-PR: (see below)
+Status: done
+Branch: claude/survival-mushrooms (merged); follow-up on claude/survival-5zelch
+PR: #837 (merged into main 272feaf); FirstEvening follow-up PR on claude/survival-5zelch
 
 ## Goal
 Small clusters of woodland mushrooms in the shade beside trees, from spring to autumn (none in winter). G "Gather mushrooms" gives 3 (Item.Mushrooms = 164, 0.07 food and 0.01 water each, a nibble like a hazelnut); a picked patch shows two tiny buttons and comes back after 12 minutes (berries take 8). Nothing to tend (D-148). Lane default, sent to the PM as option 1; numbers sit low on the D-075 curve.
@@ -17,9 +17,11 @@ Forage is now data (D-206): `shared/Forages.cs` has one `ForageDef` per kind (yi
 
 - 2026-10-17 15:45: #836 merged; merged main and applied the model wiring (Modeling's painted Patch/Picked meshes, ItemModels.MushroomItem set in SurvivalClient.Setup, stand-in cap gone).
 
+- 2026-10-17 16:05: #837 green at 0f5dc91e, CI run https://github.com/Indenex/LifeGame/actions/runs/39047892208 (every job passed). Offline FirstEvening re-run with mushrooms: /mnt/project-files/survival/survival-35/firstevening-2026-10-17.md (first spawn: nearest wild food of any kind median 6 m, worst 15; rim respawn median 5, worst 14). No tuning proposed.
+- 2026-10-17 16:20: #837 merged (main 272feaf). Follow-up: tools/FirstEvening now lists mushroom patches and prints "nearest mushroom patch" and "nearest wild food of any kind" per spawn kind.
+
 ## Open questions / blockers
-- (none)
 - Justin: whether mushrooms are the next wild food at all (PM question, option 1 of 3).
 
 ## Next step
-Wait for CI on #837 and send the green sha to the PM (merge after #832); then re-run tools/FirstEvening (PM asked) and render request for the patches.
+Wait for CI on the FirstEvening follow-up PR and send its green sha to the PM.

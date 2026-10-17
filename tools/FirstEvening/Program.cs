@@ -1,6 +1,6 @@
 // First evening (survival-10): how far a new player is from what they need on
 // their first evening, and how long their warmth lasts while they fetch it.
-// Reads the live world (berry bushes, loose sticks and fiber) from a local server
+// Reads the live world (berry bushes, mushroom patches, loose sticks and fiber) from a local server
 // and the terrain from shared/World.cs, then prints a table per spawn kind:
 // first spawns (the middle of the seeded area) and respawns (the wilderness rim).
 // It changes nothing in the world.
@@ -31,10 +31,12 @@ conn.SubscriptionBuilder().OnApplied(_ => applied = true)
 Pump(() => applied, 30);
 
 var bushes = conn.Db.ForageBush.Iter().Where(b => b.Kind == Forages.BerryBushKind).Select(b => (b.X, b.Z)).ToList();
+var mushrooms = conn.Db.ForageBush.Iter().Where(b => b.Kind == Forages.MushroomKind).Select(b => (b.X, b.Z)).ToList();
+var food = bushes.Concat(mushrooms).ToList();
 var items = conn.Db.WorldItem.Iter().ToList();
 var sticks = items.Where(i => i.Item == (ushort)Item.Stick).Select(i => (i.X, i.Z)).ToList();
 var fiber = items.Where(i => i.Item == (ushort)Item.Fiber).Select(i => (i.X, i.Z)).ToList();
-Console.WriteLine($"world: {bushes.Count} bushes, {sticks.Count} sticks, {fiber.Count} fiber lying about");
+Console.WriteLine($"world: {bushes.Count} bushes, {mushrooms.Count} mushroom patches, {sticks.Count} sticks, {fiber.Count} fiber lying about");
 
 const float Walk = 4.2f, PickSeconds = 1f;
 float Dist((float x, float z) a, (float x, float z) b) => MathF.Sqrt((a.x - b.x) * (a.x - b.x) + (a.z - b.z) * (a.z - b.z));
@@ -85,13 +87,15 @@ void Report(string kind, List<(float x, float z)> spawns, bool arrival)
     {
         float fireMetres = Gather(p, (sticks, 2), (fiber, 2));
         float fireSeconds = fireMetres / Walk + 4 * PickSeconds + 3 + 4 / 0.65f; // shred, drill with ~35% fails
-        return (wet: Wet(p.x, p.z), bush: Nearest(p, bushes), water: NearestWater(p), fireMetres, fireSeconds);
+        return (wet: Wet(p.x, p.z), bush: Nearest(p, bushes), mushroom: Nearest(p, mushrooms), food: Nearest(p, food), water: NearestWater(p), fireMetres, fireSeconds);
     }).ToList();
-    string Stat(Func<(bool wet, float bush, float water, float fireMetres, float fireSeconds), float> f) =>
+    string Stat(Func<(bool wet, float bush, float mushroom, float food, float water, float fireMetres, float fireSeconds), float> f) =>
         $"median {Median(rows.Select(f)):F0}, worst {rows.Select(f).Max():F0}";
     Console.WriteLine($"\n{kind} ({spawns.Count} spots)");
     Console.WriteLine($"  spawned in water: {rows.Count(r => r.wet)}");
     Console.WriteLine($"  nearest bush (m): {Stat(r => r.bush)}");
+    Console.WriteLine($"  nearest mushroom patch (m): {Stat(r => r.mushroom)}");
+    Console.WriteLine($"  nearest wild food of any kind (m): {Stat(r => r.food)}");
     Console.WriteLine($"  nearest drinkable water (m): {Stat(r => r.water)}");
     Console.WriteLine($"  2 sticks + 2 fiber walk (m): {Stat(r => r.fireMetres)}");
     Console.WriteLine($"  first fire (s): {Stat(r => r.fireSeconds)}");
