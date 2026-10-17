@@ -446,7 +446,7 @@ public partial class CraftingUi : CanvasLayer
         job = j;
         jobStartLocal = Time.GetTicksMsec() / 1000.0;
         jobSeconds = (j.FinishAt.MicrosecondsSinceUnixEpoch - j.StartedAt.MicrosecondsSinceUnixEpoch) / 1_000_000.0;
-        progressLabel.Text = Processes.Find(j.ProcessId)?.Doing + "...";
+        progressLabel.Text = Processes.Find(j.ProcessId)?.Doing + "..." + (CraftGrid.Held?.Id == j.ProcessId ? "   (holding: again when done)" : "");
         progressPanel.Visible = true;
     }
 
@@ -468,6 +468,26 @@ public partial class CraftingUi : CanvasLayer
             if (def.Outcome == Outcome.Item) Finished?.Invoke(def, def.Makes, j.Quality);
         }
         Refresh();
+        Repeat(def, j.Failed);
+    }
+
+    // Holding a card down makes another each time one finishes (CraftGrid.Held): only work
+    // with no hands-on step left to play, and it stops on a failure or when the next would
+    // fall short (Missing says why).
+    void Repeat(ProcessDef def, bool failed)
+    {
+        if (CraftGrid.Held?.Id != def.Id) return;
+        float? skipped = null;
+        if (def.Minigame != Minigame.None) SkipMinigame(def, ref skipped);
+        bool handsOn = def.Minigame != Minigame.None && skipped == null;
+        string? missing = Missing(def);
+        if (failed || handsOn || missing != null)
+        {
+            if (!failed && !handsOn) Notice?.Invoke(missing!);
+            CraftGrid.StopHolding();
+            return;
+        }
+        Begin(def);
     }
 
     // --- Minigames --------------------------------------------------------

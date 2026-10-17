@@ -49,6 +49,18 @@ public partial class CraftGrid : VBoxContainer
         return "Other";
     }
 
+    // Hold to repeat (D-283 follow-up; Justin's hold-to-repeat ask): the recipe whose card is
+    // held down, in any grid. CraftingUi starts it again each time a job of it finishes, while
+    // the mouse stays down, it still needs no hands-on step, and there is enough for another.
+    public static ProcessDef? Held { get; private set; }
+
+    public override void _Input(InputEvent e)
+    {
+        if (Held != null && e is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: false }) Held = null;
+    }
+
+    public static void StopHolding() => Held = null;
+
     // The cards in the order they are shown; number keys 1 to 9 pick from these.
     public List<ProcessDef> Shown { get; private set; } = new();
 
@@ -190,7 +202,9 @@ public partial class CraftGrid : VBoxContainer
         card.AddThemeStyleboxOverride("pressed", hover);
         card.Modulate = new Color(1, 1, 1, ready ? 1f : 0.45f);
         card.TooltipText = Describe(def, missing);
-        card.Pressed += () => Make(def);
+        // Acts on the press, so holding it down can repeat (Held).
+        card.ActionMode = BaseButton.ActionModeEnum.Press;
+        card.Pressed += () => { Held = def; Make(def); };
 
         var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         column.SetAnchorsPreset(LayoutPreset.FullRect);
