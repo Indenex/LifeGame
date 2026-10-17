@@ -31,7 +31,8 @@ public partial class Avatar : Node3D
         rig = new PlayerRig(figure);
         PlaceMouth();
         animator = new PlayerAnimator(rig, GetInstanceId());
-        animator.Impact = (motion, thrown) => Impact?.Invoke(this, motion, ToolPoint(), thrown);
+        animator.Impact = (motion, thrown) =>
+            Impact?.Invoke(this, motion, ToolPoint(), thrown, (ushort)((WorkMotions.IsAct(motion) ? actItem : workRight) ?? 0));
         // Breath in the cold leaves the mouth, on the head bone's attachment.
         if (figure.FindChild("HeadAttach", true, false) is Node3D head)
             head.AddChild(new Breath { Position = PlayerModel.MouthAt });
@@ -86,9 +87,10 @@ public partial class Avatar : Node3D
 
     // Fired on every avatar's tool impacts (anim-7): an axe biting the trunk, a spade or
     // stick going into the ground (thrown: the dirt leaving a spade), a strike landing,
-    // fuel landing on a fire. at is the right hand's tool point in the world. Atmosphere
-    // puts chips and dirt there; Audio plays the thunk and crunch on the same frame.
-    public static event System.Action<Avatar, WorkMotion, Vector3, bool>? Impact;
+    // fuel landing on a fire. at is the right hand's tool point in the world; item is
+    // the tool (or fuel) in use, 0 for bare hands. Atmosphere puts chips and dirt there;
+    // Audio plays the thunk and crunch on the same frame.
+    public static event System.Action<Avatar, WorkMotion, Vector3, bool, ushort>? Impact;
 
     Vector3 ToolPoint() => figure.FindChild("ToolR", true, false) is Node3D tool && tool.IsInsideTree()
         ? tool.GlobalPosition : GlobalPosition + Vector3.Up;

@@ -16,7 +16,7 @@ PM 03:29, for Justin: tool work should feel good. Chop needs weight, a hit on co
     - digging stick: stab and lever (as before)
     - spade: set the blade, step the right foot onto it and drive it in, lever back, lift and throw the dirt left, over 1.35 s
   - The spade is found by name (Enum.TryParse "Spade"), so it needs no change when Crafting adds the item.
-  - Impacts: PlayerAnimator fires Impact at the bite of a craft loop (chop 0.85/s at 0.7; knap at the snap) and at an action's contact moment (WorkMotions.ActImpact / ActThrow). Avatar re-raises it as the static `Avatar.Impact(avatar, motion, toolPoint, thrown)` for Atmosphere (chips, dirt puffs) and Audio (thunk, crunch).
+  - Impacts: PlayerAnimator fires Impact at the bite of a craft loop (chop 0.85/s at 0.7; knap at the snap) and at an action's contact moment (WorkMotions.ActImpact / ActThrow). Avatar re-raises it as the static `Avatar.Impact(avatar, motion, toolPoint, thrown, item)` for Atmosphere (chips, dirt puffs) and Audio (thunk, crunch).
   - Held tools: chop shows the axe through HeldTools (anim-3); dig shows the digging tool from player_act.
   - Hip drops scale with LegLength for the chibi.
   - Client builds.
