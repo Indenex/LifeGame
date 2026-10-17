@@ -37,7 +37,7 @@ public static class MaterialLook
         Pattern.Leaves => (0.6f, Vector2.One, 1.2f),
         Pattern.Straw => (1.1f, new Vector2(1f, 1f), 1f),
         Pattern.Wool => (3.5f, Vector2.One, 0.8f),
-        Pattern.Skin => (1.5f, Vector2.One, 0.25f),
+        Pattern.Skin => (1.5f, Vector2.One, 0.35f),
         Pattern.Grass => (1.2f, Vector2.One, 1f),
         _ => (0.6f, Vector2.One, 0.45f),
     };
@@ -372,6 +372,31 @@ public static class MaterialLook
                 if (fv < fringe) return 1f;
                 float straw = Mathf.PosMod(u * 24f + Noise(u * 4, v * 4, 4, 8) * 0.6f, 1f);
                 return straw < 0.18f ? 0f : fv > 0.8f ? 0.5f : (MeshKit.Hash((int)Mathf.Floor(u * 24f), 86) > 0.55f ? 1f : 0.5f);
+            }
+            case Pattern.Skin:
+            {
+                // Skin, cloth and hair on figures: a few broad, soft brush strokes in
+                // two tones, never busy at game distance.
+                float stroke = Noise(u * 3 + v * 1.5f, v * 3, 3, 89) + 0.35f * Noise(u * 6, v * 6, 6, 90);
+                return stroke > 0.82f ? 1f : 0.5f;
+            }
+            case Pattern.Wool:
+            {
+                // Wool in soft rounded tufts: each tuft lit on top, a dark crease below.
+                float best = 9f;
+                Vector2 c0 = Vector2.Zero;
+                for (int k = 0; k < 7; k++)
+                {
+                    var c = new Vector2(MeshKit.Hash(k, 70), MeshKit.Hash(k, 71));
+                    for (int ox = -1; ox <= 1; ox++)
+                        for (int oy = -1; oy <= 1; oy++)
+                        {
+                            float d = new Vector2(u - c.X - ox, v - c.Y - oy).Length();
+                            if (d < best) { best = d; c0 = new Vector2(c.X + ox, c.Y + oy); }
+                        }
+                }
+                if (best > 0.24f) return 0f;
+                return v > c0.Y + 0.04f ? 1f : 0.5f;
             }
             default:
                 return Mathf.Clamp(Value(p, u, v), 0f, 1f);
