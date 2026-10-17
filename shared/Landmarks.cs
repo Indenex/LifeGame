@@ -64,12 +64,11 @@ namespace LifeGame.Shared
             float density = Forest.Density(x, z);
             if (density > 0.2f || Forest.Heath(x, z) > 0.5f || Forest.Wetland(x, z) > 0.3f
                 || World.BaseHeight(x, z) < World.WaterLevel + 0.5f || Trail(x, z) > 0.3f) return false;
-            // Room for a trunk up to 13 m long whichever way it fell: open ground all round.
-            for (int k = 0; k < 8; k++)
-            {
-                float a = k * MathF.PI / 4f;
-                if (Forest.Density(x + (int)(MathF.Cos(a) * 6f), z + (int)(MathF.Sin(a) * 6f)) > 0.3f) return false;
-            }
+            // Room for a trunk up to 13 m long whichever way it fell: no standing tree
+            // within 7 m, so none grows through it or hides it under its crown.
+            for (int dx = -7; dx <= 7; dx++)
+                for (int dz = -7; dz <= 7; dz++)
+                    if (dx * dx + dz * dz <= 49 && Trees.GrowsAt(x + dx, z + dz)) return false;
             return true;
         }
 
