@@ -92,6 +92,11 @@ public static partial class Module
         // Tool wear (shared/Durability.cs); 0 for anything that does not wear.
         [Default(0u)]
         public uint Wear;
+        // Set down on purpose with PlaceItem (crafting-21): it keeps the way it was turned.
+        [Default(false)]
+        public bool Placed;
+        [Default(0f)]
+        public float Yaw;
     }
 
     // What each player carries: one stack per item and quality.

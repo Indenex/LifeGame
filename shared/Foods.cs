@@ -26,6 +26,17 @@ namespace LifeGame.Shared
         public float Water;
     }
 
+    // A raw food that roasts on a fire (Roasting timing): what it becomes when done well,
+    // when left on too long, and which skill process it trains. A new roastable is one
+    // entry here plus its recipe.
+    public sealed class RoastDef
+    {
+        public Item Raw;
+        public Item Cooked;
+        public Item Burnt;
+        public string Process = "";
+    }
+
     public static class Foods
     {
         public static readonly IReadOnlyList<FoodDef> All = new[]
@@ -47,10 +58,19 @@ namespace LifeGame.Shared
             new PotDef { Full = Item.CoilPotOfWater, Empty = Item.CoilPot, Water = Needs.CoilPotWater },
         };
 
+        public static readonly IReadOnlyList<RoastDef> Roasts = new[]
+        {
+            new RoastDef { Raw = Item.RawMutton, Cooked = Item.CookedMutton, Burnt = Item.BurntMutton, Process = "cook.meat" },
+            new RoastDef { Raw = Item.RawVenison, Cooked = Item.CookedVenison, Burnt = Item.BurntVenison, Process = "cook.venison" },
+        };
+
+        static readonly Dictionary<Item, RoastDef> RoastByRaw = Roasts.ToDictionary(r => r.Raw);
         static readonly Dictionary<Item, FoodDef> ById = All.ToDictionary(f => f.Id);
         static readonly Dictionary<Item, PotDef> PotById = Pots.ToDictionary(p => p.Full);
 
         public static FoodDef? Find(Item item) => ById.TryGetValue(item, out var f) ? f : null;
+
+        public static RoastDef? FindRoast(Item raw) => RoastByRaw.TryGetValue(raw, out var r) ? r : null;
 
         public static PotDef? FindPot(Item item) => PotById.TryGetValue(item, out var p) ? p : null;
     }

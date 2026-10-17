@@ -6,7 +6,7 @@ You have four needs: food, water, warmth and staying dry. They drain slowly, so 
 Both go down over time. Water runs out faster than food. Press X to eat the best food you carry; face water and use it to drink. Cooked food fills you more than raw. Once you can make a container, you can carry water.
 
 ## Cold
-You lose warmth at night, in rain, and when standing in water. Colder air makes it happen faster, and rain makes it worse unless you are under cover. A burning fire nearby keeps you warm, and standing by one warms you back up. Shelter also helps, and a good shelter with a fire inside is the warmest place you can be.
+You lose warmth at night, in rain, and when standing in water. Colder air makes it happen faster, and rain makes it worse unless you are under cover. A burning fire nearby keeps you warm, and standing by one warms you back up. Shelter also helps, and a good shelter with a fire inside is the warmest place you can be. Clothing slows the loss of warmth too, but only while you wear it: put it on in the equipment panel (I).
 
 The world goes through spring, summer, autumn and winter. Summer is warm. Winter days are cool, and winter nights are the coldest time in the game, so be near a fire or in a good shelter after dark. In cold weather, snow falls instead of rain.
 
@@ -19,8 +19,11 @@ Rain and wading make you wet. Heavy rain soaks you faster than drizzle, and wadi
 ## Stamina
 Hold Shift to run. Running uses stamina, shown as a small bar under your character while you are short of breath. When it runs out you walk until it refills. It refills after you stop running. A good meal lets you run longer for a while. Running trains Endurance, and higher Endurance means longer runs and a faster refill.
 
+## Water
+You can walk into any water. Walking slows as it gets deeper, and in deep water you float with your head above the surface and move slowly. You cannot jump while floating. Water soaks you quickly.
+
 ## Carrying
-You can only carry so much. Over the limit you can still pick things up, but you walk more slowly the more you carry. Some crafted items raise the limit.
+You can only carry so much. Clothes you wear do not count. Over the limit you can still pick things up, but you walk more slowly the more you carry. Some crafted items raise the limit.
 
 ## Death
 If you die, you drop everything you were carrying. You keep your skills and everything in your journal. You respawn with partial food and water and full warmth. If you have laid a sleeping mat, you respawn on it; otherwise you respawn at the edge of the wilderness.

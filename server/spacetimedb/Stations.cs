@@ -7,11 +7,12 @@ using SpacetimeDB;
 // storage within StationInfo.StorageReach of the station, then the claim's stash.
 public static partial class Module
 {
-    // Stations go up only inside a claim the builder has rights to.
+    // Stations go up only inside a claim the builder has rights to, except the wild crafting table (building-13).
     static void CheckStationSite(ReducerContext ctx, StructureKind kind, float x, float z)
     {
-        var station = Structures.Shape((int)kind).Station;
-        if (station == StationKind.None) return;
+        int k = (int)kind;
+        var station = Structures.Shape(k).Station;
+        if (station == StationKind.None || Structures.IsWild(k)) return;
         if (ClaimAt(ctx, x, z) is not { } claim || !HasClaimRights(ctx, claim, ctx.Sender))
             throw new Exception($"A {StationInfo.Name(station)} has to stand inside your claim");
     }
@@ -33,7 +34,9 @@ public static partial class Module
             if (!s.Complete || Structures.Shape((int)s.Kind).Station != kind) continue;
             float d = Dist(s.X, s.Z, x, z);
             if (d - StationRadius(s) > Structures.WorkReach || d >= bestD) continue;
-            if (ClaimAt(ctx, s.X, s.Z) is not { } claim || !HasClaimRights(ctx, claim, ctx.Sender)) continue;
+            // A wild station (the crafting table) can stand on open ground; in a claim only its members may use it.
+            if (ClaimAt(ctx, s.X, s.Z) is { } claim && !HasClaimRights(ctx, claim, ctx.Sender)) continue;
+            if (ClaimAt(ctx, s.X, s.Z) is null && !Structures.IsWild((int)s.Kind)) continue;
             best = s;
             bestD = d;
         }

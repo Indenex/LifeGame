@@ -117,6 +117,7 @@ public partial class Atmosphere : Node3D
         AddChild(fireflies);
         AddChild(mist);
         AddChild(leaves);
+        ReadyWater();
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
         Deer.Cry = sound.DeerCry;
@@ -314,6 +315,7 @@ public partial class Atmosphere : Node3D
         float wooded = Woodedness(focus);
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
         leaves.Follow(focus, Year, wind, woods, WindDirection);
+        UpdateWater(dt, focus, env.FogLightColor.Lerp(sun.LightColor, 0.4f));
         sound.Foliage = wooded;
         Lightning(dt, focus);
         if (GetViewport()?.GetCamera3D() is { } ear)

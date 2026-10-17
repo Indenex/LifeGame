@@ -17,6 +17,9 @@ public partial class CraftingUi : CanvasLayer
     // True while the panel is up (ui/Panels.cs reads it, so the G prompt steps aside).
     public bool PanelOpen => panel.Visible;
     public event Action<string>? Notice;
+    // A craft that makes an item has finished and the item is in the bag: the process, what
+    // it made and at what quality. UX offers to set placeable things down (crafting-21).
+    public event Action<ProcessDef, Item, byte>? Finished;
 
     DbConnection? conn;
     readonly PanelContainer panel;
@@ -501,7 +504,10 @@ public partial class CraftingUi : CanvasLayer
         else if (def.Outcome == Outcome.Roast)
             Notice?.Invoke($"It's over the fire. Press G by the fire once it's browned ({Roasting.BestSeconds:0}s is about right)");
         else if (def.Outcome != Outcome.Placed)
+        {
             Notice?.Invoke($"Made: {ItemLook.Label(def.Makes, j.Quality, def.MakesCount)}");
+            if (def.Outcome == Outcome.Item) Finished?.Invoke(def, def.Makes, j.Quality);
+        }
         Refresh();
     }
 
