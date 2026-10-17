@@ -29,8 +29,13 @@ Built on top of env-27 (merged in) so `PaintedTerrain.Chosen` picks the style.
   richer; ghibli grass good, ground too blotchy, so I softened it (SoftPaint); ghibli flowers 1.35x.
   Paired stills requested from Render A.
 
+- 2026-10-17 09:10: merged main (soft edges, 963d4c10). Local renders at (-6,-10) look right
+  (botw lush tall green, ghibli soft painted ground and flower clusters). Cost in view at the
+  gameplay camera (radius 3, frame stats): draw calls 595 / 595 / 596 (today / botw / ghibli),
+  primitives 2.13M / 2.32M (+9%) / 2.14M (+0.7%). Tufts only within 48 m, so the cost stays small.
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for Render A's paired stills; run --view-bench for each look (old, botw, ghibli) and report draws/frame cost to the PM.
+Wait for Justin's pick via the PM (Render A is shooting the paired stills). If botw or ghibli wins: grass density setting, then build it properly on main.
