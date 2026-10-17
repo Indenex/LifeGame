@@ -1,11 +1,14 @@
-# ceramics-13: Clay pipes and drain tiles for water
+# ceramics-13: Clay trough (pipe network designed, parked)
 Lane: Clay and ceramics
 Owner: Clay and ceramics lane (Sonnet session_01Sc3N1RCsurSszfX5YwGzMU)
-Status: in_progress (design note only, no code, as the PM asked)
+Status: in_progress
 Branch: claude/clay-ceramics-13-kfr4kr
 PR: (none yet)
 
-## Goal
+## DECISION (2026-10-17, Justin via the PM): option 4, trough and drains only, no pipe network for now.
+Build a fired clay **trough** you fill by hand (pour from water pots). It is placeable, holds a good amount, players (and animals, via an Animals hook) can drink from it, and needs no upkeep (D-148). Drain tiles only if they serve a real purpose; if not, leave them out and tell the PM. A Def entry per docs/CONTENT.md, small, and rendered. The pipe-network design below stays on file for later.
+
+## Goal (original, now parked: pipes)
 Justin picked clay pipes and drain tiles for water (2026-10-17). Done when a player can fire clay pipe segments, lay them from a water source to a sink in their claim, and have water arrive with no tending (D-148). This ticket is the design note; no code until Justin picks the core loop.
 
 ## Design note
