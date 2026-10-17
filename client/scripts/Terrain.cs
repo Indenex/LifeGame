@@ -24,6 +24,12 @@ public partial class Terrain : Node3D
     // The old broadleaf canopy (birches, landmark trees), for Showcase.
     internal static Mesh LeafyCanopy { get { EnsureMeshes(); return leafyMesh!; } }
 
+    // A birch's painted crown on its slim white trunk: narrowed, and lifted so the pale
+    // trunk shows below it. Its tint lifts the painted broadleaf's dark palette to a
+    // light, yellow-green birch.
+    internal static Transform3D BirchCrown(Transform3D at) => at.TranslatedLocal(new Vector3(0, 1.0f, 0)).ScaledLocal(new Vector3(0.6f, 0.85f, 0.6f));
+    internal static readonly Color BirchLeaf = new(2.0f, 2.15f, 1.5f);
+
     // Cells under buildings: no trees or grass, and the ground is trodden bare.
     public Func<int, int, bool>? Cleared;
     // Cells whose clearing is drawn by something else (TreeFall), so the chunk shows
@@ -193,6 +199,11 @@ public partial class Terrain : Node3D
 
     bool Edited(int x, int z) => building is { } snapshot ? snapshot.EditedAt(x, z) : depths.ContainsKey(World.CellKey(x, z));
 
+    // The dug depth and building-cleared state of a cell, for checks shared with the server
+    // (FireGround: the fire-spot ghost, ui-30).
+    public short DepthAt(int x, int z) => Depth(x, z);
+    public bool ClearedAt(int x, int z) => IsCleared(x, z);
+
     short Depth(int x, int z) =>
         building is { } snapshot ? snapshot.DepthAt(x, z) : depths.TryGetValue(World.CellKey(x, z), out var d) ? d : (short)0;
 
@@ -331,8 +342,6 @@ public partial class Terrain : Node3D
         // Each instance: transform, color, and custom data saying when it started to
         // go away (or come back) on a cell that was just cleared.
         var trunks = new List<(Transform3D, Color, Color)>();
-        var leafy = new List<(Transform3D, Color, Color)>();
-        var pines = new List<(Transform3D, Color, Color)>();
         // Grass tufts only in the chunks near the player (WantsTufts).
         var tufts = data.Tufts ? new List<(Transform3D, Color, Color)>() : null;
         var ferns = new List<(Transform3D, Color, Color)>();
@@ -341,10 +350,14 @@ public partial class Terrain : Node3D
         var bushes = new List<(Transform3D, Color, Color)>();
         var landmarks = new LandmarkProps.Lists();
         var painted = new Dictionary<(bool Pine, int Variant), List<(Transform3D, Color, Color)>>();
+        // Painted crowns on trunks of their own (birches, the landmark giants).
+        var crowns = new Dictionary<(bool Pine, int Variant), List<(Transform3D, Color, Color)>>();
         for (int v = 0; v < PaintedTrees.Variants; v++)
         {
             painted[(true, v)] = new();
             painted[(false, v)] = new();
+            crowns[(true, v)] = new();
+            crowns[(false, v)] = new();
         }
 
         int n = World.ChunkSize;
@@ -417,10 +430,10 @@ public partial class Terrain : Node3D
                     {
                         // Birch and alder by the water: slim, pale and light-leaved. Modeling's
                         // birch trunk is already slim, so only the canopy is narrowed.
-                        var slim = at.ScaledLocal(new Vector3(0.6f, 1.1f, 0.6f));
                         landmarks.Put(PropMeshes.Birch(Variant(x, z, 25, PropMeshes.BirchVariants)), Painted.Bark,
                             (at.ScaledLocal(new Vector3(1f, 1.1f, 1f)), Colors.White.Darkened(Hash01(x, z, 24) * 0.12f), custom));
-                        leafy.Add((slim, Look.LeafLight.Lerp(Look.Leaf, Hash01(x, z, 18) * 0.3f), custom with { A = SeasonBroadleaf }));
+                        // The painted broadleaf crown, a lighter, yellower green than the forest's.
+                        crowns[(false, TreeVariant(x, z, 30))].Add((BirchCrown(at), BirchLeaf.Darkened(Hash01(x, z, 18) * 0.1f), custom with { A = SeasonBroadleaf }));
                     }
                     else if (heath > 0.5f && roll < tree)
                     {
@@ -538,11 +551,21 @@ public partial class Terrain : Node3D
             }
 
         trunks.AddRange(landmarks.Trunks);
-        leafy.AddRange(landmarks.Leafy);
-        pines.AddRange(landmarks.Pines);
         data.Add(trunkMesh!, trunks, Painted.Bark);
-        data.Add(leafyMesh!, leafy, Painted.Leaves);
-        data.Add(pineMesh!, pines, Painted.Leaves);
+        // The landmark giants' crowns, painted (Justin: "trees that didn't get painted"). Their
+        // colours are kept as a tint relative to the plain leaf and pine greens.
+        static Color Relative(Color c, Color to) => new(c.R / to.R, c.G / to.G, c.B / to.B);
+        static int Pick(Transform3D at) => (int)(Mathf.Abs(at.Origin.X * 7.3f + at.Origin.Z * 13.1f)) % PaintedTrees.Variants;
+        foreach (var (at, color, c) in landmarks.Leafy)
+            crowns[(false, Pick(at))].Add((at, Relative(color, Look.Leaf), c));
+        foreach (var (at, color, c) in landmarks.Pines)
+            crowns[(true, Pick(at))].Add((at, Relative(color, Look.Pine), c));
+        foreach (var ((pine, v), items) in crowns)
+        {
+            var material = pine ? PaintedTrees.PineMaterial : PaintedTrees.BroadleafMaterial;
+            data.Add(pine ? PaintedTrees.PineCrown(v, false) : PaintedTrees.BroadleafCrown(v, false), items, material, range: (0f, PaintedTrees.NearRange));
+            data.Add(pine ? PaintedTrees.PineCrown(v, true) : PaintedTrees.BroadleafCrown(v, true), items, material, range: (PaintedTrees.NearRange, 0f));
+        }
         // Painted trees in full near the camera and as a lighter far version beyond.
         foreach (var ((pine, v), items) in painted)
         {
