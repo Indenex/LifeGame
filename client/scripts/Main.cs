@@ -42,6 +42,7 @@ public partial class Main : Node3D
     readonly Dictionary<uint, Avatar> others = new();
     readonly GroundItems items = new();
     readonly Woodcutting woodcutting = new();
+    TreeFall treeFall = null!;
     readonly Dictionary<uint, string> names = new();
     BuildingSystem building = null!;
 
@@ -53,6 +54,7 @@ public partial class Main : Node3D
     readonly EquipmentPanel equipment = new();
     readonly StationPanel station = new();
     readonly BuildMenu buildMenu = new();
+    readonly MarkPicker markPicker = new();
     readonly Placing placing = new();
     readonly LookPicker lookPicker = new();
     bool spawned;
@@ -67,6 +69,9 @@ public partial class Main : Node3D
 
     public override void _Ready()
     {
+        // First, so it sees every window built after it (the --warm prototype, D-313).
+        AddChild(new WarmLook());
+        AddChild(new Bounce());
         SetupInput();
         SetupView();
         SetupEnvironment();
@@ -90,6 +95,8 @@ public partial class Main : Node3D
         // Setting crafted things down (ui-16): from the bag, a hotbar key or the after-craft prompt.
         placing.Terrain = terrain;
         placing.Me = me;
+        // Fires go where you choose (ui-30); the ring turns amber where the server would say no.
+        crafting.PickSpot = (label, min, picked) => placing.PickSpot(label, min, picked, FireSpotProblem);
         placing.CameraRig = cameraRig;
         placing.View = view;
         placing.Note = hud.Note;
@@ -97,7 +104,11 @@ public partial class Main : Node3D
         HotbarBar.Placeable = item => Items.IsKnown((ushort)item) && Items.Def(item).Placeable;
         hud.Hotbar.PlaceRequested += placing.StartItem;
         AddChild(placing);
+        // The maker's mark (ui-23): chosen from Options, shown on made things' tooltips.
+        BagGrid.Makers = markPicker.Link;
+        AddChild(markPicker);
         AddChild(woodcutting);
+        AddChild(treeFall = new TreeFall(terrain));
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
@@ -154,7 +165,10 @@ public partial class Main : Node3D
         // Choosing how you look (ui-21): opens by itself at first join, and from Options.
         lookPicker.Conn = () => conn;
         lookPicker.MyId = () => myId;
+        lookPicker.Note = hud.Note;
         AddChild(lookPicker);
+        // The sundial's time-of-day arc (ui-32); Has comes from House building's building-18 flag.
+        AddChild(new SundialArc { TimeOfDay = () => atmosphere.TimeOfDay });
         JournalPanel? journalPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
@@ -163,9 +177,10 @@ public partial class Main : Node3D
             || equipment.IsOpen
             || station.IsOpen
             || buildMenu.IsOpen
-            || lookPicker.IsOpen;
+            || markPicker.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
-        herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning;
+        // A click with food, drink, clothes or a placeable in hand uses it instead of striking (ui-36).
+        herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning || hud.Hotbar.ClickUsesHeld;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
@@ -176,11 +191,26 @@ public partial class Main : Node3D
         var keyHelp = new KeyHelp();
         AddChild(keyHelp);
         // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.
-        var menu = new PauseMenu { Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || admin.IsOpen || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
+        var menu = new PauseMenu { Unstuck = RequestUnstuck, Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || admin.IsOpen || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
         AddChild(menu);
         // First child, so Esc reaches it only after every lane panel had its turn.
         MoveChild(menu, 0);
-        AddChild(new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing });
+        // ui-35: a right click that doesn't drag opens the player menu on whoever is under it.
+        var playerMenu = new PlayerMenu
+        {
+            Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning || social.Typing,
+            PlayerAt = point => PlayerMenuFacts.At(point, cameraRig.Camera, view.Size, GetViewport().GetVisibleRect().Size, me.Position,
+                others.Select(o => (o.Key, (Node3D)o.Value))),
+            Facts = id => conn == null ? null : PlayerMenuFacts.Read(conn, myId, id, me.Position, trade.Link.Incoming?.id ?? 0),
+            AskTrade = id => conn?.Reducers.AskTrade(id),
+            AnswerTrade = yes => trade.Link.Answer(yes),
+            InviteToTown = id => conn?.Reducers.InviteToTown(id),
+            OpenChat = social.OpenChat,
+        };
+        AddChild(playerMenu);
+        var cameraDrag = new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing };
+        cameraDrag.Clicked += playerMenu.Clicked;
+        AddChild(cameraDrag);
         RegisterUse();
         cameraRig.Camera.MakeCurrent();
         if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
@@ -349,12 +379,13 @@ public partial class Main : Node3D
 
     // --- Networking -------------------------------------------------------
 
-    void Connect()
+    void Connect(bool useToken = true)
     {
         string server = Arg("server") ?? OS.GetEnvironment("LIFEGAME_SERVER");
         if (string.IsNullOrEmpty(server)) server = "http://127.0.0.1:3000";
         string db = Arg("db") ?? OS.GetEnvironment("LIFEGAME_DB");
         if (string.IsNullOrEmpty(db)) db = "lifegame";
+        tokenServer = server;
 
         hud.SetStatus("Connecting...");
         var builder = DbConnection.Builder()
@@ -362,12 +393,22 @@ public partial class Main : Node3D
             .WithDatabaseName(db)
             .WithCompression(Compression.Brotli)
             .OnConnect(OnConnected)
-            .OnConnectError(e => CallDeferred(nameof(GoOffline), e.Message))
+            .OnConnectError(e => CallDeferred(nameof(ConnectFailed), e.Message, sentToken))
             .OnDisconnect((_, e) => CallDeferred(nameof(GoOffline), e?.Message ?? "disconnected"));
-        string? token = LoadToken();
+        string? token = useToken ? LoadToken() : null;
+        sentToken = token != null;
         if (token != null) builder = builder.WithToken(token);
         conn = builder.Build();
         journal.Attach(conn, () => me.Position, terrain.HeightAt, hud.Note);
+        // A maker's mark carries 16 bits of the maker's id; this finds their name (ceramics-15).
+        ItemLook.MakerName = id => conn.Db.Player.Iter().FirstOrDefault(p => (p.PlayerId & 0xFFFFu) == id)?.Name;
+        ClayLook.MarkLookup = id =>
+        {
+            var m = conn.Db.PlayerMark.Iter().FirstOrDefault(r => (r.PlayerId & 0xFFFFu) == id);
+            int slot = m == null ? -1 : MakerStamp.SlotOf(m.Glyph);
+            if (m == null || slot < 0) return null;
+            return (slot, new Color(((m.Color >> 16) & 0xFF) / 255f, ((m.Color >> 8) & 0xFF) / 255f, (m.Color & 0xFF) / 255f));
+        };
 
         conn.Db.Player.OnInsert += (_, p) => OnPlayer(p);
         conn.Db.Player.OnUpdate += (_, _, p) => OnPlayer(p);
@@ -390,19 +431,23 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         herd.Bind(conn, terrain, () => me.Position);
         jumpView.Attach(conn, id => others.GetValueOrDefault(id), () => myId);
-        conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
+        conn.OnUnhandledReducerError += (_, e) => { Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
+        Use.Busy = () => crafting.Working;
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
         admin.Attach(conn);
         equipment.Attach(new ServerEquipLink(conn));
         hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
-        placing.Attach(new ServerPlaceLink(conn, crafting, terrain.HeightAt));
+        placing.Attach(new ServerPlaceLink(conn, crafting, terrain.HeightAt) { TakeInHand = hud.Hotbar.TakeInHand });
         equipment.Bag.Link = new ServerBagLink(conn);
+        markPicker.Attach(new ServerMarkLink(conn, () => myId));
+        BagGrid.Makers = markPicker.Link;
         buildMenu.Carried = item => conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
         woodcutting.Attach(conn, terrain, crafting);
+        treeFall.Attach(conn);
         clay.Attach(conn);
         building.Bind(conn);
         survival.Attach(conn);
@@ -414,12 +459,27 @@ public partial class Main : Node3D
         SaveToken(token);
         hud.SetStatus("Connected");
         ServerCheck.Warn = hud.Warn;
+        HookUnstuck(c);
         c.SubscriptionBuilder()
             .OnApplied(_ => { if (c.Db.ServerInfo.Id.Find(0) is { } info) ServerCheck.Compare(info.Build); })
             .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
             .Subscribe(new[] { "SELECT * FROM server_info" });
         SubscribeSelf();
         atmosphere.Connect(c);
+    }
+
+    // A refused token (401) came from some other server, say the host launcher's local world
+    // (bugfix-43): keep it as a .bak, tell the player calmly and join once more as a new visitor.
+    void ConnectFailed(string reason, bool hadToken)
+    {
+        if (hadToken && (reason.Contains("401") || reason.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase)))
+        {
+            RetireToken();
+            hud.Note("This server didn't know your saved key, so it was set aside. Joining fresh");
+            Connect(useToken: false);
+            return;
+        }
+        GoOffline(reason);
     }
 
     void GoOffline(string reason)
@@ -447,6 +507,18 @@ public partial class Main : Node3D
                 Subscribe(0, 0);
             })
             .Subscribe(Subscriptions.Self);
+    }
+
+    // Why a fire can't go at (x, z), or null: Crafting's shared ground rule (level, dry, clear of
+    // rocks and trunks) and the spacing from other fires and hearths, as the server checks them.
+    string? FireSpotProblem(float x, float z)
+    {
+        if (!FireGround.Clear(x, z, terrain.DepthAt, terrain.ClearedAt)) return "Not here: a fire wants level, dry ground clear of rocks and trees";
+        if (conn == null) return null;
+        bool near(float fx, float fz) => new Vector2(fx - x, fz - z).Length() < Fires.Spacing;
+        if (conn.Db.Fire.Iter().Any(f => near(f.X, f.Z)) || conn.Db.ColdHearth.Iter().Any(h => near(h.X, h.Z)))
+            return "Too close to another fire";
+        return null;
     }
 
     PlayerPos? MyPos() =>
@@ -486,7 +558,7 @@ public partial class Main : Node3D
         {
             myId = p.PlayerId;
             if (conn?.Db.PlayerLook.PlayerId.Find(p.PlayerId) is { } chosen)
-                me.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard));
+                me.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard, chosen.Race));
             else me.SetLook(p.PlayerId);
         }
         if (others.TryGetValue(p.PlayerId, out var avatar))
@@ -499,7 +571,7 @@ public partial class Main : Node3D
     // A player's chosen look (model-3): applied to their avatar over the id default.
     void OnPlayerLook(PlayerLook l)
     {
-        var look = HumanFigure.Appearance.From(l.Skin, l.Hair, l.Cut, l.Beard);
+        var look = HumanFigure.Appearance.From(l.Skin, l.Hair, l.Cut, l.Beard, l.Race);
         if (myId != 0 && l.PlayerId == myId || (myId == 0 && IsMine(l.PlayerId))) me.SetLook(look);
         else if (others.TryGetValue(l.PlayerId, out var avatar)) avatar.SetLook(look);
     }
@@ -521,7 +593,7 @@ public partial class Main : Node3D
         {
             avatar = new Avatar(names.GetValueOrDefault(p.PlayerId, "Wanderer")) { Remote = true, Position = at };
             if (conn?.Db.PlayerLook.PlayerId.Find(p.PlayerId) is { } chosen)
-                avatar.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard));
+                avatar.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard, chosen.Race));
             else avatar.SetLook(p.PlayerId);
             others[p.PlayerId] = avatar;
             view.AddChild(avatar);
@@ -564,7 +636,7 @@ public partial class Main : Node3D
         if (items.Has(item.Id)) return;
         float yaw = item.Placed ? item.Yaw : Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
         var at = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
-        items.Add(item.Id, (Item)item.Item, new Transform3D(new Basis(Vector3.Up, yaw), at));
+        items.Add(item.Id, (Item)item.Item, new Transform3D(new Basis(Vector3.Up, yaw), at), item.Wear);
     }
 
     void RemoveItem(ulong id) => items.Remove(id);
@@ -586,15 +658,33 @@ public partial class Main : Node3D
             if (mb.ButtonIndex == MouseButton.WheelUp) cameraRig.Zoom(-2f);
             if (mb.ButtonIndex == MouseButton.WheelDown) cameraRig.Zoom(2f);
         }
-        if (e.IsActionPressed("dig")) Dig();
-        if (e.IsActionPressed("pick_up")) PickUp();
+        if (e.IsActionPressed("dig") && !e.IsEcho()) { digHold.Pressed(me.Position); Dig(); }
+        if (e.IsActionPressed("pick_up") && !e.IsEcho()) { pickHold.Pressed(me.Position); PickUp(); }
         if (e.IsActionPressed("craft")) crafting.Toggle();
     }
+
+    // Hold the dig key to keep digging, one cell at a time as the ground allows (HoldRepeat).
+    readonly HoldRepeat digHold = new();
+    // The same for picking things up off the ground with the Use key when nothing else is on offer.
+    readonly HoldRepeat pickHold = new();
 
     public override void _Process(double delta)
     {
         float dt = (float)delta;
         conn?.FrameTick();
+        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput && !admin.IsOpen
+            && digHold.Update(Input.IsActionPressed("dig"), dt, World.DigCooldownMicros / 1_000_000f + 0.1f, false, me.Position))
+        {
+            digHold.Acted(me.Position);
+            Dig();
+        }
+        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput && !admin.IsOpen
+            && pickHold.Update(Input.IsActionPressed("pick_up") && Use.Shown == null, dt, 0.5f, false, me.Position)
+            && conn != null && conn.Db.WorldItem.Iter().Any(i => new Vector2(i.X - me.Position.X, i.Z - me.Position.Z).Length() <= World.Reach))
+        {
+            pickHold.Acted(me.Position);
+            PickUp();
+        }
 
         if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput && !admin.IsOpen) Walk(dt);
         jumpView.Process(dt, atmosphere.GroundAt);
@@ -625,7 +715,9 @@ public partial class Main : Node3D
 
     void Walk(float dt)
     {
-        var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
+        // No walking while typing in any text box you can see (chat, a name, a search).
+        bool typing = social.Typing || GetViewport().GuiGetFocusOwner() is LineEdit { } box && box.IsVisibleInTree();
+        var input = typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
         if (flying) { Fly(dt, input); return; }
         bool sneak = Input.IsActionPressed(NSneak);
         float wading = Wading.SpeedFactor(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z)), SwimmingRank());
@@ -634,7 +726,7 @@ public partial class Main : Node3D
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
         // Jump (bugfix-25): a hop keeps its takeoff direction, and the server tells the others.
-        if (!social.Typing && Input.IsActionJustPressed(NJump) && jump.CanStart(sneak) && !Wading.Floating(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z))) && survival.TrySpendStamina(Stamina.JumpCost))
+        if (!typing && Input.IsActionJustPressed(NJump) && jump.CanStart(sneak) && !Wading.Floating(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z))) && survival.TrySpendStamina(Stamina.JumpCost))
         {
             jump.Start(velocity);
             conn?.Reducers.Jump();
@@ -743,23 +835,51 @@ public partial class Main : Node3D
         return null;
     }
 
-    // One identity per install, so you keep your character between sessions. It lives in the
-    // Godot user folder (outside the launcher's game folder), so reinstalling the game keeps it.
-    static string TokenPath => Arg("profile") is { } p ? $"user://token_{p}.txt" : "user://token.txt";
+    // One identity per install and server, so you keep your character between sessions. It lives in
+    // the Godot user folder (outside the launcher's game folder), so reinstalling the game keeps it.
+    // Tokens are per server (bugfix-43): one issued by another SpacetimeDB server is refused with 401.
+    static string tokenServer = "http://127.0.0.1:3000";
+    bool sentToken;
+
+    static string Profile => Arg("profile") is { } p ? $"_{p}" : "";
+    static string LegacyTokenPath => $"user://token{Profile}.txt";
+
+    static string TokenPath
+    {
+        get
+        {
+            var uri = Uri.TryCreate(tokenServer, UriKind.Absolute, out var u) ? u : new Uri("http://127.0.0.1:3000");
+            string host = new string(uri.Host.Select(c => char.IsLetterOrDigit(c) || c == '-' ? c : '-').ToArray());
+            return $"user://token_{host}_{uri.Port}{Profile}.txt";
+        }
+    }
 
     static string? LoadToken()
     {
-        if (!FileAccess.FileExists(TokenPath)) return null;
-        using var file = FileAccess.Open(TokenPath, FileAccess.ModeFlags.Read);
+        // An install from before per-server tokens has one token.txt: try it once on first run.
+        string path = FileAccess.FileExists(TokenPath) ? TokenPath : LegacyTokenPath;
+        if (!FileAccess.FileExists(path)) return null;
+        using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
         var token = file.GetAsText().Trim();
         return token.Length > 0 ? token : null;
+    }
+
+    // Sets the token this server refused aside as .bak, and forgets the old shared one for it.
+    static void RetireToken()
+    {
+        string path = FileAccess.FileExists(TokenPath) ? TokenPath : LegacyTokenPath;
+        if (!FileAccess.FileExists(path)) return;
+        using (var file = FileAccess.Open(path, FileAccess.ModeFlags.Read))
+        using (var bak = FileAccess.Open(TokenPath + ".bak", FileAccess.ModeFlags.Write))
+            bak.StoreString(file.GetAsText());
+        if (path == TokenPath) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));
     }
 
     static void SaveToken(string token)
     {
         // A different token from the one on disk (server wiped, key changed) keeps the old one as
         // a .bak, so a character is never lost for good by an overwrite.
-        if (LoadToken() is { } old && old != token)
+        if (FileAccess.FileExists(TokenPath) && LoadToken() is { } old && old != token)
         {
             using var bak = FileAccess.Open(TokenPath + ".bak", FileAccess.ModeFlags.Write);
             bak.StoreString(old);

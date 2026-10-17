@@ -181,7 +181,7 @@ public partial class Herd : Node3D
         }
         if (nearest == null) return null;
         ulong id = nearest.Id;
-        return new UseOffer("Butcher", best, () => conn.Reducers.ButcherCarcass(id));
+        return new UseOffer("Butcher", best, () => conn.Reducers.ButcherCarcass(id), Again: Use.HoldInterval);
     }
 
     static float DistanceTo(Animal a, Vector3 at) => new Vector2(a.X - at.X, a.Z - at.Z).Length();
@@ -200,7 +200,7 @@ public partial class Herd : Node3D
         }
         if (nearest == null) return null;
         ulong id = nearest.Id;
-        return new UseOffer("Shear", best, () => conn.Reducers.ShearSheep(id));
+        return new UseOffer("Shear", best, () => conn.Reducers.ShearSheep(id), Again: Use.HoldInterval);
     }
 
     // A hen in reach that is holding an egg.
@@ -217,7 +217,7 @@ public partial class Herd : Node3D
         }
         if (nearest == null) return null;
         ulong id = nearest.Id;
-        return new UseOffer("Take eggs", best, () => conn.Reducers.CollectEggs(id));
+        return new UseOffer("Take eggs", best, () => conn.Reducers.CollectEggs(id), Again: Use.HoldInterval);
     }
 
     // A finished hen coop covers this spot (roosting hens are drawn inside it).

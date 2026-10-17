@@ -138,9 +138,17 @@ public static partial class Module
     // House building asks this before placing or taking down a structure.
     static partial void CheckClaimAccess(ReducerContext ctx, float x, float z) => RequireClaimAccess(ctx, x, z);
 
-    public static bool HasClaimRights(ReducerContext ctx, Claim claim, Identity who)
+    // Builder rights on a claim: its owner, its members, and (claims-19) anyone who signed
+    // the same town roster as the claim. Building, digging, picking up, gates and the like.
+    public static bool HasClaimRights(ReducerContext ctx, Claim claim, Identity who) =>
+        !BannedFromClaim(ctx, claim, who) && (IsOwnerOrMember(ctx, claim, who) || IsTownmate(ctx, claim, who));
+
+    // The inner circle only: the owner and the members the owner added. Stashes, tending the
+    // marker and similar stay with them, not with the town.
+    public static bool IsOwnerOrMember(ReducerContext ctx, Claim claim, Identity who)
     {
         if (claim.Owner == who) return true;
+        if (BannedFromClaim(ctx, claim, who)) return false;
         foreach (var m in ctx.Db.ClaimMember.ClaimId.Filter(claim.Id))
             if (m.Member == who) return true;
         return false;
@@ -153,7 +161,8 @@ public static partial class Module
         if (ClaimAt(ctx, x, z) is not { } claim) return;
         if (!HasClaimRights(ctx, claim, ctx.Sender))
             throw new Exception($"This land is claimed by {claim.OwnerName}");
-        TendByWork(ctx, claim);
+        // Working a neighbour's land under a town roster does not keep their claim standing.
+        if (IsOwnerOrMember(ctx, claim, ctx.Sender)) TendByWork(ctx, claim);
     }
 
     // claims-5: owners and members keep their claim standing just by working on it.
@@ -274,7 +283,7 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         var claim = RequireStandingClaim(ctx, claimId);
-        if (!HasClaimRights(ctx, claim, ctx.Sender))
+        if (!IsOwnerOrMember(ctx, claim, ctx.Sender))
             throw new Exception("Only the owner and members can tend this marker");
         RequireNearMarker(ctx, player, claim);
 
@@ -324,7 +333,7 @@ public static partial class Module
     static void AddMember(ReducerContext ctx, Claim claim, Player who)
     {
         if (who.Identity == ctx.Sender) throw new Exception("You already own this claim");
-        if (HasClaimRights(ctx, claim, who.Identity)) throw new Exception($"{who.Name} is already a member");
+        if (IsOwnerOrMember(ctx, claim, who.Identity)) throw new Exception($"{who.Name} is already a member");
         ctx.Db.ClaimMember.Insert(new ClaimMember { Id = 0, ClaimId = claim.Id, Member = who.Identity, PlayerId = who.PlayerId, Name = who.Name });
 
         // A calm line by the marker, and where the new member stands if that's elsewhere.
@@ -458,6 +467,7 @@ public static partial class Module
             ctx.Db.ClaimMember.Id.Delete(m.Id);
         RemoveClaimName(ctx, claim.Id);
         RemoveStashLog(ctx, claim.Id);
+        TownDropClaim(ctx, claim);
         ctx.Db.Claim.Id.Delete(claim.Id);
         // The marker post goes with it; what was built into it is not given back.
         if (ctx.Db.Structure.Id.Find(claim.StructureId) is { } marker)
@@ -493,7 +503,7 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         var claim = RequireStandingClaim(ctx, claimId);
-        if (!HasClaimRights(ctx, claim, ctx.Sender)) throw new Exception("This stash is not yours to open");
+        if (!IsOwnerOrMember(ctx, claim, ctx.Sender)) throw new Exception("This stash is not yours to open");
         RequireNearMarker(ctx, player, claim);
         return claim;
     }

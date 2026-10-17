@@ -55,6 +55,9 @@ namespace LifeGame.Shared
         // Roof tiles (ceramics-10): shaped at the bench, kiln-fired only; House building roofs with them.
         UnfiredRoofTile = 120,
         RoofTile = 121,
+        // A big fired basin set down to hold water (ceramics-13).
+        UnfiredClayTrough = 122,
+        ClayTrough = 123,
 
         // House building, 130-159.
         SleepingMat = 130,
@@ -177,15 +180,15 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Potsherd, Name = "Potsherd", Plural = "Potsherds" },
             new ItemDef { Id = Item.Grog, Name = "Grog", Plural = "Grog" },
             new ItemDef { Id = Item.PinchPot, Name = "Pinch pot", Plural = "Pinch pots", HasQuality = true, Placeable = true },
-            new ItemDef { Id = Item.CoilPot, Name = "Coil pot", Plural = "Coil pots", HasQuality = true, Placeable = true },
+            new ItemDef { Id = Item.CoilPot, Name = "Clay pot", Plural = "Clay pots", HasQuality = true, Placeable = true },
             new ItemDef { Id = Item.Waterskin, Name = "Waterskin", Plural = "Waterskins", HasQuality = true },
             new ItemDef { Id = Item.WaterskinOfWater, Name = "Waterskin of water", Plural = "Waterskins of water", HasQuality = true, Use = UseAction.Drink },
             new ItemDef { Id = Item.PinchPotOfWater, Name = "Pinch pot of water", Plural = "Pinch pots of water", HasQuality = true, Use = UseAction.Drink },
-            new ItemDef { Id = Item.CoilPotOfWater, Name = "Coil pot of water", Plural = "Coil pots of water", HasQuality = true, Use = UseAction.Drink },
+            new ItemDef { Id = Item.CoilPotOfWater, Name = "Clay pot of water", Plural = "Clay pots of water", HasQuality = true, Use = UseAction.Drink },
             new ItemDef { Id = Item.Brick, Name = "Sun-dried brick", Plural = "Sun-dried bricks", Placeable = true },
             new ItemDef { Id = Item.Daub, Name = "Daub", Plural = "Daub" },
             new ItemDef { Id = Item.UnfiredPinchPot, Name = "Unfired pinch pot", Plural = "Unfired pinch pots", HasQuality = true },
-            new ItemDef { Id = Item.UnfiredCoilPot, Name = "Unfired coil pot", Plural = "Unfired coil pots", HasQuality = true },
+            new ItemDef { Id = Item.UnfiredCoilPot, Name = "Unfired clay pot", Plural = "Unfired clay pots", HasQuality = true },
             new ItemDef { Id = Item.UnfiredStorageJar, Name = "Unfired storage jar", Plural = "Unfired storage jars", HasQuality = true },
             new ItemDef { Id = Item.StorageJar, Name = "Storage jar", Plural = "Storage jars", HasQuality = true, Placeable = true },
             new ItemDef { Id = Item.PotOfBroth, Name = "Pot of berry broth", Plural = "Pots of berry broth", HasQuality = true, Use = UseAction.Eat },
@@ -194,6 +197,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.ClayLamp, Name = "Clay lamp", Plural = "Clay lamps", HasQuality = true },
             new ItemDef { Id = Item.UnfiredRoofTile, Name = "Unfired roof tile", Plural = "Unfired roof tiles", HasQuality = true },
             new ItemDef { Id = Item.RoofTile, Name = "Roof tile", Plural = "Roof tiles", HasQuality = true },
+            new ItemDef { Id = Item.UnfiredClayTrough, Name = "Unfired clay trough", Plural = "Unfired clay troughs", HasQuality = true },
+            new ItemDef { Id = Item.ClayTrough, Name = "Clay trough", Plural = "Clay troughs", HasQuality = true },
             new ItemDef { Id = Item.Tallow, Name = "Tallow", Plural = "Tallow" },
             new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true, Wears = true, RepairCost = Lashing, Use = UseAction.Tool },
             new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true, Wears = true, RepairNeedsTool = ItemTags.Cutting, Use = UseAction.Tool },

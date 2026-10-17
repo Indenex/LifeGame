@@ -208,9 +208,9 @@ public partial class BuildingSystem : Node
 
         int appeared = v.Show(s.Stage, Fraction(s), s.Complete, animate: existed || fresh);
         // A finished claim marker is drawn by client/scripts/social, which weathers it.
-        v.Visible = !(s.Complete && s.Kind == StructureKind.ClaimMarker);
+        v.Visible = !(s.Complete && Structures.Shape((int)s.Kind).Model == "ClaimMarker");
         if (appeared > 0 && (existed || fresh))
-            Puff(v.Position + Vector3.Up * 0.6f, s.Stage >= 3 || s.Kind == StructureKind.ClayHut && s.Stage == 2 ? Look.LeafWarm : Look.DugEarth);
+            Puff(v.Position + Vector3.Up * 0.6f, s.Stage >= 3 || Structures.Shape((int)s.Kind).Hut && s.Stage == 2 ? Look.LeafWarm : Look.DugEarth);
 
         if (existed && !before!.Complete && s.Complete && me.Position.DistanceTo(v.Position) < 30f)
             hud.Note($"The {ShapeOf(s).Name.ToLowerInvariant()} is finished");
@@ -244,10 +244,10 @@ public partial class BuildingSystem : Node
         for (int x = cx - r; x <= cx + r; x++)
             for (int z = cz - r; z <= cz + r; z++)
             {
-                if (!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, 0.4f)) continue;
+                if (!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, 0.4f + ShapeOf(s).ClearExtra)) continue;
                 long key = World.CellKey(x, z);
                 if (on) cleared.Add(key);
-                else if (!rows.Values.Any(o => Structures.Contains((int)o.Kind, o.X, o.Z, o.Yaw, x, z, 0.4f))) cleared.Remove(key);
+                else if (!rows.Values.Any(o => Structures.Contains((int)o.Kind, o.X, o.Z, o.Yaw, x, z, 0.4f + ShapeOf(o).ClearExtra))) cleared.Remove(key);
                 terrain.Refresh(x, z);
             }
     }
@@ -284,12 +284,12 @@ public partial class BuildingSystem : Node
                 to = HouseWalls(s, from, to);
                 continue;
             }
-            if (s.Kind == StructureKind.LeanTo)
+            if (shape.Model == "LeanTo")
             {
                 to = LeanToWalls(s, shape, from, to);
                 continue;
             }
-            if (s.Kind != StructureKind.ClayHut || (!s.Complete && s.Stage < 1)) continue;
+            if (!shape.Hut || (!s.Complete && s.Stage < 1)) continue;
             float wall = Structures.HutWallRadiusFor((int)s.Kind);
             const float half = 0.32f, door = 0.42f;
             var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
@@ -386,7 +386,7 @@ public partial class BuildingSystem : Node
         }
         else if (e.IsActionPressed("build_next"))
         {
-            placeKind = (placeKind + 1) % Structures.Shapes.Length;
+            placeKind = Structures.Kinds[(System.Array.IndexOf(Structures.Kinds, placeKind) + 1) % Structures.Kinds.Length];
             MakeGhost();
             GetViewport().SetInputAsHandled();
         }
@@ -405,7 +405,7 @@ public partial class BuildingSystem : Node
     // Starts placing a particular kind (the picture build menu, ui-20); B still starts with the last one.
     public void StartPlacing(int kind)
     {
-        if (kind < 0 || kind >= Structures.Shapes.Length) return;
+        if (!Structures.Exists(kind)) return;
         placeKind = kind;
         StartPlacing();
     }
@@ -450,7 +450,9 @@ public partial class BuildingSystem : Node
         }
         c.Reducers.PlaceStructure((StructureKind)placeKind, ghostPos.X, ghostPos.Z, ghostYawTarget);
         Sfx.Play(Cue.Place);
-        StopPlacing();
+        // Shift keeps the ghost up for another of the same kind (fences, walls, houses in a row).
+        if (Input.IsKeyPressed(Key.Shift)) MakeGhost();
+        else StopPlacing();
     }
 
     // --- Frame loop -------------------------------------------------------
@@ -636,7 +638,7 @@ public partial class BuildingSystem : Node
         {
             var shape = Structures.Shape(placeKind);
             string name = shape.Name.ToLowerInvariant();
-            text = $"Lay out {("aeiou".Contains(name[0]) ? "an" : "a")} {name}    Tab change    T turn    click to place    Esc cancel";
+            text = $"Lay out {("aeiou".Contains(name[0]) ? "an" : "a")} {name}    Tab change    T turn    click to place    Shift keeps placing    Esc cancel";
             if (placeProblem != null) text += $"\n{placeProblem}";
             else text += $"\nNeeds {StageList(placeKind)}";
         }
@@ -664,7 +666,7 @@ public partial class BuildingSystem : Node
 
     // What each stage takes, in order: "4 sticks, then 3 plant fiber, then ...".
     static string StageList(int kind) =>
-        string.Join(", then ", Structures.StageCosts[kind].Select(stage =>
+        string.Join(", then ", Structures.Costs(kind).Select(stage =>
             string.Join(" and ", stage.Select(c => $"{c.Count} {ItemName((ushort)c.Item, c.Count)}"))));
 
     static string ItemName(ushort item, uint count) =>

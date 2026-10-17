@@ -21,6 +21,7 @@ using LifeGame.Shared;
 using SpacetimeDB;
 using SpacetimeDB.Types;
 
+bool axeEquipped = false; // World tool actions need the tool equipped (crafting-29)
 string uri = args.Length > 0 ? args[0] : "http://127.0.0.1:3000";
 string db = args.Length > 1 ? args[1] : "lifegame";
 string? tokenPath = args.FirstOrDefault(a => a.StartsWith("--token="))?[8..];
@@ -60,6 +61,8 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM basket_item",
                 "SELECT * FROM simmer_pot",
                 "SELECT * FROM lamp",
+                "SELECT * FROM trough_water",
+                "SELECT * FROM player_mark",
                 "SELECT * FROM animal",
                 "SELECT * FROM animal_carcass",
                 "SELECT * FROM forage_bush",
@@ -82,23 +85,14 @@ conn.Db.ClayNews.OnInsert += (_, n) =>
 Pump(() => subscribed, 20, "subscription");
 Pump(() => me is { } id && conn.Db.Player.Identity.Find(id) is not null, 10, "player row");
 myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;
+var ground = new BotGround(conn);
 var start = conn.Db.PlayerPos.PlayerId.Find(myId)!;
 float x = start.X, z = start.Z;
 
 // Every run begins from the same place (bugfix-31): new players wake at a random spot in the
 // spawn clearing, so walk to the origin first, at a pace the server accepts.
-for (var go = Stopwatch.StartNew(); go.Elapsed.TotalSeconds < 60; )
-{
-    float dx = -x, dz = -z, d = MathF.Sqrt(dx * dx + dz * dz);
-    if (d < 0.05f && conn.Db.PlayerPos.PlayerId.Find(myId) is { } at && MathF.Abs(at.X - x) + MathF.Abs(at.Z - z) < 0.1f) break;
-    if (d >= 0.05f && conn.Db.PlayerPos.PlayerId.Find(myId) is { } seen0 && MathF.Abs(seen0.X - x) + MathF.Abs(seen0.Z - z) < 1.5f)
-    {
-        float step = Math.Min(d, 0.5f);
-        x += dx / d * step; z += dz / d * step;
-    }
-    conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
-    Pump(() => false, 0.1f, null);
-}
+var walker = new BotWalker(conn, myId, "Clay check", "bot", ms => Pump(() => false, ms / 1000f, null), Fail);
+WalkTo(0f, 0f, 0.1f);
 
 if (goTo != null)
 {
@@ -116,14 +110,14 @@ Log($"Clay at {clayX}, {clayZ}; water at {waterX}, {waterZ}");
 // Stones: a hammer that is never used up, one for the hand axe, two for the
 // potter's bench and up to two for grit. Sticks and fiber: also the axe's haft and
 // cordage, and the claim marker.
-Gather(Item.Stone, 6);
+Gather(Item.Stone, jarRun ? 14u : 6u);
 Gather(Item.Stick, 10 + 1 + Social.MarkerSticks);
 Gather(Item.Fiber, (kilnRun ? 12u : 4u) + 3 + Social.MarkerFiber);
 
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);
 int cell = 0;
-uint clayWanted = jarRun ? 54u : kilnRun ? 38u : potRun ? 12u : lampRun ? (tallowRun ? 12u : 4u) : 12u;
+uint clayWanted = jarRun ? 70u : kilnRun ? 38u : potRun ? 17u : lampRun ? (tallowRun ? 12u : 4u) : 12u;
 while (CountOf(Item.Clay) < clayWanted)
 {
     int cx = clayX + cell % 5 - 2, cz = clayZ + cell / 5 % 5 - 2;
@@ -258,7 +252,7 @@ return 0;
 // dried in the open are loaded and fired in it.
 int KilnCheck()
 {
-    while (CountOf(Item.CleanClay) < (jarRun ? 27 : 19)) Craft("clay.clean", 0, Item.CleanClay);
+    while (CountOf(Item.CleanClay) < (jarRun ? 33 : 19)) Craft("clay.clean", 0, Item.CleanClay);
     Craft("clay.grit", 0, Item.Grit);
     Craft("clay.temper_grit", 0, Item.TemperedClay);
     if (jarRun)
@@ -267,6 +261,12 @@ int KilnCheck()
         Craft("clay.temper_grit", 0, Item.TemperedClay);
         Craft("clay.temper_grit", 0, Item.TemperedClay);
         Craft("clay.temper_grit", 0, Item.TemperedClay); // two more tempered clay, for a roof tile
+        // Six more tempered clay for a clay trough (ceramics-13): three batches, two more grit.
+        Craft("clay.grit", 0, Item.Grit);
+        Craft("clay.grit", 0, Item.Grit);
+        Craft("clay.temper_grit", 0, Item.TemperedClay);
+        Craft("clay.temper_grit", 0, Item.TemperedClay);
+        Craft("clay.temper_grit", 0, Item.TemperedClay);
     }
 
     // Two pots shaped at the bench, away from any fire, so picking them up doesn't fire them.
@@ -276,7 +276,7 @@ int KilnCheck()
     Craft("clay.daub", 0, Item.Daub);
     var kilnPots = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.PinchPot).Select(p => p.Id).ToList();
     if (kilnPots.Count != 2) Fail($"expected 2 pots drying, have {kilnPots.Count}");
-    ulong jarPiece = 0, tilePiece = 0;
+    ulong jarPiece = 0, tilePiece = 0, troughPiece = 0;
     if (jarRun)
     {
         AtBench();
@@ -289,12 +289,17 @@ int KilnCheck()
         tilePiece = conn.Db.ClayPiece.Iter().FirstOrDefault(p => p.MadeBy == myId && p.Form == (byte)ClayForm.Tile)?.Id ?? 0;
         if (tilePiece == 0) Fail("no roof tile drying");
         Log("STAGE tile-drying");
+        // And a clay trough (ceramics-13), kiln-fired only too.
+        Craft("clay.trough", 0.9f, null);
+        troughPiece = conn.Db.ClayPiece.Iter().FirstOrDefault(p => p.MadeBy == myId && p.Form == (byte)ClayForm.Trough)?.Id ?? 0;
+        if (troughPiece == 0) Fail("no clay trough drying");
+        Log("STAGE trough-drying");
     }
 
     // Eight bricks round a fire, where they dry twice as fast. Bricks need no bench;
     // the fire is well clear of the pots by the bench.
     LightFireNear(bench.X + 4f, bench.Z + 1.3f);
-    foreach (var id in kilnPots.Append(jarPiece).Append(tilePiece).Where(id => id != 0))
+    foreach (var id in kilnPots.Append(jarPiece).Append(tilePiece).Append(troughPiece).Where(id => id != 0))
         if (conn.Db.ClayPiece.Id.Find(id) is { } p && DistanceTo(p.X, p.Z, fire.X, fire.Z) <= ClayRules.FireReach + 0.5f)
             Fail("the brick fire is lit too close to the drying pots");
     KeepFireGoing();
@@ -352,7 +357,7 @@ int KilnCheck()
 
     // Wait for the pots, pick them up, load them.
     watch.Restart();
-    while (kilnPots.Append(jarPiece).Append(tilePiece).Where(id => id != 0).Any(id => MoistureOf(id) > ClayRules.SafeToFire))
+    while (kilnPots.Append(jarPiece).Append(tilePiece).Append(troughPiece).Where(id => id != 0).Any(id => MoistureOf(id) > ClayRules.SafeToFire))
     {
         if (watch.Elapsed > TimeSpan.FromMinutes(12)) Fail("pots never dried");
         Pump(() => false, 5, null);
@@ -382,6 +387,14 @@ int KilnCheck()
         Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(tilePiece) == null, 3, "picking up the dry tile");
         if (lastError != null) Fail($"picking up the tile: {lastError}");
         if (CountOf(Item.UnfiredRoofTile) != 1) Fail("expected an unfired roof tile");
+        // And the trough.
+        var trp = conn.Db.ClayPiece.Id.Find(troughPiece)!;
+        WalkTo(trp.X, trp.Z, 1.2f);
+        lastError = null;
+        conn.Reducers.TendClay(troughPiece, false);
+        Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(troughPiece) == null, 3, "picking up the dry trough");
+        if (lastError != null) Fail($"picking up the trough: {lastError}");
+        if (CountOf(Item.UnfiredClayTrough) != 1) Fail("expected an unfired clay trough");
     }
     foreach (var id in kilnPots)
     {
@@ -400,7 +413,7 @@ int KilnCheck()
     WalkTo(kiln.X, kiln.Z, 1.6f);
     lastError = null;
     conn.Reducers.UseKiln(kiln.Id);
-    int loadWanted = jarRun ? 4 : 2;
+    int loadWanted = jarRun ? 5 : 2;
     Pump(() => lastError != null || (conn.Db.Kiln.StructureId.Find(kiln.Id)?.Load?.Count ?? 0) == loadWanted, 3, "the kiln to be loaded");
     if (lastError != null) Fail($"loading: {lastError}");
     Log($"Loaded {loadWanted} pieces");
@@ -439,6 +452,7 @@ int KilnCheck()
         if (tile != null) Log("STAGE tile-fired");
     }
     if (jarRun) JarCheck(kiln);
+    if (jarRun) TroughCheck(kiln);
     Log("Kiln check passed: bricks to a kiln to kiln-fired pots");
     conn.Disconnect();
     return 0;
@@ -594,8 +608,10 @@ void HuntMutton()
         {
             // Short steps, so the sheep isn't startled.
             float dx = a.X - x, dz = a.Z - z, d = MathF.Sqrt(dx * dx + dz * dz);
+            float px = x, pz = z;
             x += dx / d * 0.15f;
             z += dz / d * 0.15f;
+            (x, z) = ground.Slide(px, pz, x, z);
             conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
             Pump(() => false, 0.1f, null);
             a = conn.Db.Animal.Id.Find(id);
@@ -603,6 +619,7 @@ void HuntMutton()
         }
         if (a == null) continue;
         lastError = null;
+        EquipAxe();
         conn.Reducers.StrikeAnimal(id);
         Pump(() => false, 1.1f, null);
         if (lastError != null && !lastError.Contains("Too far")) Fail($"striking the sheep: {lastError}");
@@ -610,6 +627,7 @@ void HuntMutton()
     var carcass = conn.Db.AnimalCarcass.Iter().First(c => c.AnimalId == id);
     WalkTo(carcass.X, carcass.Z, 1.5f);
     lastError = null;
+    EquipAxe();
     conn.Reducers.ButcherCarcass(carcass.Id);
     Pump(() => lastError != null || CountOf(Item.RawMutton) >= 2 || conn.Db.WorldItem.Iter().Count(w => w.Item == (ushort)Item.RawMutton) >= 3, 5, "the butchering");
     if (lastError != null) Fail($"butchering: {lastError}");
@@ -671,6 +689,108 @@ int TileCheck()
     return 0;
 }
 
+// The fired clay trough comes out of the kiln; set it down, pour a pot of water in, scoop
+// a pot back out, and have a drink (ceramics-13).
+void TroughCheck(Structure kiln)
+{
+    var trough = conn.Db.WorldItem.Iter().FirstOrDefault(w => w.Item == (ushort)Item.ClayTrough && DistanceTo(w.X, w.Z, kiln.X, kiln.Z) < 2.5f);
+    if (trough == null)
+    {
+        Log("The trough cracked in the kiln (2% chance); trough not checked this run");
+        return;
+    }
+    WalkTo(trough.X, trough.Z, 1.0f);
+    lastError = null;
+    conn.Reducers.PickUp(trough.Id);
+    Pump(() => lastError != null || CountOf(Item.ClayTrough) == 1, 3, "picking up the trough");
+    if (lastError != null) Fail($"picking up the fired trough: {lastError}");
+    Log($"Fired trough at quality {trough.Quality}");
+    Log("STAGE trough-fired");
+
+    var site = FindSite(StructureKind.ClayTrough, kiln.X + 3.5f, kiln.Z, 0f, (sx, sz) =>
+        DistanceTo(sx, sz, kiln.X, kiln.Z) >= 2.5f && DistanceTo(sx, sz, fire.X, fire.Z) >= 2f
+        && conn.Db.Structure.Iter().All(o => DistanceTo(sx, sz, o.X, o.Z) >= 2.5f)
+        && InMyClaim(sx, sz, 1f) && ClearGround(sx, sz, -1, 1, -1, 1)) ?? FailAt("no ground for the trough");
+    // Round the front of the kiln first: the server refuses steps through its walls (bugfix-27).
+    WalkTo(kiln.X, kiln.Z + 2.6f, 0.3f);
+    WalkTo(site.X - 1.4f, site.Z, 0.2f);
+    float tx = site.X, tz = site.Z;
+    lastError = null;
+    conn.Reducers.PlaceStructure(StructureKind.ClayTrough, tx, tz, 0f);
+    Pump(() => lastError != null || conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.ClayTrough && s.Owner == me), 5, "the trough site");
+    if (lastError != null) Fail($"placing the trough: {lastError}");
+    var placed = conn.Db.Structure.Iter().First(s => s.Kind == StructureKind.ClayTrough && s.Owner == me);
+    for (int i = 0; i < 10 && conn.Db.Structure.Id.Find(placed.Id) is { Complete: false }; i++)
+    {
+        lastError = null;
+        conn.Reducers.Build(placed.Id);
+        Pump(() => lastError != null || conn.Db.Structure.Id.Find(placed.Id) is { Complete: true }, 3, "the trough to be set down");
+        if (lastError == "Still working") { Pump(() => false, 0.5f, null); continue; }
+        if (lastError != null) Fail($"setting the trough down: {lastError}");
+    }
+    if (conn.Db.Structure.Id.Find(placed.Id) is not { Complete: true }) Fail("trough never set down");
+    if (CountOf(Item.ClayTrough) != 0) Fail("the trough is still in the bag");
+    int capacity = Structures.TroughLitres(conn.Db.StructureProgress.StructureId.Find(placed.Id)?.Quality ?? Items.RawQuality);
+    Log($"Trough set down; it holds {capacity} L");
+    Log("STAGE trough-placed");
+
+    // Pouring with no water pot is refused.
+    WalkTo(placed.X - 1.2f, placed.Z, 0.2f);
+    lastError = null;
+    conn.Reducers.PourIntoTrough(placed.Id);
+    Pump(() => lastError != null, 3, "pouring nothing to be refused");
+    if (lastError?.Contains("pot of water") != true) Fail($"pouring with no water: {lastError}");
+
+    // Fill a fired pot at the water, bring it back and pour it in.
+    var pinch = conn.Db.WorldItem.Iter().Where(w => w.Item == (ushort)Item.PinchPot && DistanceTo(w.X, w.Z, kiln.X, kiln.Z) < 3f).FirstOrDefault();
+    if (pinch == null) { Log("No fired pot by the kiln to carry water; pouring not checked this run"); return; }
+    Gather(Item.PinchPot, 1);
+    WalkTo(waterX, waterZ, 1.5f);
+    lastError = null;
+    conn.Reducers.FillPots();
+    Pump(() => lastError != null || CountOf(Item.PinchPotOfWater) == 1, 3, "a pot of water");
+    if (lastError != null) Fail($"filling a pot: {lastError}");
+    WalkTo(placed.X - 1.2f, placed.Z, 0.2f);
+    lastError = null;
+    conn.Reducers.PourIntoTrough(placed.Id);
+    Pump(() => lastError != null || conn.Db.TroughWater.StructureId.Find(placed.Id) is { Litres: 2 }, 3, "the trough to fill");
+    if (lastError != null) Fail($"pouring: {lastError}");
+    if (CountOf(Item.PinchPot) != 1 || CountOf(Item.PinchPotOfWater) != 0) Fail("the emptied pot did not come back");
+    Log("Poured a pot in: the trough holds 2 L");
+    Log("STAGE trough-poured");
+
+    // A drink: either a sip, or "not thirsty" if the bot is not.
+    // Actions share a short cooldown: wait it out, as a player would.
+    for (int tries = 0; tries < 6; tries++)
+    {
+        Pump(() => false, 1.0f, null);
+        lastError = null;
+        conn.Reducers.DrinkFromTrough(placed.Id);
+        Pump(() => lastError != null || conn.Db.TroughWater.StructureId.Find(placed.Id) is { Litres: 1 }, 3, "a drink");
+        if (lastError != "Still working") break;
+    }
+    if (lastError != null && !lastError.Contains("not thirsty")) Fail($"drinking: {lastError}");
+    int litres = (int)(conn.Db.TroughWater.StructureId.Find(placed.Id)?.Litres ?? 0);
+    Log(lastError != null ? $"Drink: {lastError}" : $"Drank a sip; {litres} L left");
+
+    // Scoop the empty pot full again from what's left (a pinch pot holds 2 L).
+    if (litres >= 2)
+    {
+        for (int tries = 0; tries < 6; tries++)
+        {
+            Pump(() => false, 1.0f, null);
+            lastError = null;
+            conn.Reducers.ScoopFromTrough(placed.Id);
+            Pump(() => lastError != null || CountOf(Item.PinchPotOfWater) == 1, 3, "a pot scooped full");
+            if (lastError != "Still working") break;
+        }
+        if (lastError != null) Fail($"scooping: {lastError}");
+        if ((conn.Db.TroughWater.StructureId.Find(placed.Id)?.Litres ?? 0) != litres - 2) Fail("the trough level did not drop by a pot");
+        Log("Scooped a pot back out");
+    }
+    Log("STAGE trough-done");
+}
+
 int PotCheck()
 {
     // Two coil pots, so one cracking in the pit (a chance) doesn't void the run.
@@ -681,11 +801,54 @@ int PotCheck()
 
     // Shaped at the bench, then a fire lit right beside them so they dry by it.
     AtBench();
+    // A first pot with no mark chosen carries no maker; then pick a mark (a bad glyph is refused).
+    lastError = null;
+    conn.Reducers.SetMark(9999, 0xFFFFFF);
+    Pump(() => lastError != null, 3, "a bad glyph to be refused");
+    if (lastError?.Contains("no such mark") != true) Fail($"a bad glyph: {lastError}");
+    lastError = null;
+    conn.Reducers.SetMark(Marks.All[17].Id, 0xFF00FF);   // neon magenta: clamped
+    Pump(() => lastError != null || conn.Db.PlayerMark.PlayerId.Find(myId) != null, 3, "the mark to be set");
+    if (lastError != null) Fail($"setting the mark: {lastError}");
+    var mine = conn.Db.PlayerMark.PlayerId.Find(myId)!;
+    if (mine.Color != Marks.ClampColor(0xFF00FF) || mine.Color == 0xFF00FF) Fail($"colour not clamped: {mine.Color:X}");
+    Log($"Mark: {Marks.Find(mine.Glyph)!.Name}, colour {mine.Color:X6} (clamped from FF00FF)");
     Craft("clay.coil_pot", 0.9f, null);
     Craft("clay.coil_pot", 0.9f, null);
     var coilPieces = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.CoilPot).ToList();
     var coils = coilPieces.Select(p => p.Id).ToList();
     if (coils.Count != 2) Fail($"expected 2 coil pots drying, have {coils.Count}");
+    // Each pot carries its maker's mark (ceramics-15): this player's id and the glyph worked out from it.
+    uint expectedMark = Marks.Pack(myId);
+    foreach (var cp in coilPieces)
+        if (cp.Mark != expectedMark) Fail($"coil pot mark {cp.Mark:X}, expected {expectedMark:X}");
+    Log($"Pots carry their maker, player {Marks.Maker(expectedMark)}");
+
+    // Slip round the rim (ceramics-14): a band count other than one or two is refused; both wet pots
+    // get two bands in a free colour that is clamped and snapped; each takes one clean clay; and the
+    // slip rides on the same number as the maker, so it must survive the fire, pick-up and filling.
+    while (CountOf(Item.CleanClay) < 2 && CountOf(Item.Clay) >= 2) Craft("clay.clean", 0, Item.CleanClay);
+    if (CountOf(Item.CleanClay) < 2) Log("Not enough clean clay for slip; slip not checked this run");
+    else
+    {
+        lastError = null;
+        conn.Reducers.SlipPiece(coils[0], 0x5E7A3A, 3);
+        Pump(() => lastError != null, 3, "three bands to be refused");
+        if (lastError?.Contains("one or two bands") != true) Fail($"three bands: {lastError}");
+        uint cleanBefore = CountOf(Item.CleanClay);
+        foreach (var id in coils)
+        {
+            lastError = null;
+            conn.Reducers.SlipPiece(id, 0x5E7A3A, 2);
+            Pump(() => lastError != null || Slip.Has(conn.Db.ClayPiece.Id.Find(id)!.Mark), 3, "slip on a wet pot");
+            if (lastError != null) Fail($"slipping a wet pot: {lastError}");
+        }
+        expectedMark = Slip.With(expectedMark, 0x5E7A3A, 2);
+        foreach (var id in coils)
+            if (conn.Db.ClayPiece.Id.Find(id)!.Mark != expectedMark) Fail($"slipped pot mark {conn.Db.ClayPiece.Id.Find(id)!.Mark:X}, expected {expectedMark:X}");
+        if (CountOf(Item.CleanClay) != cleanBefore - 2) Fail($"slip took {cleanBefore - CountOf(Item.CleanClay)} clean clay, expected 2");
+        Log($"Slip: two bands in {Slip.Color(expectedMark):X6} on both pots, maker kept ({Marks.Maker(expectedMark)}), 2 clean clay used");
+    }
     LightFireNear(coilPieces.Average(p => p.X) + 1.3f, coilPieces.Average(p => p.Z));
     if (coilPieces.Any(p => DistanceTo(p.X, p.Z, fire.X, fire.Z) > ClayRules.FireReach)) Fail("coil pot set down out of the fire's reach");
     KeepFireGoing();
@@ -721,12 +884,25 @@ int PotCheck()
         return 0;
     }
     Gather(Item.CoilPot, 1);
+    var firedRow = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.CoilPot);
+    if (firedRow.Wear != expectedMark) Fail($"the fired pot lost its mark: {firedRow.Wear:X}, expected {expectedMark:X}");
+    Log("The fired pot kept its mark (and slip) through the pit fire and the pick-up");
     WalkTo(waterX, waterZ, 1.5f);
     lastError = null;
     conn.Reducers.FillPots();
     Pump(() => lastError != null || CountOf(Item.CoilPotOfWater) > 0, 3, "a coil pot of water");
     if (lastError != null) Fail($"filling: {lastError}");
+    var filledRow = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.CoilPotOfWater);
+    if (filledRow.Wear != expectedMark) Fail($"the filled pot lost its mark: {filledRow.Wear:X}");
     Log("STAGE pot-of-water");
+
+    // Changing the mark later: the maker stays, so older pots follow the new glyph.
+    lastError = null;
+    conn.Reducers.SetMark(Marks.All[30].Id, Marks.Presets[5]);
+    Pump(() => lastError != null || conn.Db.PlayerMark.PlayerId.Find(myId) is { Glyph: 30 }, 3, "the mark to change");
+    if (lastError != null) Fail($"changing the mark: {lastError}");
+    Log($"Changed the mark to {Marks.Find(30)!.Name}; the pot's maker is unchanged");
+    Log("STAGE mark-changed");
 
     // Berries from the nearest ripe bushes.
     watch.Restart();
@@ -1025,8 +1201,18 @@ short DepthAt(int cx, int cz) => conn.Db.TerrainEdit.CellKey.Find(World.CellKey(
 
 static float DistanceTo(float ax, float az, float bx, float bz) => MathF.Sqrt((ax - bx) * (ax - bx) + (az - bz) * (az - bz));
 
+// World tool actions need the tool on the bar and equipped (crafting-29). Equipping toggles, so only once.
+void EquipAxe()
+{
+    conn.Reducers.SetHotbarSlot(9, (ushort)Item.StoneAxe);
+    if (axeEquipped) return;
+    conn.Reducers.EquipSlot(9);
+    axeEquipped = true;
+}
+
 void Craft(string processId, float score, Item? expect)
 {
+    if (Processes.Find(processId) is { Outcome: Outcome.Chop }) EquipAxe();
     uint before = expect is { } e ? CountOf(e) : 0;
     lastError = null;
     conn.Reducers.StartCraft(processId, score);
@@ -1064,49 +1250,8 @@ void Gather(Item item, uint want)
     }
 }
 
-// Walks at a safe pace until within `near` of a spot.
-void WalkTo(float tx, float tz, float near)
-{
-    int lagged = 0;
-    for (int guard = 0; ; guard++)
-    {
-        float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
-        if (d <= near) break;
-        if (guard > 900)
-        {
-            // 90 s without arriving: say where everyone is and what stands nearby, so the failure can be told apart.
-            var srv = conn.Db.PlayerPos.PlayerId.Find(myId);
-            var around = conn.Db.Structure.Iter().Where(st => MathF.Abs(st.X - x) < 6 && MathF.Abs(st.Z - z) < 6)
-                .Select(st => $"{st.Kind}@({st.X:F1},{st.Z:F1}) complete={st.Complete} stage={st.Stage}");
-            Fail($"stuck walking to ({tx:F1}, {tz:F1}): bot at ({x:F1}, {z:F1}), server at ({srv?.X:F1}, {srv?.Z:F1}), {d:F1} m left; structures within 6 m: {string.Join("; ", around)}");
-        }
-        float step = Math.Min(d - near * 0.9f, 0.5f);
-        // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
-        // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
-        var behind = conn.Db.PlayerPos.PlayerId.Find(myId);
-        if (behind is { } held && MathF.Abs(held.X - x) + MathF.Abs(held.Z - z) >= 1.5f)
-        {
-            // The server has not followed for a second: it refused the last step (something solid in the
-            // way). Take its word for where we are and carry on from there, like a player would.
-            if (++lagged > 10) { x = held.X; z = held.Z; lagged = 0; }
-        }
-        else lagged = 0;
-        if (behind is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
-        {
-            x += dx / d * step;
-            z += dz / d * step;
-        }
-        conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
-        Pump(() => false, 0.1f, null);
-    }
-    for (var settle = Stopwatch.StartNew(); ; )
-    {
-        if (conn.Db.PlayerPos.PlayerId.Find(myId) is { } p && MathF.Abs(p.X - x) < 0.1f && MathF.Abs(p.Z - z) < 0.1f) break;
-        if (settle.Elapsed.TotalSeconds > 15) Fail("timed out waiting for position to settle");
-        conn.Reducers.Move(x, z, 0f);
-        Pump(() => false, 0.1f, null);
-    }
-}
+// Walks at a safe pace until within `near` of a spot (the shared walk: routes, stall detection, last-resort reposition).
+void WalkTo(float tx, float tz, float near) => walker.To(ref x, ref z, tx, tz, near);
 
 void Pump(Func<bool> until, float seconds, string? what)
 {

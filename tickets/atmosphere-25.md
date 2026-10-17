@@ -1,7 +1,7 @@
 # atmosphere-25: Valheim-grand lighting grade (prototype)
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_review
+Status: done
 Branch: claude/atmosphere-25-grade
 PR: #448
 
@@ -51,9 +51,11 @@ Justin's art direction (2026-10-16, via the PM): "closer to Valheim", cutesy, "b
 
 - 2026-10-17 02:50: Justin said YES (via the PM): the grade is now the default (`--grade` defaults to 1; `--grade=0` turns it off for comparison). The Options toggle "Light rays: Off/Normal/High" ships with it. Opening the PR.
 
+- 2026-10-17 02:55: #448 merged (green sha 0b6babfd, CI run 38996536939). The grade is now the default.
+
 ## Open questions / blockers
 - Render with/without pairs, then Justin's sign-off (D-154), before making --grade the default.
 - (Reference images are now on main in docs/art-reference/.)
 
 ## Next step
-Wait for #448 CI, then send the PM the green sha.
+Done. Any later tuning goes in a new ticket.

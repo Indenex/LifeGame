@@ -14,6 +14,7 @@ public partial class Hud : CanvasLayer
     // The ten slots along the bottom (ui-19); Main attaches the server link.
     public HotbarBar Hotbar => inventory;
     readonly Label toast = new();
+    readonly NoteStack earlier = new();
     float toastTime, statusTime;
 
     public override void _Ready()
@@ -54,6 +55,11 @@ public partial class Hud : CanvasLayer
         noteRoot.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         notes.AddChild(noteRoot);
         noteRoot.AddChild(toast);
+        // Notes still showing when a newer one arrives stack above it (ui/NoteStack.cs, UX).
+        earlier.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
+        earlier.GrowHorizontal = Control.GrowDirection.Both;
+        earlier.GrowVertical = Control.GrowDirection.Begin;
+        noteRoot.AddChild(earlier);
 
         // --screenshot-hud fills the HUD with sample things, for screenshots without a server.
         if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-hud") >= 0)
@@ -89,6 +95,8 @@ public partial class Hud : CanvasLayer
                         new InventoryEntry(LifeGame.Shared.Item.Grit, "Stone grit", 1),
                     });
                 GetTree().CreateTimer(3.5).Timeout += () => Note("The fire takes the stick and brightens");
+                // A second note soon after, to show the earlier one moving up (ui-28).
+                GetTree().CreateTimer(4.3).Timeout += () => Note("Made: Twisted cordage");
             };
     }
 
@@ -108,6 +116,7 @@ public partial class Hud : CanvasLayer
 
     public void Note(string text)
     {
+        if (toastTime > 0f && toast.Text != text) earlier.Push(toast, toastTime);
         toast.Text = text;
         toastTime = 3f;
     }
@@ -123,9 +132,12 @@ public partial class Hud : CanvasLayer
         float noteY = Panels.Open() ? TopNote
             : toast.GetParentAreaSize().Y - NoteLane - Mathf.Max(0f, inventory.Top - 76f);
         toast.Position = new Vector2(toast.Position.X, noteY);
+        earlier.Position = new Vector2(earlier.Position.X, noteY - earlier.Size.Y - 2);
         toast.Modulate = new Color(1, 1, 1, Mathf.Clamp(toastTime * 1.5f, 0f, 1f));
         statusTime -= dt;
         status.Modulate = new Color(1, 1, 1, Mathf.Clamp(statusTime * 0.7f, 0f, 1f));
+        // Under the sundial's arc while it shows (ui-32).
+        status.Position = new Vector2(status.Position.X, 18 + SundialArc.Room);
     }
 
     // The lanes along the bottom, from the edge up: the inventory row, the name of a
@@ -161,7 +173,7 @@ public partial class Hud : CanvasLayer
     internal static void Soft(Label label, int size, float alpha)
     {
         Style(label, size, alpha);
-        label.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.45f));
+        label.AddThemeColorOverride("font_shadow_color", WarmLook.On ? new Color(0.22f, 0.12f, 0.06f, 0.5f) : new Color(0, 0, 0, 0.45f));
         label.AddThemeConstantOverride("shadow_outline_size", 7);
         label.AddThemeConstantOverride("shadow_offset_y", 2);
     }
@@ -177,7 +189,9 @@ public partial class Hud : CanvasLayer
     {
         label.AddThemeFontSizeOverride("font_size", size);
         label.AddThemeColorOverride("font_color", new Color(Look.Cream, alpha));
-        label.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.35f));
+        // D-313: the HUD stays light and boxless, in Nunito with a soft warm shadow.
+        if (WarmLook.On) label.AddThemeFontOverride("font", Ui.Font(700));
+        label.AddThemeColorOverride("font_shadow_color", WarmLook.On ? new Color(0.22f, 0.12f, 0.06f, 0.4f) : new Color(0, 0, 0, 0.35f));
         label.AddThemeConstantOverride("shadow_offset_y", 1);
     }
 

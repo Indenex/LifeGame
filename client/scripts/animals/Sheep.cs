@@ -92,7 +92,8 @@ public partial class Sheep : Node3D
         material.SetShaderParameter("detail_scale", 1.5f);
         material.SetShaderParameter("bump", 0.15f);
         material.SetShaderParameter("cavity", 0.08f);
-        return material;
+        // Painted (painted-4): one painted twin per fleece colour.
+        return PaintedAnimals.Wool(material);
     }
 
     // About a third of deer are antlered stags; Audio uses this too so the roar
@@ -122,7 +123,7 @@ public partial class Sheep : Node3D
             // Coats vary a little, from red-brown to a greyer brown.
             int coat = (int)(Terrain.Hash01((int)id, 17, 3) * Coats.Length) % Coats.Length;
             if (!CoatMaterials.TryGetValue(coat, out wool))
-                CoatMaterials[coat] = wool = Look.Solid(Coats[coat]);
+                CoatMaterials[coat] = wool = PaintedAnimals.Coat(Look.Solid(Coats[coat]));
             woolColor = Coats[coat];
         }
 
@@ -422,7 +423,7 @@ public partial class Sheep : Node3D
     static void BuildMeshes()
     {
         if (sheepMesh != null) return;
-        plainMaterial = Look.Solid(Colors.White);
+        plainMaterial = PaintedAnimals.Skin;
         // The Modeling lane's sheep in the chosen style (model-2): same bones and
         // surfaces as below, so everything else here works unchanged.
         sheepMesh = SheepFigure.Build(SheepFigure.Variant, plainMaterial).Mesh;
@@ -484,7 +485,7 @@ public partial class Sheep : Node3D
     static void BuildDeerMeshes()
     {
         if (deerMesh != null) return;
-        plainMaterial ??= Look.Solid(Colors.White);
+        plainMaterial ??= PaintedAnimals.Skin;
         deerMesh = DeerFigure.Build(false, plainMaterial);
         stagMesh = DeerFigure.Build(true, plainMaterial);
     }
