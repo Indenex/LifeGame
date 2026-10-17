@@ -35,8 +35,6 @@ for i, name in enumerate(SPRITES):
     y = (i // COLS) * CELL + (CELL - 2 - im.height)
     atlas.alpha_composite(im, (x, y))
     table.append((name, i, im.width / CELL, im.height / CELL))
-# Bleed colour into transparent pixels so mipmaps don't fringe dark.
-r, g, b, a = atlas.split()
 OUT.parent.mkdir(parents=True, exist_ok=True)
 atlas.save(OUT, optimize=True)
 print(f"wrote {OUT} {atlas.size}")

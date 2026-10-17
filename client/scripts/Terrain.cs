@@ -485,7 +485,7 @@ public partial class Terrain : Node3D
                     var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, (0.75f + Hash01(x, z, 42) * 0.5f) * (1f - 0.35f * density) * (1f - 0.45f * heath) * (1f - 0.5f * trail), 0), new Vector3(0, sz, 1));
                     var g = new Transform3D(slope, new Vector3(x, top, z));
                     var tuftColor = PaintedGround.On
-                        ? PaintedGround.Grass(TileColor(x, z, top, cleared: false, painted: false), World.Noise(x, z, 14f, 31))
+                        ? PaintedGround.CardTint(TileColor(x, z, top, cleared: false, painted: false))
                         : TileColor(x, z, top, cleared: false);
                     tufts!.Add((g, tuftColor, custom));
                 }
@@ -499,7 +499,11 @@ public partial class Terrain : Node3D
                     float px = x + 0.5f - Hash01(x, z, 71), pz = z + 0.5f - Hash01(x, z, 72);
                     var spot = Plant(px, HeightAt(px, pz), pz, Hash01(x, z, 73) * Mathf.Tau, 0.8f + Hash01(x, z, 74) * 0.6f);
                     if (scatter < mushrooms)
-                        landmarks.Put(PaintedGround.Mushroom, Look.RockSurface, (spot, Colors.White.Darkened(Hash01(x, z, 75) * 0.2f), custom));
+                        landmarks.Put(PaintedGround.Card(PaintedGround.MushroomCards + Variant(x, z, 76, 4), 0.22f), PaintedGround.CardMaterial,
+                            (spot, Colors.White.Darkened(Hash01(x, z, 75) * 0.15f), custom));
+                    else if (scatter < mushrooms + 0.05f * (1f - density) * (1f - heath))
+                        landmarks.Put(PaintedGround.Card(PaintedGround.CloverCards + Variant(x, z, 77, 3), 0.3f), PaintedGround.CardMaterial,
+                            (spot, Colors.White.Darkened(Hash01(x, z, 75) * 0.15f), custom));
                     else if (scatter < mushrooms + twigs)
                         landmarks.Put(PaintedGround.Twig, Look.BarkSurface, (spot, Look.Bark.Lightened(Hash01(x, z, 75) * 0.15f), custom));
                     else if (scatter < mushrooms + twigs + stumps)
@@ -515,10 +519,21 @@ public partial class Terrain : Node3D
         AddMulti(root, pineMesh!, pines, Look.TreeFoliage);
         foreach (var ((mesh, material), items) in landmarks.Batches)
             AddMulti(root, mesh, items, material, castShadow: material != Look.Grass);
-        if (tufts != null) AddMulti(root, tuftMesh!, tufts, Look.GrassTufts, castShadow: false);
-        AddMulti(root, Undergrowth.Fern, ferns, Look.Grass, castShadow: false);
+        if (PaintedGround.On)
+        {
+            // The art-reference prototype draws grass, ferns and flowers as the pack's
+            // painted cards, which carry their own colours.
+            if (tufts != null) AddMulti(root, PaintedGround.GrassClump, tufts, PaintedGround.GrassCardMaterial, castShadow: false);
+            AddMulti(root, PaintedGround.Card(PaintedGround.FernCards, 0.75f), PaintedGround.Whiten(ferns), PaintedGround.CardMaterial, castShadow: false);
+            AddMulti(root, PaintedGround.Card(PaintedGround.FlowerCards, 0.35f), PaintedGround.Whiten(flowers), PaintedGround.CardMaterial, castShadow: false);
+        }
+        else
+        {
+            if (tufts != null) AddMulti(root, tuftMesh!, tufts, Look.GrassTufts, castShadow: false);
+            AddMulti(root, Undergrowth.Fern, ferns, Look.Grass, castShadow: false);
+            AddMulti(root, Undergrowth.Flowers, flowers, Look.Grass, castShadow: false);
+        }
         AddMulti(root, Undergrowth.Reed, reeds, Look.Grass, castShadow: false);
-        AddMulti(root, Undergrowth.Flowers, flowers, Look.Grass, castShadow: false);
         AddMulti(root, Undergrowth.Bush, bushes, Look.Foliage);
     }
 
@@ -648,7 +663,7 @@ public partial class Terrain : Node3D
                 Xf(0, 1.6f + k * 0.7f, 0), new Color(0.9f + k * 0.06f, 0.9f + k * 0.06f, 0.9f + k * 0.06f));
         pineMesh = pine.Commit();
 
-        tuftMesh = PaintedGround.On ? PaintedGround.Blades : BuildTuft();
+        tuftMesh = BuildTuft();
     }
 
     internal static SphereMesh Blob(float radius) => new() { Radius = radius, Height = radius * 1.7f, RadialSegments = 10, Rings = 6 };
