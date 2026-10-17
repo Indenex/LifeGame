@@ -1308,3 +1308,7 @@ Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, 
 ## D-320 — 2026-10-17 — Merge queue with batches replaces PR-pausing priority
 **Decision:** "Merge queue + batches". Green PRs go into GitHub's merge queue and are tested together in batches every ~10 to 15 minutes, then land and release as one. No PR runs are paused or cancelled any more. This supersedes D-301 and D-316. Ticket integration-16.
 **Who:** Justin, choosing "Merge queue + batches" (relayed by the PM; no direct quote).
+
+## D-321 — 2026-10-17 — Hotbar look: "Paper buttons"
+**Decision:** The hotbar is "Paper buttons": cream paper discs with a soft brown rim and shadow, the key number in brown Nunito, and a butter-gold ring on the item in hand (ui-45).
+**Who:** Justin, choosing "Paper buttons" (relayed by the PM; no direct quote).
