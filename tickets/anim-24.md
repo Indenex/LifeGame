@@ -3,7 +3,7 @@ Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
 Status: in_review
 Branch: claude/anim-24 (from main)
-PR: (see below)
+PR: #732
 
 ## Goal
 Crushing stone into grit and potsherds into grog (clay.grit, clay.grog) now looks like pounding instead of kneading. Kneeling, the player raises a stone in both hands to the chest and brings it down onto the pile in front, bending into each blow, 1.2 times a second. Each blow fires Avatar.Impact (WorkMotion.Pound, near the end of each downstroke), so Atmosphere and Audio can add dust and a thud. This is the first step of option (c), per-tool polish.
