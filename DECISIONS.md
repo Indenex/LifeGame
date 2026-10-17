@@ -1225,3 +1225,7 @@ Owner: Claims.
 ## D-301 — 2026-10-17 — Releases and builds get priority over PR CI
 **Decision:** Main builds and releases pause PR CI runs, which re-run automatically afterwards (integration-13). The PM applied this by hand on 2026-10-17 at 05:30 in the meantime.
 **Who:** Justin: "can we give releases and builds 100% priority over PRs?"
+
+## D-302 — 2026-10-17 — A tool must be equipped in the selected hotbar slot to be used in the world
+**Decision:** World tool actions (chop, dig, mine, cut) require the matching tool equipped in the selected hotbar slot, checked by the server. With no tool equipped, E near trees goes to loot first, because loot near trees was hard to pick up. Crafting recipes that need a tool still count belt and bag tools (D-263 unchanged). Ticket crafting-29.
+**Who:** Justin: "for a tool to be used, it needs to be on your bar and equipped".
