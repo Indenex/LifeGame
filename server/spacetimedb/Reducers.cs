@@ -243,7 +243,7 @@ public static partial class Module
         RequireClaimAccess(ctx, item.X, item.Z);
 
         ctx.Db.WorldItem.Id.Delete(itemId);
-        AddToInventory(ctx, ctx.Sender, (Item)item.Item, 1, item.Quality, item.Wear);
+        AddToInventory(ctx, ctx.Sender, (Item)item.Item, 1, item.Quality, item.Wear, item.Maker);
         PerformedProcess(ctx, player.PlayerId, Skills.Forage, item.X, item.Z);
         NoteAct(ctx, player.PlayerId, WorkMotion.PickUp, (Item)item.Item);
     }
@@ -261,6 +261,7 @@ public static partial class Module
             Item = item,
             Quality = quality,
             Wear = stack.Wear,
+            Maker = stack.Maker,
             X = pos.X,
             Z = pos.Z,
             ChunkX = pos.ChunkX,
@@ -380,14 +381,14 @@ public static partial class Module
         {
             uint n = Math.Min(count, stack.Count);
             RemoveFromStack(ctx, stack, n);
-            AddToInventory(ctx, to, item, n, quality, stack.Wear);
+            AddToInventory(ctx, to, item, n, quality, stack.Wear, stack.Maker);
             count -= n;
         }
     }
 
     // Into the bag: onto a matching bag stack, never onto the tools belt (Inventory.cs, ui-18).
-    static void AddToInventory(ReducerContext ctx, Identity owner, Item item, uint count, byte quality, uint wear = 0) =>
-        AddToBag(ctx, owner, item, count, quality, wear);
+    static void AddToInventory(ReducerContext ctx, Identity owner, Item item, uint count, byte quality, uint wear = 0, uint maker = 0) =>
+        AddToBag(ctx, owner, item, count, quality, wear, maker);
 
     static void RemoveFromStack(ReducerContext ctx, InventoryItem stack, uint count)
     {
