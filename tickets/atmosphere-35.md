@@ -3,7 +3,7 @@ Lane: Atmosphere
 Owner: World atmosphere lane (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_review
 Branch: claude/atmosphere-35-cosy
-PR: (opening)
+PR: #608
 
 ## Goal
 Justin's art direction D-313: "cutesy, relaxing, with a hint of realism". He likes today's lighting and shadows (renders/unity-spike-*-godot.png on claude/unity-spike) but wants them less realistic, to match the chibi characters. A small look tune layered on the atmosphere-25 grade:
@@ -19,9 +19,10 @@ On by default; `--cosy=0` shows the earlier look for before/after renders. Sun s
 
 ## Progress log
 - 2026-10-17 07:20: cosy layer in AtmosphereGrade.cs plus a `cosy` sky uniform in Atmosphere.cs. The client builds with 0 errors.
+- 2026-10-17 07:22: PR #608 opened (8010008f). Asked Render B for before/after stills. Shadow params stay with the Unity-spike worker (session_017Weex8fujB3VFsrpg84jEP, atmos-shadows-1).
 
 ## Open questions / blockers
 - Needs a before/after from Render (`--cosy=0` vs default) at noon, dusk and night to tune the numbers.
 
 ## Next step
-Open the PR and send Render the before/after request; tune from the stills.
+Wait for CI on #608 and Render B's before/after stills (requested 07:22), then tune the numbers from them.
