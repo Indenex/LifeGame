@@ -188,6 +188,8 @@ public partial class Atmosphere : Node3D
         conn.Db.AnimalHit.OnInsert += (_, h) => HearHit(h);
         // A bow shot: the twang now, the arrow's thunk when it lands (audio-6).
         conn.Db.ArrowShot.OnInsert += (_, shot) => HearArrow(shot);
+        // Drinking, eating, plucking and picking up, for everyone, timed to the motions (audio-7).
+        conn.Db.PlayerAct.OnInsert += (_, act) => HearAct(conn, act);
         // Campfires crackle; FireView subscribes to the fires near the player.
         conn.Db.Fire.OnInsert += (_, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
         conn.Db.Fire.OnUpdate += (_, _, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);

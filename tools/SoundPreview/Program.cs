@@ -174,6 +174,16 @@ foreach (var scene in scenes)
             if (At(7.65)) mix.Land(Ground.Sand, 0.6f);
             if (At(10)) mix.Step(Ground.Grass, 0f);
         }
+        // Acts scene: drink, eat, pluck, pick up, 4 s apart.
+        if (parts[0] == "acts")
+        {
+            double a = done / (double)rate, b = (done + n) / (double)rate;
+            bool At(double x) => a < x && b >= x;
+            if (At(1)) mix.Play(CueDefs.Drink);
+            if (At(5)) mix.Play(CueDefs.Eat);
+            if (At(8)) mix.Play(CueDefs.Pluck);
+            if (At(10)) mix.Play(CueDefs.PickUp);
+        }
         // Crack scene: close strikes, then a far one, in a storm.
         if (parts[0] == "crack")
         {
