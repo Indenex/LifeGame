@@ -27,3 +27,14 @@ Crafting check 7:31 (longest), Building check 6:11, Load/spawn/social 3:10, Upgr
 
 ## Next step
 Compare the PR's run time with the before figures, fix anything the run shows, then send the PM the green sha. Later: Godot .godot import cache.
+
+## integration-13: main builds and releases first (Justin)
+`.github/workflows/priority.yml` ("Main priority"): GitHub has no job priority, so while a push-triggered Build or any Release is queued or running, queued and in-progress pull_request Build runs are cancelled (job summary: "paused for a main build; re-runs automatically"). When main is idle (after each finished Build or Release, and on a 15-minute schedule) the newest cancelled run per open PR head is re-run. Merge-queue and manual runs and Release runs are never touched; PR runs a newer push replaced are left alone. Needs `actions: write`. WORKER_LOOP.md step 5b tells lanes a cancelled run is not red.
+## Update 2026-10-17: main builds and ships only (Justin approved)
+- Push to main runs the module build, the Upgrade check (now also on main; the merged PR's `world-wipe` label is looked up through the API so a wipe merge doesn't go red) and the clients, plus the `server` summary job. The load, Building and Crafting checks run on PRs only, because they already ran before the merge.
+- Draft PRs skip those three checks (module, upgrade and clients still run); `ready_for_review` is a pull_request trigger so the full set runs when the PR is marked ready.
+- A ticket/docs-only push already skips every heavy job (the `changes` filter), on PRs and on main.
+- Load test on PRs stays 5 bots for 5 s; main no longer runs the 20 bots / 20 s one.
+
+## integration-13 update: smart priority (Justin picked A)
+Pausing on every main push starved PRs (main merges every 3-5 min, a PR run takes ~9). Now `priority.yml` pauses PR Builds only while a main Build (push) or a Release has a queued run or queued jobs (main is waiting for a runner), and leaves any PR run that has been running 4 minutes or more to finish. It resumes (re-runs the newest cancelled run per open PR head) when no main Build or Release is queued or running. Also triggered by pull_request pushes and a 5-minute schedule, since starvation can begin after the push.

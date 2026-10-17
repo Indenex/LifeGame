@@ -53,6 +53,15 @@ public static class Painted
         }
     }
 
+    // The see-through copy of a painted twin on a building (StructureView's cutaway, D-168):
+    // Look.StructureGhost's render mode, Painted's look, so a fading wall stays painted.
+    // Null for anything that isn't a painted twin.
+    public static ShaderMaterial? StructureGhostOf(ShaderMaterial material) =>
+        material.Shader == Shader ? Look.Ghost(material, StructureGhostShader) : null;
+
+    // Whether a material is already one of Painted's twins.
+    public static bool IsPainted(Material? material) => material is ShaderMaterial m && m.Shader == Shader;
+
     // Look's rock, painted: boulders, outcrops, river stones and pebbles.
     public static ShaderMaterial Rock => rock ??= MakeRock();
     static ShaderMaterial? rock;
@@ -67,6 +76,25 @@ public static class Painted
         twin.SetShaderParameter("shade_tint", new Color(0.56f, 0.53f, 0.8f));
         twin.SetShaderParameter("crevice", 0.22f);
         twin.SetShaderParameter("lit_dabs", 0.08f);
+        return twin;
+    }
+
+    // Look's foliage, painted, for low plants with their own colours in the vertices
+    // (heather, gorse): sway and the heather's season code stay as they were.
+    public static ShaderMaterial Foliage => Of(Look.Foliage);
+
+    // The bushes' leaves (painted-2): Look's foliage with the shade leaning further
+    // violet, more lit dabs on the tops and only the deepest relief as dark gaps.
+    public static ShaderMaterial Bush => bush ??= MakeBush();
+    static ShaderMaterial? bush;
+
+    static ShaderMaterial MakeBush()
+    {
+        var twin = (ShaderMaterial)Of(Look.Foliage).Duplicate();
+        twin.SetShaderParameter("shade_tint", new Color(0.64f, 0.6f, 0.88f));
+        twin.SetShaderParameter("lit_dabs", 0.22f);
+        twin.SetShaderParameter("crevice", 0.28f);
+        twin.SetShaderParameter("dab_size", 0.9f);
         return twin;
     }
 
@@ -95,9 +123,10 @@ public static class Painted
         return twin;
     }
 
-    static Shader Shader => shader ??= Look.MakeShader(Code(ghost: false));
-    static Shader GhostShader => ghostShader ??= Look.MakeShader(Code(ghost: true));
-    static Shader? shader, ghostShader;
+    static Shader Shader => shader ??= Look.MakeShader(Code(ghost: null));
+    static Shader GhostShader => ghostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_back, depth_draw_always;"));
+    static Shader StructureGhostShader => structureGhostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_disabled, depth_prepass_alpha;"));
+    static Shader? shader, ghostShader, structureGhostShader;
 
     static NoiseTexture2D Dabs => dabs ??= new NoiseTexture2D
     {
@@ -106,43 +135,48 @@ public static class Painted
     };
     static NoiseTexture2D? dabs;
 
-    static string Code(bool ghost)
+    // Replaces the one place anchor appears in a shader's code; throws if it appears
+    // anywhere else or not at all, so a change to Look's shader fails at startup, not silently.
+    internal static string Splice(string text, string anchor, string replacement)
+    {
+        int at = text.IndexOf(anchor, System.StringComparison.Ordinal);
+        if (at < 0 || text.IndexOf(anchor, at + anchor.Length, System.StringComparison.Ordinal) >= 0)
+            throw new System.InvalidOperationException($"Painted: Look's shader changed near '{anchor}'");
+        return text[..at] + replacement + text[(at + anchor.Length)..];
+    }
+
+    // ghost: the render mode of a see-through variant, or null for the solid.
+    static string Code(string? ghost)
     {
         string code = Look.PaintedCode;
-        string Put(string text, string anchor, string replacement)
-        {
-            int at = text.IndexOf(anchor, System.StringComparison.Ordinal);
-            if (at < 0 || text.IndexOf(anchor, at + anchor.Length, System.StringComparison.Ordinal) >= 0)
-                throw new System.InvalidOperationException($"Painted: Look's shader changed near '{anchor}'");
-            return text[..at] + replacement + text[(at + anchor.Length)..];
-        }
-        code = Put(code, "shader_type spatial;", "shader_type spatial;\n#define PAINTED_PROP" + (ghost ? "\n#define GHOST" : ""));
-        if (ghost) code = Put(code, "render_mode cull_disabled;", "render_mode cull_back, depth_draw_always;");
-        code = Put(code, "varying float season_kind;", "varying float season_kind;\n" + Declarations);
-        code = Put(code, "vec3 color = tint * (1.0 + paint * 2.0);", """
+        code = Splice(code, "shader_type spatial;", "shader_type spatial;\n#define PAINTED_PROP" + (ghost != null ? "\n#define GHOST" : ""));
+        if (ghost != null) code = Splice(code, "render_mode cull_disabled;", ghost);
+        code = Splice(code, "varying float season_kind;", "varying float season_kind;\n" + Declarations);
+        code = Splice(code, "vec3 color = tint * (1.0 + paint * 2.0);", """
             dab = dab_at(world_pos);
                 // Flat strokes: the brush only nudges the colour, and the faces that look up
                 // catch a few lighter dabs, as a painter lights from above.
                 float lift = smoothstep(0.56, 0.6, dab) * smoothstep(0.3, 0.7, world_normal.y);
                 vec3 color = mix(tint, base_paint * dot(tint, vec3(0.3, 0.59, 0.11)) / 0.45, base_mix) * (1.0 + paint * 0.6) * (1.0 + lit_dabs * lift);
             """);
-        code = Put(code, "color *= mix(1.0 - cavity, 1.0 + cavity * 0.35, smoothstep(0.15, 0.75, h));", """
+        code = Splice(code, "color *= mix(1.0 - cavity, 1.0 + cavity * 0.35, smoothstep(0.15, 0.75, h));", """
             // Crevices in one darker tone, their edge broken by the brush.
                 color *= mix(1.0 - cavity * 1.4, 1.0 + cavity * 0.2, smoothstep(crevice - 0.03, crevice + 0.03, h + (dab - 0.5) * 0.12));
             """);
-        code = Put(code, "ALBEDO = clamp(color, 0.0, 1.0);", """
+        code = Splice(code, "ALBEDO = clamp(color, 0.0, 1.0);", """
             // A soft dark line round each shape, like the ink round the card art.
                 float rim = 1.0 - clamp(abs(dot(NORMAL, VIEW)), 0.0, 1.0);
                 color *= mix(1.0, 0.62, ink * smoothstep(0.66, 0.9, rim));
                 ALBEDO = clamp(color, 0.0, 1.0);
             """);
-        code = Put(code, "void light() {", "void light() {\n#ifdef PAINTED_PROP\n" + Light + "\n#else\n");
+        code = Splice(code, "void light() {", "void light() {\n#ifdef PAINTED_PROP\n" + Light + "\n#else\n");
         code = code.TrimEnd();
         if (!code.EndsWith("}")) throw new System.InvalidOperationException("Painted: Look's shader no longer ends with light()");
         return code[..^1] + "#endif\n}\n";
     }
 
-    const string Declarations = """
+    // The painted uniforms and dab_at(); spliced after Look's varyings. Environment's ground uses it too.
+    internal const string Declarations = """
         uniform sampler2D dabs : filter_linear_mipmap, repeat_enable;
         uniform vec3 shade_tint : source_color = vec3(0.74, 0.72, 0.9);
         uniform float lit_dabs = 0.14;
@@ -164,7 +198,7 @@ public static class Painted
 
     // Stepped light as on the painted trees: shade, mid and lit with brush-broken edges,
     // the shade leaning violet, a lift at low sun, fires and doorways fading with distance.
-    const string Light = """
+    internal const string Light = """
             float sky = LIGHT_IS_DIRECTIONAL ? shade : 1.0;
             float elevation = (INV_VIEW_MATRIX * vec4(LIGHT, 0.0)).y;
             float low_sun = LIGHT_IS_DIRECTIONAL ? 1.0 - smoothstep(0.2, 0.55, elevation) : 0.0;
