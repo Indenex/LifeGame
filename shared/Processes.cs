@@ -217,6 +217,13 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.Stick, 3), new Ingredient(Item.Fiber, 10) },
                 Seconds = Base(2, 2.5f), Makes = Item.Basket, Station = StationKind.Table,
             },
+            // A hide waterskin (survival-20): carries a little water before pottery. Hand craft.
+            new ProcessDef
+            {
+                Id = "hide.waterskin", Name = "Make a waterskin", Doing = "Sewing a hide into a waterskin", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.SheepHide), new Ingredient(Item.Cordage) }, NeedsTool = ItemTags.Cutting,
+                Seconds = Base(2, 1.5f), Makes = Item.Waterskin,
+            },
             // House building: a woven grass mat to lay inside a hut or house and wake on (BuildingBed.cs).
             new ProcessDef
             {

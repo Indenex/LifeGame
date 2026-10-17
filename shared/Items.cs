@@ -61,6 +61,9 @@ namespace LifeGame.Shared
 
         // Survival
         Berries = 160,
+        // A hide waterskin (survival-20): carries a little water before pottery.
+        Waterskin = 161,
+        WaterskinOfWater = 162,
 
         // Animals (190-219); mutton is cooked by Crafting
         RawMutton = 190,
@@ -172,6 +175,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Grog, Name = "Grog", Plural = "Grog" },
             new ItemDef { Id = Item.PinchPot, Name = "Pinch pot", Plural = "Pinch pots", HasQuality = true, Placeable = true },
             new ItemDef { Id = Item.CoilPot, Name = "Coil pot", Plural = "Coil pots", HasQuality = true, Placeable = true },
+            new ItemDef { Id = Item.Waterskin, Name = "Waterskin", Plural = "Waterskins", HasQuality = true },
+            new ItemDef { Id = Item.WaterskinOfWater, Name = "Waterskin of water", Plural = "Waterskins of water", HasQuality = true, Use = UseAction.Drink },
             new ItemDef { Id = Item.PinchPotOfWater, Name = "Pinch pot of water", Plural = "Pinch pots of water", HasQuality = true, Use = UseAction.Drink },
             new ItemDef { Id = Item.CoilPotOfWater, Name = "Coil pot of water", Plural = "Coil pots of water", HasQuality = true, Use = UseAction.Drink },
             new ItemDef { Id = Item.Brick, Name = "Sun-dried brick", Plural = "Sun-dried bricks", Placeable = true },
