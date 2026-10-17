@@ -171,8 +171,10 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     // A fence is thin: stand close, since a walk can stop a meter short and reach is 2.2 m past its line.
     float stand = shape.Round ? shape.Radius + 0.6f : shape.Fence ? 0.9f : Math.Max(1.9f, shape.HalfDepth + 0.6f);
     var front = Structures.ToWorld(sx, sz, s.Yaw, 0.6f, stand);
-    b.WalkTo(front.x + 0.6f, front.z, 1f, Pump);
-    a.WalkTo(front.x - 0.6f, front.z, 1f, Pump);
+    // Walk right up to the spot, not "within a meter": stopping 1 m short on the far side of a round hut
+    // left B 0.1 m outside the work reach (hut radius + 2.2 m) and every Build was refused.
+    b.WalkTo(front.x + 0.6f, front.z, 0.3f, Pump);
+    a.WalkTo(front.x - 0.6f, front.z, 0.3f, Pump);
     until = clock.Elapsed + TimeSpan.FromSeconds(180);
     while (a.Conn.Db.Structure.Id.Find(id) is { Complete: false } && clock.Elapsed < until)
     {
@@ -566,7 +568,7 @@ sealed class Bot
             WalkStraight(tx, tz, within, pump);
             if (Conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen) return;
             float left = MathF.Sqrt((seen.X - tx) * (seen.X - tx) + (seen.Z - tz) * (seen.Z - tz));
-            if (left <= within + 1f) return;
+            if (left <= within + 0.6f) return;
             X = seen.X;
             Z = seen.Z;
             float dx = tx - X, dz = tz - Z, d = MathF.Sqrt(dx * dx + dz * dz);
