@@ -33,8 +33,13 @@ public static class UiScale
         Apply();
     }
 
-    public static float Factor(Vector2I window) =>
-        Setting == 0 ? Mathf.Clamp(Mathf.Snapped(window.Y / 1080f, 0.05f), 1f, 2f) : Steps[Setting];
+    // Never so big that the UI has fewer than 720 lines to lay out in (the size every page is
+    // rendered and checked at), so a big step on a small window can't push pages off screen.
+    public static float Factor(Vector2I window)
+    {
+        float wanted = Setting == 0 ? Mathf.Clamp(Mathf.Snapped(window.Y / 1080f, 0.05f), 1f, 2f) : Steps[Setting];
+        return Mathf.Min(wanted, Mathf.Max(1f, window.Y / 720f));
+    }
 
     static void Apply()
     {
