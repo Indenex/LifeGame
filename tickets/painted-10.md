@@ -3,7 +3,7 @@ Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
 Status: in_review
 Branch: claude/painted-10-rim
-PR: (opening)
+PR: #620
 
 ## Goal
 D-313, Justin's pick (idea #1): a thin warm glow on silhouettes facing away from the light. It applies to characters, animals and props, through the shared painted shader, with a small strength constant.
