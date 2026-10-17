@@ -42,6 +42,7 @@ public partial class Main : Node3D
     readonly Dictionary<uint, Avatar> others = new();
     readonly GroundItems items = new();
     readonly Woodcutting woodcutting = new();
+    TreeFall treeFall = null!;
     readonly Dictionary<uint, string> names = new();
     BuildingSystem building = null!;
 
@@ -102,6 +103,7 @@ public partial class Main : Node3D
         BagGrid.Makers = markPicker.Link;
         AddChild(markPicker);
         AddChild(woodcutting);
+        AddChild(treeFall = new TreeFall(terrain));
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
@@ -158,7 +160,10 @@ public partial class Main : Node3D
         // Choosing how you look (ui-21): opens by itself at first join, and from Options.
         lookPicker.Conn = () => conn;
         lookPicker.MyId = () => myId;
+        lookPicker.Note = hud.Note;
         AddChild(lookPicker);
+        // The sundial's time-of-day arc (ui-32); Has comes from House building's building-18 flag.
+        AddChild(new SundialArc { TimeOfDay = () => atmosphere.TimeOfDay });
         JournalPanel? journalPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
@@ -167,10 +172,10 @@ public partial class Main : Node3D
             || equipment.IsOpen
             || station.IsOpen
             || buildMenu.IsOpen
-            || markPicker.IsOpen
-            || lookPicker.IsOpen;
+            || markPicker.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
-        herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning;
+        // A click with food, drink, clothes or a placeable in hand uses it instead of striking (ui-36).
+        herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning || hud.Hotbar.ClickUsesHeld;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
@@ -185,7 +190,22 @@ public partial class Main : Node3D
         AddChild(menu);
         // First child, so Esc reaches it only after every lane panel had its turn.
         MoveChild(menu, 0);
-        AddChild(new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing });
+        // ui-35: a right click that doesn't drag opens the player menu on whoever is under it.
+        var playerMenu = new PlayerMenu
+        {
+            Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning || social.Typing,
+            PlayerAt = point => PlayerMenuFacts.At(point, cameraRig.Camera, view.Size, GetViewport().GetVisibleRect().Size, me.Position,
+                others.Select(o => (o.Key, (Node3D)o.Value))),
+            Facts = id => conn == null ? null : PlayerMenuFacts.Read(conn, myId, id, me.Position, trade.Link.Incoming?.id ?? 0),
+            AskTrade = id => conn?.Reducers.AskTrade(id),
+            AnswerTrade = yes => trade.Link.Answer(yes),
+            InviteToTown = id => conn?.Reducers.InviteToTown(id),
+            OpenChat = social.OpenChat,
+        };
+        AddChild(playerMenu);
+        var cameraDrag = new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing };
+        cameraDrag.Clicked += playerMenu.Clicked;
+        AddChild(cameraDrag);
         RegisterUse();
         cameraRig.Camera.MakeCurrent();
         if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
@@ -354,12 +374,13 @@ public partial class Main : Node3D
 
     // --- Networking -------------------------------------------------------
 
-    void Connect()
+    void Connect(bool useToken = true)
     {
         string server = Arg("server") ?? OS.GetEnvironment("LIFEGAME_SERVER");
         if (string.IsNullOrEmpty(server)) server = "http://127.0.0.1:3000";
         string db = Arg("db") ?? OS.GetEnvironment("LIFEGAME_DB");
         if (string.IsNullOrEmpty(db)) db = "lifegame";
+        tokenServer = server;
 
         hud.SetStatus("Connecting...");
         var builder = DbConnection.Builder()
@@ -367,9 +388,10 @@ public partial class Main : Node3D
             .WithDatabaseName(db)
             .WithCompression(Compression.Brotli)
             .OnConnect(OnConnected)
-            .OnConnectError(e => CallDeferred(nameof(GoOffline), e.Message))
+            .OnConnectError(e => CallDeferred(nameof(ConnectFailed), e.Message, sentToken))
             .OnDisconnect((_, e) => CallDeferred(nameof(GoOffline), e?.Message ?? "disconnected"));
-        string? token = LoadToken();
+        string? token = useToken ? LoadToken() : null;
+        sentToken = token != null;
         if (token != null) builder = builder.WithToken(token);
         conn = builder.Build();
         journal.Attach(conn, () => me.Position, terrain.HeightAt, hud.Note);
@@ -411,7 +433,7 @@ public partial class Main : Node3D
         admin.Attach(conn);
         equipment.Attach(new ServerEquipLink(conn));
         hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
-        placing.Attach(new ServerPlaceLink(conn, crafting, terrain.HeightAt));
+        placing.Attach(new ServerPlaceLink(conn, crafting, terrain.HeightAt) { TakeInHand = hud.Hotbar.TakeInHand });
         equipment.Bag.Link = new ServerBagLink(conn);
         markPicker.Attach(new ServerMarkLink(conn, () => myId));
         BagGrid.Makers = markPicker.Link;
@@ -420,6 +442,7 @@ public partial class Main : Node3D
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
         woodcutting.Attach(conn, terrain, crafting);
+        treeFall.Attach(conn);
         clay.Attach(conn);
         building.Bind(conn);
         survival.Attach(conn);
@@ -437,6 +460,20 @@ public partial class Main : Node3D
             .Subscribe(new[] { "SELECT * FROM server_info" });
         SubscribeSelf();
         atmosphere.Connect(c);
+    }
+
+    // A refused token (401) came from some other server, say the host launcher's local world
+    // (bugfix-43): keep it as a .bak, tell the player calmly and join once more as a new visitor.
+    void ConnectFailed(string reason, bool hadToken)
+    {
+        if (hadToken && (reason.Contains("401") || reason.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase)))
+        {
+            RetireToken();
+            hud.Note("This server didn't know your saved key, so it was set aside. Joining fresh");
+            Connect(useToken: false);
+            return;
+        }
+        GoOffline(reason);
     }
 
     void GoOffline(string reason)
@@ -660,7 +697,9 @@ public partial class Main : Node3D
 
     void Walk(float dt)
     {
-        var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
+        // No walking while typing in any text box you can see (chat, a name, a search).
+        bool typing = social.Typing || GetViewport().GuiGetFocusOwner() is LineEdit { } box && box.IsVisibleInTree();
+        var input = typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
         if (flying) { Fly(dt, input); return; }
         bool sneak = Input.IsActionPressed(NSneak);
         float wading = Wading.SpeedFactor(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z)), SwimmingRank());
@@ -669,7 +708,7 @@ public partial class Main : Node3D
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
         // Jump (bugfix-25): a hop keeps its takeoff direction, and the server tells the others.
-        if (!social.Typing && Input.IsActionJustPressed(NJump) && jump.CanStart(sneak) && !Wading.Floating(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z))) && survival.TrySpendStamina(Stamina.JumpCost))
+        if (!typing && Input.IsActionJustPressed(NJump) && jump.CanStart(sneak) && !Wading.Floating(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z))) && survival.TrySpendStamina(Stamina.JumpCost))
         {
             jump.Start(velocity);
             conn?.Reducers.Jump();
@@ -778,23 +817,51 @@ public partial class Main : Node3D
         return null;
     }
 
-    // One identity per install, so you keep your character between sessions. It lives in the
-    // Godot user folder (outside the launcher's game folder), so reinstalling the game keeps it.
-    static string TokenPath => Arg("profile") is { } p ? $"user://token_{p}.txt" : "user://token.txt";
+    // One identity per install and server, so you keep your character between sessions. It lives in
+    // the Godot user folder (outside the launcher's game folder), so reinstalling the game keeps it.
+    // Tokens are per server (bugfix-43): one issued by another SpacetimeDB server is refused with 401.
+    static string tokenServer = "http://127.0.0.1:3000";
+    bool sentToken;
+
+    static string Profile => Arg("profile") is { } p ? $"_{p}" : "";
+    static string LegacyTokenPath => $"user://token{Profile}.txt";
+
+    static string TokenPath
+    {
+        get
+        {
+            var uri = Uri.TryCreate(tokenServer, UriKind.Absolute, out var u) ? u : new Uri("http://127.0.0.1:3000");
+            string host = new string(uri.Host.Select(c => char.IsLetterOrDigit(c) || c == '-' ? c : '-').ToArray());
+            return $"user://token_{host}_{uri.Port}{Profile}.txt";
+        }
+    }
 
     static string? LoadToken()
     {
-        if (!FileAccess.FileExists(TokenPath)) return null;
-        using var file = FileAccess.Open(TokenPath, FileAccess.ModeFlags.Read);
+        // An install from before per-server tokens has one token.txt: try it once on first run.
+        string path = FileAccess.FileExists(TokenPath) ? TokenPath : LegacyTokenPath;
+        if (!FileAccess.FileExists(path)) return null;
+        using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
         var token = file.GetAsText().Trim();
         return token.Length > 0 ? token : null;
+    }
+
+    // Sets the token this server refused aside as .bak, and forgets the old shared one for it.
+    static void RetireToken()
+    {
+        string path = FileAccess.FileExists(TokenPath) ? TokenPath : LegacyTokenPath;
+        if (!FileAccess.FileExists(path)) return;
+        using (var file = FileAccess.Open(path, FileAccess.ModeFlags.Read))
+        using (var bak = FileAccess.Open(TokenPath + ".bak", FileAccess.ModeFlags.Write))
+            bak.StoreString(file.GetAsText());
+        if (path == TokenPath) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));
     }
 
     static void SaveToken(string token)
     {
         // A different token from the one on disk (server wiped, key changed) keeps the old one as
         // a .bak, so a character is never lost for good by an overwrite.
-        if (LoadToken() is { } old && old != token)
+        if (FileAccess.FileExists(TokenPath) && LoadToken() is { } old && old != token)
         {
             using var bak = FileAccess.Open(TokenPath + ".bak", FileAccess.ModeFlags.Write);
             bak.StoreString(old);

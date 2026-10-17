@@ -334,14 +334,22 @@ public partial class BagSlotView : PanelContainer
             Position = -new Vector2(BagGrid.Slot, BagGrid.Slot) / 2,
             Modulate = new Color(1, 1, 1, 0.8f),
         };
+        // Shift-drag takes half the stack (rounded up) into a basket or the stash; a plain drag takes it all.
+        uint count = Input.IsKeyPressed(Key.Shift) && Stack.Count > 1 ? (Stack.Count + 1) / 2 : Stack.Count;
         var holder = new Control();
         holder.AddChild(preview);
+        if (count > 1)
+        {
+            var label = Hud.Text(count.ToString(), 13);
+            label.Position = new Vector2(BagGrid.Slot * 0.1f, BagGrid.Slot * 0.05f);
+            holder.AddChild(label);
+        }
         SetDragPreview(holder);
         Grid.Dragging = (Stack.Item, Stack.Quality);
         var data = new Godot.Collections.Dictionary
         {
             ["from"] = Grid.Kind, ["item"] = (int)Stack.Item, ["quality"] = (int)Stack.Quality,
-            ["count"] = (long)Stack.Count, ["id"] = (long)Stack.Id,
+            ["count"] = (long)count, ["id"] = (long)Stack.Id,
         };
         // Only the bag's own things go onto the hotbar or a worn slot.
         if (Grid.Kind == "bag") data["bag"] = (int)Stack.Item;

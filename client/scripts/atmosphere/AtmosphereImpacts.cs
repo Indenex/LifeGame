@@ -12,7 +12,8 @@ namespace LifeGame;
 //
 // Each one lands on Animation's impact frame (anim-7's Avatar.Impact: the motion, the
 // tool point in the world, and whether it is a spade throwing its dirt); a felled
-// tree is read straight from the ChoppedTree table. Knapping knocks off grey stone
+// tree's dust and leaves land when its crown hits the ground (Environment's
+// TreeFall.Landed, env-22), so they match the fall. Knapping knocks off grey stone
 // flakes, and fuel landing on a fire throws up sparks and a little ash.
 //
 // Command line: --impacts=seconds throws a chop, a dig and a falling tree's dust
@@ -26,7 +27,6 @@ public partial class Atmosphere
     static readonly Color Clod = new(0.34f, 0.25f, 0.16f), Dust = new(0.72f, 0.64f, 0.50f);
     static readonly Color Flint = new(0.55f, 0.56f, 0.58f), Ember = new(1f, 0.62f, 0.22f), Ash = new(0.55f, 0.53f, 0.50f);
 
-    double connectedAt = -1;
     DbConnection? impactConn;
     bool impactsHooked;
     float? argImpacts;
@@ -65,7 +65,7 @@ public partial class Atmosphere
             default:
             {
                 var at = p.GlobalPosition + facing * 6f;
-                FellAt(new Vector3(at.X, terrain?.HeightAt(at.X, at.Z) ?? at.Y, at.Z));
+                FellAt(new Vector3(at.X, terrain?.HeightAt(at.X, at.Z) ?? at.Y, at.Z), new Vector3(facing.Z, 0f, -facing.X));
                 break;
             }
         }
@@ -74,14 +74,20 @@ public partial class Atmosphere
     void ConnectImpacts(DbConnection conn)
     {
         impactConn = conn;
-        connectedAt = Time.GetTicksMsec() / 1000.0;
         // Once only, even if the connection is made again.
-        if (!impactsHooked) Avatar.Impact += OnAvatarImpact;
+        if (!impactsHooked)
+        {
+            Avatar.Impact += OnAvatarImpact;
+            TreeFall.Landed += OnTreeLanded;
+        }
         impactsHooked = true;
-        conn.Db.ChoppedTree.OnUpdate += (_, before, after) => { if (!before.Felled && after.Felled) TreeFell(after); };
-        // A tree felled since we connected arrives as a new row; the ones felled
-        // before are just the world as it is.
-        conn.Db.ChoppedTree.OnInsert += (_, t) => { if (t.Felled && Time.GetTicksMsec() / 1000.0 - connectedAt > 5.0) TreeFell(t); };
+    }
+
+    // TreeFall's event is static; a freed atmosphere (a closed preview) ignores it.
+    void OnTreeLanded(Vector3 crownImpact, Vector3 direction)
+    {
+        if (!IsInstanceValid(this) || !IsInsideTree()) return;
+        FellAt(crownImpact, direction);
     }
 
     void OnToolContact(WorkMotion motion, Vector3 at, Vector3 facing, bool thrown = false)
@@ -142,17 +148,18 @@ public partial class Atmosphere
         }
     }
 
-    void TreeFell(ChoppedTree t)
+    // The trunk has just slammed down along direction, its crown landing at
+    // crownImpact (about 4 m from the stump).
+    void FellAt(Vector3 crownImpact, Vector3 direction)
     {
-        var (x, z) = Trees.Trunk(t.CellX, t.CellZ);
-        FellAt(new Vector3(x, terrain?.HeightAt(x, z) ?? 0f, z));
-    }
-
-    void FellAt(Vector3 foot)
-    {
-        if (!Near(foot)) return;
-        // Dust rolls out round the stump as the trunk hits the ground.
-        Puff(foot + Vector3.Up * 0.2f, 1.6f, 18, 2.2f, Dust, 1.2f);
+        if (!Near(crownImpact)) return;
+        direction.Y = 0f;
+        direction = direction.LengthSquared() > 1e-4f ? direction.Normalized() : Vector3.Forward;
+        var mid = crownImpact - direction * 2f;
+        mid.Y = terrain?.HeightAt(mid.X, mid.Z) ?? crownImpact.Y;
+        // Dust bursts out where the crown hits and, more thinly, along the trunk.
+        Puff(crownImpact + Vector3.Up * 0.2f, 1.8f, 18, 2.2f, Dust, 1.3f);
+        Puff(mid + Vector3.Up * 0.15f, 0.8f, 8, 1.8f, Dust, 0.9f);
         // A last shower of leaves from where the crown was, unless the tree was
         // already bare; green in summer, turned in autumn.
         float bare = (1f - Mathf.SmoothStep(-0.85f, -0.35f, Seasons.Warmth(Year))) * (Seasons.Autumn(Year) > 0.3f ? 1f : 0f);
@@ -161,10 +168,11 @@ public partial class Atmosphere
         var green = new Color(0.30f, 0.42f, 0.15f);
         var light = green.Lerp(new Color(0.70f, 0.40f, 0.08f), turned);
         var dark = new Color(0.20f, 0.30f, 0.10f).Lerp(new Color(0.55f, 0.18f, 0.06f), turned);
-        var leaves = Burst(foot + Vector3.Up * 6f, Vector3.Up, 180f, 0.2f, 1.0f, (int)(40 * (1f - bare)), 4.5f,
+        // Shaken loose as the crown hits, they burst up and flutter back down.
+        var leaves = Burst(crownImpact + Vector3.Up * 1.2f, Vector3.Up, 70f, 1.5f, 3.2f, (int)(40 * (1f - bare)), 4.5f,
             new QuadMesh { Size = new Vector2(0.1f, 0.07f) }, light, dark, spin: true);
         leaves.EmissionShape = CpuParticles3D.EmissionShapeEnum.Sphere;
-        leaves.EmissionSphereRadius = 2.2f;
+        leaves.EmissionSphereRadius = 1.8f;
         leaves.Gravity = new Vector3(WindDirection.X * 0.6f, -1.2f, WindDirection.Y * 0.6f);
         leaves.DampingMin = 1.2f;
         leaves.DampingMax = 1.8f;
