@@ -1,9 +1,13 @@
-# claude/anim-render: Emote(24 wave, 25 cheer, 26 dance, 27 bow) about 3.5 s apart, then eat berries (X): happy face. Chibi, 3/4 view.
+# Front view: the figure first steps toward the camera (w at yaw 200) so its face shows. claude/anim-render: Emote(24 wave, 25 cheer, 26 dance, 27 bow) about 3.5 s apart, then eat berries (X): happy face. Chibi, 3/4 view.
 client-as-puppet
 client-movie 12
 client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=2.6,0.8,200,0.5
 frames 48
 give 160 6 50
+frames +12
+keydown w
+frames +8
+keyup w
 frames +12
 mark emote-start
 act Emote 24
