@@ -3,7 +3,7 @@ Lane: Modeling
 Owner: Modeling lane (session_01JKX3FNjkrEkAqoTaFJiXAm)
 Status: in_review
 Branch: claude/model-31-prop-variety
-PR: (opening)
+PR: #768
 
 ## Goal
 Every cattail clump at the pond edge was the same mesh. `PropMeshes.CattailsOf(v)` gives 5 variants (`CattailVariants`) that differ in clump thickness, height, number of seed-head stalks (1 to 5), lean and folded-over blades. `PropMeshes.Cattails` stays as variant 0 and is unchanged, so nothing breaks; Environment switches Terrain.cs:402 to `CattailsOf(Variant(x, z, <salt>, PropMeshes.CattailVariants))` (their file). Showcase view `cattails`.
