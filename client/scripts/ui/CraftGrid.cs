@@ -245,27 +245,15 @@ public partial class CraftGrid : VBoxContainer
     {
         string? missing = Missing(def);
         bool ready = missing == null;
-        var card = new Button { FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(CardWidth, CardHeight) };
-        var style = new StyleBoxFlat { BgColor = new Color(0.09f, 0.10f, 0.07f, 0.6f), BorderColor = new Color(Look.Cream, 0.22f) };
-        style.SetBorderWidthAll(1);
-        style.SetCornerRadiusAll(10);
-        var hover = (StyleBoxFlat)style.Duplicate();
-        hover.BorderColor = new Color(Look.Cream, 0.6f);
-        card.AddThemeStyleboxOverride("normal", style);
-        card.AddThemeStyleboxOverride("hover", hover);
-        card.AddThemeStyleboxOverride("pressed", hover);
+        // A Card keeps its width and grows taller to fit; inputs wrap inside it (ui-33).
+        var card = new Card(CardWidth, CardHeight);
         card.Modulate = new Color(1, 1, 1, ready ? 1f : 0.45f);
         card.SetMeta("tip", Describe(def, missing));
         // Acts on the press, so holding it down can repeat (Held).
         card.ActionMode = BaseButton.ActionModeEnum.Press;
         card.Pressed += () => { Held = def; Make(def); };
 
-        var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-        column.SetAnchorsPreset(LayoutPreset.FullRect);
-        column.OffsetLeft = column.OffsetTop = 8;
-        column.OffsetRight = column.OffsetBottom = -8;
-        column.AddThemeConstantOverride("separation", 4);
-        card.AddChild(column);
+        var column = card.Column;
 
         // The result's picture, with the number key in the corner for the first nine.
         var picture = new Control { CustomMinimumSize = new Vector2(Picture, Picture), MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ShrinkCenter };
@@ -285,28 +273,25 @@ public partial class CraftGrid : VBoxContainer
             card.AddChild(key);
         }
 
-        var name = Hud.Text(def.Name, 14);
-        name.HorizontalAlignment = HorizontalAlignment.Center;
-        name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-        name.MouseFilter = MouseFilterEnum.Ignore;
-        column.AddChild(name);
+        column.AddChild(card.Line(def.Name, 14));
 
         // Inputs as pictures with have/need, then the tool and the hands-on mark.
-        var needs = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = MouseFilterEnum.Ignore };
-        needs.AddThemeConstantOverride("separation", 4);
+        var needs = card.Wrap();
         foreach (var input in def.Consumes)
         {
-            needs.AddChild(Icon(input.Item, 20));
+            // Icon and count kept together, so a wrap never splits them.
+            var pair = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            pair.AddThemeConstantOverride("separation", 2);
+            pair.AddChild(Icon(input.Item, 20));
             uint have = Have(input.Item), need = Need(def, input);
             var n = Hud.Text($"{Math.Min(have, 99)}/{need}", 12);
             if (have < need) n.Modulate = new Color(1f, 0.75f, 0.45f);
             n.MouseFilter = MouseFilterEnum.Ignore;
-            needs.AddChild(n);
+            pair.AddChild(n);
+            needs.AddChild(pair);
         }
         if (def.NeedsTool != ItemTags.None && ToolFor(def.NeedsTool) is { } tool)
         {
-            var spacer = new Control { CustomMinimumSize = new Vector2(4, 0), MouseFilter = MouseFilterEnum.Ignore };
-            needs.AddChild(spacer);
             var toolIcon = Icon(tool, 20);
             // The tool is held, not used up: drawn in a ring.
             var ring = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
@@ -321,8 +306,7 @@ public partial class CraftGrid : VBoxContainer
         string note = HandsOn(def).Trim(' ', '·');
         if (note != "")
         {
-            var hands = Hud.Text(note.Split('.')[0], 11);
-            hands.HorizontalAlignment = HorizontalAlignment.Center;
+            var hands = card.Line(note.Split('.')[0], 11);
             hands.Modulate = new Color(1f, 0.85f, 0.6f, 0.8f);
             hands.MouseFilter = MouseFilterEnum.Ignore;
             column.AddChild(hands);

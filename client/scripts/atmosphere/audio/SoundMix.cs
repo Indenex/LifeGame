@@ -828,8 +828,8 @@ public sealed class SoundMix
             for (int i = 0; i < n; i++)
             {
                 level += levelCoef * (gain - level);
-                // A well-stoked fire (past about 75%) swells slowly into a roar.
-                stoked += stokeCoef * (SmoothStep(0.7f, 0.95f, stoke) - stoked);
+                // A well-stoked fire (FireStoke ramps in over 70 to 80% of its cap) swells slowly into a roar.
+                stoked += stokeCoef * (stoke - stoked);
                 if (counter-- <= 0)
                 {
                     counter = rate / 12;

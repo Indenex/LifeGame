@@ -8,6 +8,12 @@ public static partial class Module
     [SpacetimeDB.Reducer(ReducerKind.Init)]
     public static void Init(ReducerContext ctx)
     {
+        // A mis-appended structure kind fails the first publish (CI load test) instead of breaking a world.
+        var enumKinds = Enum.GetValues<StructureKind>().Select(k => (int)k).OrderBy(k => k);
+        if (!enumKinds.SequenceEqual(Structures.Kinds))
+            throw new InvalidOperationException(
+                "StructureKind enum and the StructureDefs in shared/structures/ disagree: enum "
+                + string.Join(",", enumKinds) + " defs " + string.Join(",", Structures.Kinds));
         int r = World.SpawnRadiusChunks;
         for (int cx = -r; cx < r; cx++)
             for (int cz = -r; cz < r; cz++)
@@ -92,10 +98,15 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void SetName(ReducerContext ctx, string name)
     {
-        name = Social.StripControl(name).Trim();
-        if (name.Length < 1 || name.Length > 24)
-            throw new Exception("Name must be 1 to 24 characters");
+        // The picker at first join and /name later (ui-31). The rules are shared (Names), so
+        // the picker's field says the same thing before asking; the reason is the error.
+        name = Names.Normalize(name);
+        if (Names.Problem(name) is { } problem) throw new Exception(problem);
         var player = RequirePlayer(ctx);
+        string key = Names.Key(name);
+        foreach (var other in ctx.Db.Player.Iter())
+            if (other.PlayerId != player.PlayerId && Names.Key(other.Name) == key)
+                throw new Exception("That name is taken");
         ctx.Db.Player.Identity.Update(player with { Name = name });
     }
 

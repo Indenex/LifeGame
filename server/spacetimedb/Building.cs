@@ -1,7 +1,8 @@
 using LifeGame.Shared;
 using SpacetimeDB;
 
-// Each value is the kind's fixed id in shared/structures/ (its StructureDef); never renumber or reuse one.
+// Each value's position is the kind's id in shared/structures/ (its StructureDef); append only, never reorder,
+// renumber or reuse one. Init checks that the registered defs match this list exactly.
 [SpacetimeDB.Type]
 public enum StructureKind
 {
@@ -23,6 +24,7 @@ public enum StructureKind
     LogCabin,
     RepairTable,
     TiledHouse,
+    ClayTrough,
 }
 
 // One material a structure's current stage still needs.
@@ -308,7 +310,7 @@ public static partial class Module
             var shape = Structures.Shape((int)s.Kind);
             float warmth = Structures.HasDoorway((int)s.Kind) && DoorClosed(ctx, s.Id) ? MathF.Max(shape.Warmth, shape.ShutWarmth) : shape.Warmth;
             if (shape.Room && FireInside(ctx, s)) warmth = 1f;
-            if (s.Kind == StructureKind.ClayHut && HearthFireIn(ctx, s)) warmth = 1f;
+            if (shape.Hut && HearthFireIn(ctx, s)) warmth = 1f;
             if (shape.RainCover > best.RainCover || warmth > best.Warmth)
                 best = new Shelter(MathF.Max(best.RainCover, shape.RainCover), MathF.Max(best.Warmth, warmth), s.Id);
         }
