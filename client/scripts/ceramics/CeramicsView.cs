@@ -42,6 +42,7 @@ public partial class CeramicsView : Node
         RegisterUse();
         AttachSimmer(conn);
         AttachLamps(conn);
+        AttachMarks(conn);
         conn.Db.ClayPiece.OnInsert += (_, p) => Upsert(p);
         conn.Db.ClayPiece.OnUpdate += (_, _, p) => Upsert(p);
         conn.Db.ClayPiece.OnDelete += (_, p) =>

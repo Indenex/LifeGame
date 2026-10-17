@@ -11,6 +11,22 @@ public partial class CeramicsView
     // Opens the mark picker. Set by UX/UI's panel; null until it exists.
     public static System.Action? OpenMarkPicker;
 
+    // The first time you start shaping a pot with no mark chosen, the picker opens (once per
+    // session), so the pot you are making can carry your mark.
+    bool askedForMark;
+
+    void AttachMarks(SpacetimeDB.Types.DbConnection c)
+    {
+        c.Db.MyCraftJob.OnInsert += (_, job) =>
+        {
+            if (askedForMark || OpenMarkPicker == null) return;
+            if (ClayRules.FormFor(job.ProcessId) is not { } form || form == ClayForm.Brick) return;
+            if (c.Db.PlayerMark.PlayerId.Find(job.PlayerId) != null) return;
+            askedForMark = true;
+            OpenMarkPicker();
+        };
+    }
+
     UseOffer? MarkOffer(Vector3 me3)
     {
         if (conn == null) return null;
