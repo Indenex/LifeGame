@@ -134,10 +134,19 @@ jobs:
           (cd server && spacetimedb-cli call lifegame --server local set_newcomer_grace 0)
           cd tools/SocialTest && dotnet run -c Release -- http://127.0.0.1:3000 lifegame 1
 
+  # The clay hut with its door, mat and hearth is most of the time (about 4 min of 5); the rest runs beside it.
   build-test:
-    name: Building check
+    name: Building check (${{ matrix.part }})
     needs: module
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: clay hut
+            parts: clay-hut
+          - part: other structures
+            parts: lean-to,basket,fence
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-stdb
@@ -145,7 +154,7 @@ jobs:
           spacetime-version: ${{ env.SPACETIME_VERSION }}
       - uses: ./.github/actions/start-server
       - name: Build structures with two players
-        run: cd tools/BuildTest && dotnet run -c Release
+        run: cd tools/BuildTest && dotnet run -c Release -- ${{ matrix.parts }}
 
   craft-test:
     name: Crafting check
