@@ -1,9 +1,10 @@
-# anim-4 (PR #382): work with tools in hand and the blend between crafts. 24 fps movie,
-# 3/4 front at 2.5 m, as anim-1-work.
+# anim-4 (PR #382, merged): eat, pick up, work with tools in hand, blend, walk off mid-action.
+# 24 fps movie, 3/4 front at 2.5 m, camera = puppet. Eating = the hotbar key of the berries.
 client-as-puppet
 client-movie 24
 client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.2 --render-cam=2.5,0.5,35,0.1
 frames 330
+give 160 6 50
 give 3 200 50
 give 2 60 50
 give 4 80 50
@@ -12,6 +13,19 @@ give 5 20 50
 give 10 2 60
 give 15 6 50
 frames +30
+mark eat-start
+key 1
+frames +60
+key 1
+frames +60
+mark eat-end
+mark pickup-start
+drop 1
+frames +24
+pickup 1 1
+frames +48
+mark pickup-end
+frames +12
 mark knap-start
 craftloop knap.flake +72
 mark knap-end
@@ -21,4 +35,11 @@ craftloop gather.tinder +36
 craftloop knap.flake +36
 craftloop cord.twist +36
 mark blend-end
+frames +12
+mark walkoff-start
+craftloop knap.flake +24
+keydown w
+frames +48
+keyup w
+mark walkoff-end
 frames +24
