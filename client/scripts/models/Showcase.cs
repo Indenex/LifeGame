@@ -30,7 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster" or "turntable")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster" or "turntable" or "art")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -49,6 +49,7 @@ public partial class Showcase : Node3D
             else if (view == "crowd") Crowd();
             else if (view == "roster") Roster();
             else if (view == "turntable") Turntable();
+            else if (view == "art") ArtPiece();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -750,5 +751,36 @@ public partial class Showcase : Node3D
             camera.LookAtFromPosition(new Vector3(0, 0.95f, 3.7f), new Vector3(0, 0.66f, 0), Vector3.Up);
         else
             camera.LookAtFromPosition(new Vector3(0, 1.1f, 6.2f), new Vector3(0, 0.62f, 0), Vector3.Up);
+    }
+
+    // Today's model beside its Blender-authored version (art-rnd-1), each turned through
+    // three views: --view=art --piece=<name> finds the static class LifeGame.Art<Name>
+    // (client/scripts/models/art/), which has Node3D Today(), Node3D Authored() and the
+    // float fields Spacing (m between models) and Height (m, for framing).
+    // --yaws=30,-60,-150 picks the views; --close frames the authored ones only.
+    void ArtPiece()
+    {
+        string piece = args.GetValueOrDefault("piece", "tree");
+        var type = System.Type.GetType("LifeGame.Art" + char.ToUpperInvariant(piece[0]) + piece[1..])
+            ?? throw new System.ArgumentException($"no art piece {piece}");
+        Node3D Make(string name) => (Node3D)type.GetMethod(name)!.Invoke(null, null)!;
+        float spacing = (float)type.GetField("Spacing")!.GetValue(null)!;
+        float height = (float)type.GetField("Height")!.GetValue(null)!;
+        var yaws = args.GetValueOrDefault("yaws", "30,-60,-150").Split(',');
+        bool close = args.ContainsKey("close");
+        int n = yaws.Length, count = close ? n : 2 * n;
+        for (int i = 0; i < count; i++)
+        {
+            var model = close || i >= n ? Make("Authored") : Make("Today");
+            model.Position = new Vector3((i - (count - 1) * 0.5f) * spacing + (close || i < n ? 0 : spacing * 0.4f), 0, 0);
+            model.Rotation = new Vector3(0, Mathf.DegToRad(float.Parse(yaws[i % n], System.Globalization.CultureInfo.InvariantCulture)), 0);
+            AddChild(model);
+        }
+        float fov = 30f;
+        float width = count * spacing + spacing * 0.6f;
+        float distance = Mathf.Max(width * 0.5f / Mathf.Tan(Mathf.DegToRad(fov * 0.5f * 16f / 9f)), height * 0.5f / Mathf.Tan(Mathf.DegToRad(fov * 0.5f))) * 1.08f;
+        var camera = new Camera3D { Fov = fov, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, height * 0.55f + distance * 0.12f, distance), new Vector3(0, height * 0.48f, 0), Vector3.Up);
     }
 }

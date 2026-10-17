@@ -44,7 +44,9 @@ public static class ChibiFigure
     // The roster-1 colour keys.
     static readonly Color Tunic = new(0.44f, 0.56f, 0.31f), Trousers = new(0.42f, 0.35f, 0.30f), BrambleBoot = new(0.48f, 0.31f, 0.20f), Strap = new(0.55f, 0.37f, 0.24f);
     public static readonly Color[] PebbleSkins = { new(0.66f, 0.76f, 0.48f), new(0.62f, 0.72f, 0.5f), new(0.74f, 0.74f, 0.52f) };
-    public static readonly Color[] Shells = { new(0.54f, 0.42f, 0.28f), new(0.5f, 0.42f, 0.36f), new(0.6f, 0.5f, 0.3f) };
+    // Pebble's shell colours (D-313 palette): caramel (the one ChibiShell's texture is
+    // painted in), honey and sage-olive.
+    public static readonly Color[] Shells = { new(0.54f, 0.42f, 0.28f), new(0.6f, 0.5f, 0.29f), new(0.47f, 0.47f, 0.31f) };
     static readonly Color ShellRim = new(0.79f, 0.64f, 0.42f), BellyPlate = new(0.91f, 0.85f, 0.63f), PebbleFeet = new(0.56f, 0.66f, 0.40f);
     static readonly Color Petal = new(0.96f, 0.94f, 0.89f), PetalHeart = new(0.95f, 0.81f, 0.35f);
 
