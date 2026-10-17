@@ -3,7 +3,7 @@ Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_review
 Branch: claude/atmosphere-19b-homes (follow-up; first part claude/atmosphere-19-warm-homes, #281 merged)
-PR: #281
+PR: #281 (merged), follow-up #407
 
 ## Goal
 Justin's pick (2026-10-16, via the PM), order 19 warm homes, 20 wet world, 21 storms. At night, camps look lived-in from afar: warm firelight glows from hut doorways and gaps in walls, and smoke rises from hearths and chimneys and drifts with the wind. Lights and smoke follow a hearth or fire inside or by a structure; strength follows Atmosphere.Night and the fire's fuel. Coordinate with House building (which owns huts, doors and structure pieces) on where doorways, gaps and hearths are; the glow and smoke are Atmosphere's. Done: Render lane shots of a hut with a fire at dusk and night from 10 m and 40 m, and a PR green.
@@ -25,4 +25,4 @@ Justin's pick (2026-10-16, via the PM), order 19 warm homes, 20 wet world, 21 st
 - (none)
 
 ## Next step
-Wait for the follow-up PR's CI and send the PM the green sha.
+Wait for #407 CI and send the PM the green sha.
