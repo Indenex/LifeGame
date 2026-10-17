@@ -20,6 +20,7 @@ Short gameplay clips (5-15 s, 12 fps movie, 960x540) requested by lanes or the P
 3. anim-11 equip/hold in hand (main): scenes/anim-11-equip.txt; copy Animation (session_019roNRWQBPw4ozNLDhzseig)
 4. anim-12 sit/lie + anim-13 idle fidgets and hop in one clip (build claude/anim-15 head 41b33212, which includes anim-12 and 13): scenes/anim-12-13-rest-idle.txt; copy Animation
 4b. anim-15 (PR #633 claude/anim-15 41b33212): light a fire, stand 2-3 m away facing away, press H: turns to face the fire and sits; film ~40 s for fidgets; optional 30 s sitting in the open at night. Same build as 4.
+4c. After 4, unless the PM moves them up: anim-14 faces (PR #647 claude/anim-14 19a43ec2: close-up 3/4 chibi face, idle blink 10 s, eat (X key), lie down H twice sleepy/closed eyes, 2nd player waving), anim-16 emotes (PR #653 claude/anim-16 0e60316a: Emote(24 wave) 25 cheer 26 dance 27 bow, 3.5 s apart, side and 3/4)
 5. smoke signal #524 (c1fa9240): near, far; copy Atmosphere
 Dropped: painted trees, tree fall, painted items, chibi, anim-10, anim-9 idle, water rain/no-reflect/stream, crafting-29 equip, painted-2 walk-past. Scenes for some exist in tools/render/scenes if they come back.
 
