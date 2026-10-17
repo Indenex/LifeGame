@@ -11,6 +11,8 @@ A joint job with Modeling from Justin, on the pines: "I still want more of the p
 ## Progress log
 - 2026-10-17 03:20: `client/scripts/atmosphere/Painterly.cs` (new) is a screen-wide Kuwahara pass: a quad in front of the camera after the 3D scene, with each pixel taking the calmest of four patches, which are turned along a slow brush-noise field and stretched into strokes. The HUD is untouched. Flags: `--painterly=1` (soft, radius 2, 36 taps), `--painterly=2` (strong, radius 3, 64 taps), `--painterly-mix=0..1`, and `--gpu-bench`, which logs the 3D view's average GPU ms every 5 s. Hook: `AddChild(new Painterly())` in `Atmosphere.cs`. The client builds with 0 errors. Not run yet.
 
+- 2026-10-17 03:30: reviewed Modeling's painted pine ramp (claude/model-4-materials @ 0940e3c9, MaterialLook.CardPine light()). Sent them three issues: (1) a bug where omni lights add a flat 32% within their range, because the band floor has no ATTENUATION (fix: a `reach` term); (2) the 0.32 floor makes shadows too weak next to Look's ground (suggest about 0.1); (3) no cloud shadows (use cloud_shadow via Look.MakeShader). Asked Render for pinetest under dawn, noon, moonlight, fog and storm, plus a night shot with a fire.
+
 ## Open questions / blockers
 - Waiting on Render: comparison shots and the GPU cost.
 - Waiting on Modeling: their stepped-ramp material, so I can check it under sun, moon, fog and rays.
