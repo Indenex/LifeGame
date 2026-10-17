@@ -25,7 +25,7 @@ Justin: "a character menu when logging in, and a way to delete/create new charac
 - 2026-10-17 07:00: local fresh world: CharacterCheck, SurvivalCheck, SpawnCheck, SocialTest, LoadTest, upgrade check (origin/main) and full BuildTest (429 s) pass. BuildTest/SpawnCheck/ClayCheck/Puppet follow the menu (a returning login calls SelectCharacter). Fixed SurvivalCheck's bot name (digits were refused by the name rules since #558, so make_admin found nobody).
 
 ## Open questions / blockers
-- Race: the game has no race yet, so CreateCharacter takes the look only.
+- CreateCharacter(name, race, a, b, c, d) takes the race and four option bytes, validated like SetRaceLook.
 - tools/render/Puppet does not build on main (AcceptTrade needs the `accept` argument; not from this change). Render lane to fix.
 - Admin status is per character (WorldAdmin is keyed by the key).
 

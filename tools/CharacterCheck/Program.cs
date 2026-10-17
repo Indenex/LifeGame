@@ -125,7 +125,7 @@ Ok("the first character carries 5 berries and is an admin");
 
 // --- Making and selecting only happen at the menu ---
 string name2 = RandName();
-MustRefuse("making a character in the world", "menu", () => conn.Reducers.CreateCharacter(name2, 0, 0, 0, 0));
+MustRefuse("making a character in the world", "menu", () => conn.Reducers.CreateCharacter(name2, 0, 0, 0, 0, 0));
 MustRefuse("selecting a character in the world", "menu", () => conn.Reducers.SelectCharacter(first.Key));
 Ok("making or selecting a character is refused while in the world");
 
@@ -135,9 +135,9 @@ MustRefuse("walking from the menu", "player", () => conn.Reducers.Move(1, 1, 0))
 Ok("at the menu: out of the world and unable to act");
 
 // --- A second character ---
-MustRefuse("a taken name", "taken", () => conn.Reducers.CreateCharacter(name1, 0, 0, 0, 0));
-MustRefuse("a bad name", "", () => conn.Reducers.CreateCharacter("x", 0, 0, 0, 0));
-MustWork("CreateCharacter", () => conn.Reducers.CreateCharacter(name2, 0, 0, 0, 0));
+MustRefuse("a taken name", "taken", () => conn.Reducers.CreateCharacter(name1, 0, 0, 0, 0, 0));
+MustRefuse("a bad name", "", () => conn.Reducers.CreateCharacter("x", 0, 0, 0, 0, 0));
+MustWork("CreateCharacter", () => conn.Reducers.CreateCharacter(name2, 0, 0, 0, 0, 0));
 Pump(() => Chars().Length == 2 && InWorld(), 10, "the second character, in the world");
 var second = Chars().First(c => c.Key != first.Key);
 if (Me.Key(conn) != second.Key) Fail("the new character should be the one being played");
@@ -158,11 +158,11 @@ Ok("the second character can act");
 MustWork("ReturnToMenu", () => conn.Reducers.ReturnToMenu());
 Pump(() => !InWorld(), 5, "the second character to leave the world");
 string name3 = RandName();
-MustWork("CreateCharacter (third)", () => conn.Reducers.CreateCharacter(name3, 0, 0, 0, 0));
+MustWork("CreateCharacter (third)", () => conn.Reducers.CreateCharacter(name3, 0, 0, 0, 0, 0));
 Pump(() => Chars().Length == 3 && InWorld(), 10, "the third character");
 MustWork("ReturnToMenu", () => conn.Reducers.ReturnToMenu());
 Pump(() => !InWorld(), 5, "the third character to leave the world");
-MustRefuse("a fourth character", $"{Characters.MaxPerLogin}", () => conn.Reducers.CreateCharacter("Fourth One", 0, 0, 0, 0));
+MustRefuse("a fourth character", $"{Characters.MaxPerLogin}", () => conn.Reducers.CreateCharacter("Fourth One", 0, 0, 0, 0, 0));
 Ok($"{Characters.MaxPerLogin} characters is the limit");
 
 // --- Back to the first ---
@@ -181,7 +181,7 @@ MustWork("DeleteCharacter", () => conn.Reducers.DeleteCharacter(second.Key, name
 Pump(() => Chars().Length == 2, 5, "the deleted character to leave the list");
 MustRefuse("deleting another login's or a missing character", "not one of your", () => conn.Reducers.DeleteCharacter(second.Key, name2));
 Ok("delete needs the typed name and removes the character");
-MustWork("CreateCharacter with the freed name", () => conn.Reducers.CreateCharacter(name2, 0, 0, 0, 0));
+MustWork("CreateCharacter with the freed name", () => conn.Reducers.CreateCharacter(name2, 0, 0, 0, 0, 0));
 Pump(() => Chars().Length == 3 && InWorld(), 10, "a character with the freed name");
 Ok("a deleted character's name is free again");
 
