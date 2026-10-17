@@ -27,6 +27,8 @@ public partial class SocialLayer
         c.Db.TownVote.OnInsert += (_, _) => dirty(); c.Db.TownVote.OnUpdate += (_, _, _) => dirty(); c.Db.TownVote.OnDelete += (_, _) => dirty();
         c.Db.TownMerge.OnInsert += (_, _) => dirty(); c.Db.TownMerge.OnUpdate += (_, _, _) => dirty(); c.Db.TownMerge.OnDelete += (_, _) => dirty();
         c.Db.TownMergeVote.OnInsert += (_, _) => dirty(); c.Db.TownMergeVote.OnUpdate += (_, _, _) => dirty(); c.Db.TownMergeVote.OnDelete += (_, _) => dirty();
+        c.Db.TownBan.OnInsert += (_, _) => dirty(); c.Db.TownBan.OnUpdate += (_, _, _) => dirty(); c.Db.TownBan.OnDelete += (_, _) => dirty();
+        c.Db.TownLog.OnInsert += (_, _) => dirty(); c.Db.TownLog.OnUpdate += (_, _, _) => dirty(); c.Db.TownLog.OnDelete += (_, _) => dirty();
         c.Db.MyTownInvites.OnInsert += (_, invite) => { dirty(); Invited(invite); };
         c.Db.MyTownInvites.OnDelete += (_, _) => dirty();
         c.Db.Claim.OnInsert += (_, _) => dirty(); c.Db.Claim.OnUpdate += (_, _, _) => dirty(); c.Db.Claim.OnDelete += (_, _) => dirty();
