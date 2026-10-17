@@ -164,9 +164,9 @@ public static partial class Module
             throw new Exception("Go back to the character menu first");
     }
 
-    // Makes a new character, with a name and a look, and steps into the world as them.
+    // Makes a new character, with a name and a race and look (as SetRaceLook), and steps into the world as them.
     [SpacetimeDB.Reducer]
-    public static void CreateCharacter(ReducerContext ctx, string name, byte skin, byte hair, byte cut, byte beard)
+    public static void CreateCharacter(ReducerContext ctx, string name, byte race, byte a, byte b, byte c, byte d)
     {
         RequireAtMenu(ctx);
         BackfillCharacter(ctx, ctx.Sender);
@@ -174,10 +174,10 @@ public static partial class Module
             throw new Exception($"You can have {Characters.MaxPerLogin} characters");
         name = Names.Normalize(name);
         if (Names.Problem(name) is { } problem) throw new Exception(problem);
-        if (!LifeGame.Shared.Looks.Valid(skin, hair, cut, beard)) throw new Exception("That look is not one of the choices.");
+        if (!LifeGame.Shared.Looks.Valid(race, a, b, c, d)) throw new Exception("That look is not one of the choices.");
         RequireNameFree(ctx, name, 0);
         var player = MakeCharacter(ctx, ctx.Sender, NewCharacterKey(ctx), name);
-        ctx.Db.PlayerLook.Insert(new PlayerLook { PlayerId = player.PlayerId, Skin = skin, Hair = hair, Cut = cut, Beard = beard });
+        SaveLook(ctx, new PlayerLook { PlayerId = player.PlayerId, Skin = a, Hair = b, Cut = c, Beard = d, Race = race });
         SetActive(ctx, ctx.Sender, player.Identity);
         EnterWorld(ctx, player);
     }
