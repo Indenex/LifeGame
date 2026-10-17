@@ -64,6 +64,9 @@ namespace LifeGame.Shared
 
         // Survival
         Berries = 160,
+        // A hide waterskin (survival-20): carries a little water before pottery.
+        Waterskin = 161,
+        WaterskinOfWater = 162,
 
         // Animals (190-219); mutton is cooked by Crafting
         RawMutton = 190,
@@ -88,6 +91,9 @@ namespace LifeGame.Shared
         CookedChicken = 209,
         BurntChicken = 210,
         Feather = 211,
+        // A boiled egg, roasted on a fire like meat (crafting-24); eggs left on too long burn.
+        BoiledEgg = 212,
+        BurntEgg = 213,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -175,6 +181,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Grog, Name = "Grog", Plural = "Grog" },
             new ItemDef { Id = Item.PinchPot, Name = "Pinch pot", Plural = "Pinch pots", HasQuality = true, Placeable = true },
             new ItemDef { Id = Item.CoilPot, Name = "Coil pot", Plural = "Coil pots", HasQuality = true, Placeable = true },
+            new ItemDef { Id = Item.Waterskin, Name = "Waterskin", Plural = "Waterskins", HasQuality = true },
+            new ItemDef { Id = Item.WaterskinOfWater, Name = "Waterskin of water", Plural = "Waterskins of water", HasQuality = true, Use = UseAction.Drink },
             new ItemDef { Id = Item.PinchPotOfWater, Name = "Pinch pot of water", Plural = "Pinch pots of water", HasQuality = true, Use = UseAction.Drink },
             new ItemDef { Id = Item.CoilPotOfWater, Name = "Coil pot of water", Plural = "Coil pots of water", HasQuality = true, Use = UseAction.Drink },
             new ItemDef { Id = Item.Brick, Name = "Sun-dried brick", Plural = "Sun-dried bricks", Placeable = true },
@@ -221,6 +229,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Egg, Name = "Egg", Plural = "Eggs", HasQuality = true },
             new ItemDef { Id = Item.RawChicken, Name = "Raw chicken", Plural = "Raw chicken", HasQuality = true },
             new ItemDef { Id = Item.Feather, Name = "Feather", Plural = "Feathers", HasQuality = true },
+            new ItemDef { Id = Item.BoiledEgg, Name = "Boiled egg", Plural = "Boiled eggs", HasQuality = true },
+            new ItemDef { Id = Item.BurntEgg, Name = "Burnt egg", Plural = "Burnt eggs", HasQuality = true },
             new ItemDef { Id = Item.CookedChicken, Name = "Roast chicken", Plural = "Roast chicken", HasQuality = true },
             new ItemDef { Id = Item.BurntChicken, Name = "Burnt chicken", Plural = "Burnt chicken" });
 

@@ -231,12 +231,13 @@ public static partial class Module
             .Where(i => Items.IsKnown(i.Item) && ClayRules.FilledItem((Item)i.Item) is not null)
             .ToList();
         if (empty.Count == 0)
-            throw new Exception("You have no fired pot to fill");
+            throw new Exception("You have nothing to fill: a fired pot or a waterskin");
         foreach (var stack in empty)
         {
             RemoveFromStack(ctx, stack, stack.Count);
             AddToInventory(ctx, ctx.Sender, ClayRules.FilledItem((Item)stack.Item)!.Value, stack.Count, stack.Quality);
-            OnProcessPerformed(ctx, player.PlayerId, ClayRules.FillProcess, stack.Quality, false);
+            if ((Item)stack.Item != Item.Waterskin)
+                OnProcessPerformed(ctx, player.PlayerId, ClayRules.FillProcess, stack.Quality, false);
         }
     }
 

@@ -53,6 +53,7 @@ public partial class Atmosphere : Node3D
     public readonly SheepVoices Sheep = new();
     // The same for red deer: a bark when a herd bolts, hoof thuds, and stags roaring at autumn dusk (audio-4).
     public readonly DeerVoices Deer = new();
+    public readonly HenVoices Hens = new();
 
     // The clock: day zero began at dayStart, and the server is clockOffset ahead of us.
     long dayStartMicros, clockOffsetMicros;
@@ -124,6 +125,7 @@ public partial class Atmosphere : Node3D
         ReadySeasons();
         ReadyFronts();
         ReadyGrade();
+        ReadyImpacts();
         ReadyStorms();
         ReadyHomes();
 
@@ -180,12 +182,17 @@ public partial class Atmosphere : Node3D
         conn.Db.Weather.OnInsert += (_, w) => OnWeather(w);
         conn.Db.Weather.OnUpdate += (_, _, w) => OnWeather(w);
         ConnectSeasons(conn);
+        ConnectImpacts(conn);
         ConnectHomes(conn);
         // Sheep bleat (only sheep: deer and other animals get their own voices);
         // Herd subscribes to the animal rows near the player.
         conn.Db.Animal.OnInsert += (_, a) => HearAnimal(a);
-        conn.Db.Animal.OnUpdate += (_, _, a) => HearAnimal(a);
-        conn.Db.Animal.OnDelete += (_, a) => { Sheep.Gone(a.Id); Deer.Gone(a.Id); };
+        conn.Db.Animal.OnUpdate += (_, was, a) =>
+        {
+            HearAnimal(a);
+            if (a.Eggs > was.Eggs && AnimalDefs.Get((byte)a.Species).Model == "hen") Hens.Laid(a.X, a.Z);
+        };
+        conn.Db.Animal.OnDelete += (_, a) => { Sheep.Gone(a.Id); Deer.Gone(a.Id); Hens.Gone(a.Id); };
         // A blow landing on an animal: a thud, or a crack for a sneak-attack crit (audio-4).
         conn.Db.AnimalHit.OnInsert += (_, h) => HearHit(h);
         // A bow shot: the twang now, the arrow's thunk when it lands (audio-6).
@@ -201,6 +208,7 @@ public partial class Atmosphere : Node3D
             .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin", "SELECT * FROM craft_work", "SELECT * FROM season_clock", "SELECT * FROM season_state" });
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
         WorkSounds.Connect(conn, sound);
+        ToolSounds.Connect(conn);
     }
 
     void OnClock(WorldClock c)
@@ -294,6 +302,8 @@ public partial class Atmosphere : Node3D
             Sheep.Tick(dt, focus, camera.GlobalBasis.X);
             Deer.RoarTime = StagRoarTime();
             Deer.Tick(dt, focus, camera.GlobalBasis.X);
+            Hens.NightTime = Mathf.SmoothStep(0.7f, 0.85f, timeOfDay < 0f ? 0.5f : timeOfDay) + Mathf.SmoothStep(0.3f, 0.2f, timeOfDay < 0f ? 0.5f : timeOfDay);
+            Hens.Tick(dt);
         }
         float daylight = WorldTime.Daylight(timeOfDay);
         UpdateSeasons(dt, focus, wind, env.FogLightColor * (0.3f + 0.7f * WorldTime.Daylight(timeOfDay)));
@@ -316,6 +326,7 @@ public partial class Atmosphere : Node3D
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
         leaves.Follow(focus, Year, wind, woods, WindDirection);
         UpdateWater(dt, focus, env.FogLightColor.Lerp(sun.LightColor, 0.4f));
+        UpdateImpacts(dt);
         sound.Foliage = wooded;
         Lightning(dt, focus);
         if (GetViewport()?.GetCamera3D() is { } ear)
@@ -324,6 +335,7 @@ public partial class Atmosphere : Node3D
             FireSound(focus, ear.GlobalBasis.X);
             WaterSound(dt, focus, ear.GlobalBasis.X);
             WorkSounds.Place(dt, focus, ear.GlobalBasis.X);
+            ToolSounds.Tick(dt);
         }
     }
 

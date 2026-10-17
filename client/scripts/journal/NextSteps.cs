@@ -21,6 +21,9 @@ public static class NextSteps
     {
         [Skills.Forage] = "Sticks, stones and plant fiber lie all around. {pick_up} picks them up.",
         [Skills.Run] = "Hold {run} to run. The more you run, the farther you can go.",
+        [Wading.WadeProcess] = "Shallow water slows you, but a patient wader gets across.",
+        [Wading.FloatProcess] = "Where the water is deep, you can let it carry you across.",
+        [Skills.Repair] = "A tool worn thin is not lost. A repair table and a little cord will mend it.",
         [Skills.Berries] = "Some bushes carry ripe berries. Food for the road.",
         [Skills.Dig] = "The ground holds more than roots. Try {dig} where the soil is low and damp.",
         ["gather.tinder"] = "Fire needs something fine and dry to catch. Plant fiber can be shredded.",
@@ -35,7 +38,9 @@ public static class NextSteps
         ["carve.digging_stick"] = "A sharpened stick digs deeper than bare hands.",
         ["cord.twist"] = "Plant fiber, twisted tight, becomes cord.",
         ["lash.spear"] = "A sharp flake bound to a long stick reaches further.",
+        ["carve.fletched_arrows"] = "Feathers on an arrow's tail keep it flying true.",
         ["lash.bow"] = "A green stick bent and strung with cord will throw a light shaft a long way.",
+        ["cook.egg"] = "An egg set in the embers comes out firm and good to eat. Left too long it blackens.",
         ["carve.arrows"] = "Straight shafts, shaved smooth and feathered with fibre, fly truer than plain sticks.",
         ["lash.stone_axe"] = "A shaped stone bound to a handle could fell a tree.",
         ["haft.knife"] = "A flake cuts better with a handle to hold it.",
@@ -45,6 +50,8 @@ public static class NextSteps
         ["chop.log"] = "Standing trees give logs to an axe. A log burns for a long time.",
         ["hide.scrape"] = "A fresh hide must be scraped clean with an edge before it will keep.",
         ["hide.scrape_deer"] = "A deer hide wants scraping clean before it will keep, and gives finer leather than a sheep's.",
+        ["hide.waterskin"] = "A hide can be sewn shut to carry a few mouthfuls of water.",
+        [Skills.Eggs] = "A hen that is left in peace lays eggs, and a patient hand can take them.",
         ["hide.stretch"] = "A clean hide laced onto a stick frame dries stiff and tan into leather, slower in rain and faster by a fire.",
         [Skills.DryHide] = "Leave a stretched hide to the sun and wind until it turns to leather.",
         ["clay.clean"] = "Dug clay is full of stones and roots. Pick them out first.",
@@ -101,6 +108,10 @@ public static class NextSteps
         [Skills.Berries] = Array.Empty<string[]>(),
         [Skills.Dig] = Array.Empty<string[]>(),
         [Skills.Run] = Array.Empty<string[]>(),
+        [Skills.Eggs] = Array.Empty<string[]>(),
+        [Wading.WadeProcess] = Array.Empty<string[]>(),
+        [Wading.FloatProcess] = new[] { new[] { Wading.WadeProcess } },
+        [Skills.Repair] = new[] { new[] { "build.table" } },
         [ClayRules.PitFireProcess] = new[] { new[] { "fire.hand_drill", "fire.bow_drill" }, new[] { "clay.pinch_pot", "clay.coil_pot" } },
         [ClayRules.FillProcess] = new[] { new[] { ClayRules.PitFireProcess, ClayRules.KilnFireProcess } },
         [ClayRules.KilnProcess] = new[] { new[] { "clay.brick" }, new[] { "clay.daub" } },
@@ -153,9 +164,9 @@ public static class NextSteps
     // Rough tier for activities outside Processes.List, so hints come in a sensible order.
     static readonly Dictionary<string, int> Tier = new()
     {
-        [Skills.Forage] = 0, [Skills.Berries] = 0, [Skills.Run] = 0, [Skills.Dig] = 1, ["build.frame"] = 1, ["build.table"] = 2, ["build.spindle"] = 2, ["build.rack"] = 2,
+        [Skills.Forage] = 0, [Skills.Berries] = 0, [Skills.Run] = 0, [Wading.WadeProcess] = 1, [Wading.FloatProcess] = 1, [Skills.Repair] = 3, [Skills.Dig] = 1, ["build.frame"] = 1, ["build.table"] = 2, ["build.spindle"] = 2, ["build.rack"] = 2,
         ["build.wattle"] = 2, ["build.roof"] = 2, ["build.weave"] = 2,
-        [Skills.Shear] = 2, [Skills.Eggs] = 1, [Skills.Kill] = 2, [Skills.Sneak] = 2, [Skills.Shoot] = 3, [Skills.Butcher] = 2, [Skills.DryHide] = 2,
+        [Skills.Eggs] = 1, [Skills.Shear] = 2, [Skills.Eggs] = 1, [Skills.Kill] = 2, [Skills.Sneak] = 2, [Skills.Shoot] = 3, [Skills.Butcher] = 2, [Skills.DryHide] = 2,
     };
 
     // The first evening's road (D-081, D-127): fire, a claim, food and shelter, a stone

@@ -314,7 +314,7 @@ public partial class CeramicsView : Node
         for (int gx = cx - r; gx <= cx + r; gx++)
             for (int gz = cz - r; gz <= cz + r; gz++)
                 if ((gx - me3.X) * (gx - me3.X) + (gz - me3.Z) * (gz - me3.Z) <= reach * reach && heightAt(gx, gz) < World.WaterLevel)
-                    return new UseOffer("Fill pots with water", 0.5f, () => conn.Reducers.FillPots());
+                    return new UseOffer("Fill your pots and waterskin with water", 0.5f, () => conn.Reducers.FillPots(), Again: Use.HoldInterval);
         return null;
     }
 

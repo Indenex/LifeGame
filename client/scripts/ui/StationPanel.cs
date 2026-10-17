@@ -8,8 +8,9 @@ using SpacetimeDB.Types;
 namespace LifeGame;
 
 // The panel at a crafting station (D-098, D-112): Use (E) at a finished station opens it.
-// It lists what is made there and, for each ingredient, how much you have in your bag
-// and nearby (baskets and jars within 4 m of the station, and the claim's stash).
+// It shows what is made there as the crafting menu's picture cards (ui/CraftGrid.cs,
+// ui-25), counting each ingredient in your bag and nearby (baskets and jars within 4 m
+// of the station, and the claim's stash).
 // Make hands the craft to the C panel's own path (CraftingUi.Start), so minigames and
 // skills work the same; the server (Stations.cs) has the last word. Walking away, Use or
 // Esc closes it. Main sets Conn, Crafting and Me.
@@ -21,14 +22,13 @@ public partial class StationPanel : CanvasLayer
     public Func<Vector3> Me = () => Vector3.Zero;
 
     static readonly StringName NUse = "use";
-    static readonly Color Short = new(0.98f, 0.76f, 0.38f);
 
     public bool IsOpen => station != null;
 
     Structure? station;
     Control window = null!;
     Label title = null!, hint = null!;
-    VBoxContainer rows = null!;
+    readonly CraftGrid grid = new();
     string shown = "";
 
     public override void _Ready()
@@ -37,6 +37,7 @@ public partial class StationPanel : CanvasLayer
         window = MakeWindow();
         window.Visible = false;
         AddChild(window);
+        Panels.Centre(this, () => { if (IsOpen) Close(); });
         Use.Register(new UseHandler { Id = "ui.station", Priority = 30, Find = FindUse });
     }
 
@@ -59,6 +60,7 @@ public partial class StationPanel : CanvasLayer
 
     public void Open(Structure at)
     {
+        Panels.Opening(this);
         station = at;
         shown = "";
         window.Visible = true;
@@ -68,6 +70,7 @@ public partial class StationPanel : CanvasLayer
     public void Close()
     {
         station = null;
+        grid.ClearSearch();
         window.Visible = false;
     }
 
@@ -89,7 +92,8 @@ public partial class StationPanel : CanvasLayer
     public override void _UnhandledInput(InputEvent e)
     {
         if (!IsOpen) return;
-        if (e.IsActionPressed(NUse) || e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Escape })
+        if (grid.Typing && !e.IsActionPressed("ui_cancel")) return;
+        if (e.IsActionPressed(NUse) || e.IsActionPressed("ui_cancel"))
         {
             Close();
             GetViewport().SetInputAsHandled();
@@ -122,22 +126,22 @@ public partial class StationPanel : CanvasLayer
         box.AddThemeConstantOverride("separation", 10);
         title = Hud.Text("", 20);
         box.AddChild(title);
-        rows = new VBoxContainer { CustomMinimumSize = new Vector2(560, 0) };
-        rows.AddThemeConstantOverride("separation", 8);
-        box.AddChild(rows);
+        grid.Recipes = () => station is { } s ? Processes.List.Where(p => p.Station == Structures.Shape((int)s.Kind).Station) : Enumerable.Empty<ProcessDef>();
+        grid.Missing = def => Crafting.Missing(def);
+        grid.Have = item => Conn() is { } c && station is { } s ? Bag(c, item) + Stations.StoredNear(c, s, item) : 0;
+        grid.Make = def =>
+        {
+            // A minigame needs the screen, so the panel steps aside; otherwise it stays to make another.
+            if (def.Minigame != Minigame.None) Close();
+            Crafting.Start(def);
+        };
+        box.AddChild(grid);
         hint = Hud.Text($"Takes from your bag first, then baskets and jars nearby, then the claim's stash    {Controls.KeyFor("use") ?? "E"} or Esc closes", 13);
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
 
         // The same soft dark panel as the other windows (D-125).
-        var panel = Hud.Panel(box, Vector2.Zero);
-        var style = (StyleBoxFlat)panel.GetThemeStylebox("panel");
-        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.82f);
-        style.ContentMarginTop = style.ContentMarginBottom = 14;
-        style.ContentMarginLeft = style.ContentMarginRight = 18;
-        panel.SetAnchorsPreset(Control.LayoutPreset.Center);
-        panel.GrowHorizontal = Control.GrowDirection.Both;
-        panel.GrowVertical = Control.GrowDirection.Both;
+        var panel = Ui.Window(box);
         return panel;
     }
 
@@ -156,73 +160,7 @@ public partial class StationPanel : CanvasLayer
         shown = now;
 
         title.Text = Capital(StationInfo.Name(kind));
-        foreach (var child in rows.GetChildren()) { rows.RemoveChild(child); child.QueueFree(); }
-        foreach (var (def, missing, counts) in lines) rows.AddChild(Row(def, missing, counts));
-        if (recipes.Count == 0) rows.AddChild(Faint("Nothing is made here yet"));
-    }
-
-    Control Row(ProcessDef def, string? missing, List<(uint bag, uint near)> counts)
-    {
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 12);
-
-        var picture = new TextureRect
-        {
-            Texture = def.Makes != default ? ItemIcon.For(def.Makes) : null,
-            CustomMinimumSize = new Vector2(44, 44),
-            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-        };
-        row.AddChild(picture);
-
-        var text = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        text.AddThemeConstantOverride("separation", 2);
-        text.AddChild(Hud.Text(def.Name, 16));
-        // "4 fiber: 1 in your bag, 3 nearby", one line per ingredient.
-        for (int i = 0; i < def.Consumes.Length; i++)
-        {
-            var need = def.Consumes[i];
-            var (bag, near) = counts[i];
-            string what = Items.Def(need.Item).Count(need.Count).ToLowerInvariant();
-            string where = (bag, near) switch
-            {
-                (0, 0) => "none to hand",
-                (_, 0) => $"{bag} in your bag",
-                (0, _) => $"{near} nearby",
-                _ => $"{bag} in your bag, {near} nearby",
-            };
-            var line = Hud.Text($"{need.Count} {what}: {where}", 13);
-            line.Modulate = bag + near >= need.Count ? new Color(1, 1, 1, 0.75f) : Colors.White;
-            if (bag + near < need.Count) line.AddThemeColorOverride("font_color", Short);
-            text.AddChild(line);
-        }
-        if (def.NeedsTool != ItemTags.None)
-        {
-            var tool = Hud.Text($"Using {CraftingUi.ToolName(def.NeedsTool)}", 13);
-            tool.Modulate = new Color(1, 1, 1, 0.6f);
-            text.AddChild(tool);
-        }
-        if (missing != null)
-        {
-            var why = Hud.Text(missing, 13);
-            why.AddThemeColorOverride("font_color", Short);
-            why.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-            why.CustomMinimumSize = new Vector2(380, 0);
-            text.AddChild(why);
-        }
-        row.AddChild(text);
-
-        var make = new Button { Text = "Make", Disabled = missing != null, FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(90, 36) };
-        make.AddThemeFontSizeOverride("font_size", 16);
-        make.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
-        make.Pressed += () =>
-        {
-            // The minigame (if any) needs the screen; the panel steps aside.
-            Close();
-            Crafting.Start(def);
-        };
-        row.AddChild(make);
-        return row;
+        grid.Refresh();
     }
 
     static uint Bag(DbConnection c, Item item) =>
@@ -230,10 +168,4 @@ public partial class StationPanel : CanvasLayer
 
     static string Capital(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
 
-    static Label Faint(string text)
-    {
-        var label = Hud.Text(text, 14);
-        label.Modulate = new Color(1, 1, 1, 0.5f);
-        return label;
-    }
 }
