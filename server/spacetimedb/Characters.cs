@@ -24,6 +24,8 @@ public static partial class Module
         public Timestamp Created;
         // A copy of Player.Name so the menu can list characters that are not in the world.
         public string Name;
+        // The last time this character was in the world (set on entering and leaving); Created if never.
+        public Timestamp LastPlayed;
     }
 
     // Which character a login is playing, or last played. In the world only while that
@@ -74,7 +76,7 @@ public static partial class Module
     {
         if (ctx.Db.Character.Login.Filter(login).Any()) return;
         if (ctx.Db.Player.Identity.Find(login) is not { } old) return;
-        ctx.Db.Character.Insert(new Character { Key = login, Login = login, PlayerId = old.PlayerId, Created = ctx.Timestamp, Name = old.Name });
+        ctx.Db.Character.Insert(new Character { Key = login, Login = login, PlayerId = old.PlayerId, Created = ctx.Timestamp, LastPlayed = ctx.Timestamp, Name = old.Name });
         if (ctx.Db.ActiveCharacter.Login.Find(login) == null)
             ctx.Db.ActiveCharacter.Insert(new ActiveCharacter { Login = login, Key = login });
     }
@@ -103,7 +105,7 @@ public static partial class Module
     static Player MakeCharacter(ReducerContext ctx, Identity login, Identity key, string name)
     {
         var player = ctx.Db.Player.Insert(new Player { Identity = key, PlayerId = 0, Name = name, Online = false });
-        ctx.Db.Character.Insert(new Character { Key = key, Login = login, PlayerId = player.PlayerId, Created = ctx.Timestamp, Name = name });
+        ctx.Db.Character.Insert(new Character { Key = key, Login = login, PlayerId = player.PlayerId, Created = ctx.Timestamp, LastPlayed = ctx.Timestamp, Name = name });
         float x = (float)(ctx.Rng.NextDouble() * 16 - 8);
         float z = (float)(ctx.Rng.NextDouble() * 16 - 8);
         ctx.Db.PlayerPos.Insert(new PlayerPos
@@ -120,6 +122,7 @@ public static partial class Module
     {
         player = player with { Online = true };
         ctx.Db.Player.Identity.Update(player);
+        TouchLastPlayed(ctx, player.Identity);
         ForgetSeen(ctx, player.PlayerId);
         if (ctx.Db.PlayerState.PlayerId.Find(player.PlayerId) is { } state)
             ctx.Db.PlayerState.PlayerId.Update(state with { LastMoveAt = ctx.Timestamp });
@@ -127,11 +130,17 @@ public static partial class Module
         EnsureHealth(ctx, player.PlayerId);
     }
 
+    static void TouchLastPlayed(ReducerContext ctx, Identity key)
+    {
+        if (ctx.Db.Character.Key.Find(key) is { } c) ctx.Db.Character.Key.Update(c with { LastPlayed = ctx.Timestamp });
+    }
+
     // The character leaves the world, by disconnecting or going back to the menu.
     static void LeaveWorld(ReducerContext ctx, Player player)
     {
         if (!player.Online) return;
         ctx.Db.Player.Identity.Update(player with { Online = false });
+        TouchLastPlayed(ctx, player.Identity);
         ForgetSeen(ctx, player.PlayerId);
         SurvivalDisconnected(ctx, player);
         StanceDisconnected(ctx, player);
