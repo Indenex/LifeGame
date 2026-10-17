@@ -355,7 +355,8 @@ public partial class Terrain : Node3D
         var trunks = new List<(Transform3D, Color, Color)>();
         // Grass tufts only in the chunks near the player (WantsTufts).
         var tufts = data.Tufts ? new List<(Transform3D, Color, Color)>() : null;
-        var ferns = new List<(Transform3D, Color, Color)>();
+        var ferns = new List<(Transform3D, Color, Color)>[Undergrowth.FernVariants];
+        for (int v = 0; v < ferns.Length; v++) ferns[v] = new();
         var reeds = new List<(Transform3D, Color, Color)>();
         var flowers = new List<(Transform3D, Color, Color)>();
         var bushes = new List<(Transform3D, Color, Color)>();
@@ -399,7 +400,7 @@ public partial class Terrain : Node3D
                     {
                         var reed = (Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 61) * 0.5f), Look.LeafLight.Lerp(Look.LeafWarm, Hash01(x, z, 62) * 0.3f), custom);
                         // Some clumps are cattails, brown heads above the blades.
-                        if (Hash01(x, z, 63) < 0.3f) landmarks.Put(PropMeshes.Cattails, Look.Grass, reed);
+                        if (Hash01(x, z, 63) < 0.3f) landmarks.Put(PropMeshes.CattailsOf(Variant(x, z, 32, PropMeshes.CattailVariants)), Look.Grass, reed);
                         else reeds.Add(reed);
                     }
                     continue;
@@ -474,7 +475,7 @@ public partial class Terrain : Node3D
                         landmarks.Put(PropMeshes.RiverStone(Regional(x, z, 95, PropMeshes.RiverStoneVariants)), Painted.Rock,
                             (at.ScaledLocal(Vector3.One * size * 3.3f), stone.Item2, stone.Item3));
                     else
-                        landmarks.Put(PropMeshes.Rock(Regional(x, z, 94, PropMeshes.RockVariants)), Painted.Rock, stone);
+                        landmarks.Put(PropMeshes.Rock(RockVariant(x, z)), Painted.Rock, stone);
                     continue;
                 }
                 else if (density > 0.45f && Hash01(x, z, 50) < 0.006f)
@@ -512,7 +513,7 @@ public partial class Terrain : Node3D
                     else if (plant < heather + gorse + sedge)
                         reeds.Add((Plant(fx, top, fz, yaw, 0.45f + Hash01(x, z, 53) * 0.2f), Look.Sedge.Lerp(Look.LeafWarm, Hash01(x, z, 54) * 0.2f), custom));
                     else if (plant < heather + gorse + sedge + fernChance)
-                        ferns.Add((Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 53) * 0.6f), Look.Leaf.Lerp(Look.LeafLight, Hash01(x, z, 54) * 0.4f), custom));
+                        ferns[Variant(x, z, 33, Undergrowth.FernVariants)].Add((Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 53) * 0.6f), Look.Leaf.Lerp(Look.LeafLight, Hash01(x, z, 54) * 0.4f), custom));
                     else if (plant < heather + gorse + sedge + fernChance + 0.035f * edge + 0.01f * density + 0.08f * rim)
                         bushes.Add((Plant(fx, top, fz, yaw, 0.7f + Hash01(x, z, 55) * 0.6f), Look.Leaf.Lerp(Look.Pine, Hash01(x, z, 56) * 0.4f), custom));
                 }
@@ -593,7 +594,7 @@ public partial class Terrain : Node3D
         foreach (var ((mesh, material), items) in landmarks.Batches)
             data.Add(mesh, items, material, castShadow: material != Look.Grass);
         if (tufts != null) data.Add(tuftMesh!, tufts, Look.GrassTufts, castShadow: false);
-        data.Add(Undergrowth.Fern, ferns, Look.Grass, castShadow: false);
+        for (int v = 0; v < ferns.Length; v++) data.Add(Undergrowth.FernOf(v), ferns[v], Look.Grass, castShadow: false);
         data.Add(Undergrowth.Reed, reeds, Look.Grass, castShadow: false);
         data.Add(Undergrowth.Flowers, flowers, Look.Grass, castShadow: false);
         // Bushes are painted (painted-2), in the painted trees' muted olive and grey-green.
@@ -604,6 +605,11 @@ public partial class Terrain : Node3D
     // Which of a prop's shape variants stands on a cell: at random, or (Regional) the
     // same over a stretch of ground, so neighbouring boulders look like one stone.
     static int Variant(int x, int z, uint salt, int count) => Math.Min((int)(Hash01(x, z, 1100u + salt) * count), count - 1);
+    // A boulder's shape (model-28, D-166): the kind follows the region, as before, and each
+    // stone takes either of that kind's two forms, so a patch is never one shape stamped.
+    static int RockVariant(int x, int z) =>
+        Regional(x, z, 94, PropMeshes.RockKinds) + (Hash01(x, z, 1294u) < 0.5f ? 0 : PropMeshes.RockKinds);
+
     static int Regional(int x, int z, uint salt, int count) => Math.Min((int)(World.Noise(x + 211, z - 977, 30f, salt) * count), count - 1);
 
     // Which painted tree shape stands on a cell: one of two neighbouring shapes chosen by
