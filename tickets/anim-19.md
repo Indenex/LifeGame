@@ -1,7 +1,7 @@
 # anim-19: More emotes (clap, shrug, point)
 Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
-Status: in_review
+Status: done
 Branch: claude/anim-19 (from main)
 PR: #705
 
