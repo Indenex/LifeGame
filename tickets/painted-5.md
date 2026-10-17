@@ -2,8 +2,8 @@
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
 Status: in_review
-Branch: claude/painted-5-structures (includes painted-1, claude/painted-1-rocks)
-PR: (not opened)
+Branch: claude/painted-5-structures (painted-1 is on main)
+PR: #573
 
 ## Goal
 Fifth family of the painted rollout (painted-1 rocks ... painted-6 items): everything players build (lean-tos, clay huts, log cabins, brick and tiled houses, walls, doors, roofs and thatch, hearths and the stone hearth, stations, fences, kilns, jars, troughs, claim posts, the fire ring) on Painted's shader, so they share the rocks' and trees' stepped light, violet shade and soft ink edge. Materials only: no mesh, server, Look shader or CI changes. Justin sees warm brown wood with violet shade, golden straw thatch in small strokes, and hearth stones like the painted rocks.
