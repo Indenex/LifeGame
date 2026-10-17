@@ -117,4 +117,24 @@ public partial class Showcase
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(-0.4f, 1.6f, 6.5f), new Vector3(-0.4f, 0.8f, 0f), Vector3.Up);
     }
+
+    // Woodland ferns (model-32, D-166): all five Undergrowth fern variants on the grass
+    // shader, a person for scale.
+    [ShowcaseView("ferns")]
+    void FernVariety()
+    {
+        for (int v = 0; v < Undergrowth.FernVariants; v++)
+        {
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, UseCustomData = true, Mesh = Undergrowth.FernOf(v), InstanceCount = 1 };
+            multi.SetInstanceTransform(0, new Transform3D(Basis.Identity.Scaled(Vector3.One * 1.2f), new Vector3(-2.4f + v * 1.2f, 0, 0)));
+            multi.SetInstanceColor(0, Look.Leaf);
+            AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = Look.Grass });
+        }
+        var person = PlayerModel.Build();
+        person.Position = new Vector3(-3.6f, 0, 0.6f);
+        AddChild(person);
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(-0.8f, 2.4f, 6.5f), new Vector3(-0.8f, 0.4f, 0f), Vector3.Up);
+    }
 }
