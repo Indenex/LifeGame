@@ -10,7 +10,9 @@ using SpacetimeDB;
 public static partial class Module
 {
     // One batch per device. Remaining counts units not yet finished, this round included.
-    [SpacetimeDB.Table(Accessor = "DeviceJob", Public = true)]
+    // Private (bugfix-54, hidden values): the round's score, input quality, skill cap, timer token and
+    // who is working it are the server's. What every client draws is copied to DeviceStatus.
+    [SpacetimeDB.Table(Accessor = "DeviceJob")]
     public partial struct DeviceJob
     {
         [PrimaryKey]
@@ -32,6 +34,42 @@ public static partial class Module
         // Who is working the round (the attended speed-up holds only while they stay), 0 for none.
         [Default(0u)]
         public uint WorkerId;
+    }
+
+    // The public face of a DeviceJob: which device is running what, and how far along it is.
+    [SpacetimeDB.Table(Accessor = "DeviceStatus", Public = true)]
+    public partial struct DeviceStatus
+    {
+        [PrimaryKey]
+        public ulong StructureId;
+        public Identity Owner;
+        public uint PlayerId;
+        public string ProcessId;
+        public uint Remaining;
+        public uint RoundUnits;
+        public Timestamp RoundStart;
+        public Timestamp RoundEnd;
+        public bool Attended;
+    }
+
+    static void SaveDeviceJob(ReducerContext ctx, DeviceJob job)
+    {
+        if (ctx.Db.DeviceJob.StructureId.Find(job.StructureId) is null) ctx.Db.DeviceJob.Insert(job);
+        else ctx.Db.DeviceJob.StructureId.Update(job);
+        var status = new DeviceStatus
+        {
+            StructureId = job.StructureId, Owner = job.Owner, PlayerId = job.PlayerId, ProcessId = job.ProcessId,
+            Remaining = job.Remaining, RoundUnits = job.RoundUnits, RoundStart = job.RoundStart, RoundEnd = job.RoundEnd,
+            Attended = job.Attended,
+        };
+        if (ctx.Db.DeviceStatus.StructureId.Find(job.StructureId) is null) ctx.Db.DeviceStatus.Insert(status);
+        else ctx.Db.DeviceStatus.StructureId.Update(status);
+    }
+
+    static void DeleteDeviceJob(ReducerContext ctx, ulong structureId)
+    {
+        ctx.Db.DeviceJob.StructureId.Delete(structureId);
+        ctx.Db.DeviceStatus.StructureId.Delete(structureId);
     }
 
     [SpacetimeDB.Table(Accessor = "DeviceTimer", Scheduled = nameof(FinishDeviceRound), ScheduledAt = nameof(ScheduledAt))]
@@ -150,8 +188,7 @@ public static partial class Module
         job.Token += 1;
         job.RoundStart = ctx.Timestamp;
         job.RoundEnd = ctx.Timestamp + new TimeDuration((long)(seconds * 1_000_000));
-        if (ctx.Db.DeviceJob.StructureId.Find(job.StructureId) is null) ctx.Db.DeviceJob.Insert(job);
-        else ctx.Db.DeviceJob.StructureId.Update(job);
+        SaveDeviceJob(ctx, job);
         ctx.Db.DeviceTimer.Insert(new DeviceTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(job.RoundEnd), StructureId = job.StructureId, Token = job.Token });
     }
 
@@ -177,7 +214,7 @@ public static partial class Module
         job.Score = TrustScore(ctx, player.PlayerId, job.ProcessId, Devices.MinigameOf(Structures.Shape((int)device.Kind).Station), score);
         job.RoundEnd = new Timestamp(now + (long)(left * (Devices.AttendedTime / Devices.UnattendedTime)));
         job.Token += 1;
-        ctx.Db.DeviceJob.StructureId.Update(job);
+        SaveDeviceJob(ctx, job);
         ctx.Db.DeviceTimer.Insert(new DeviceTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(job.RoundEnd), StructureId = structureId, Token = job.Token });
     }
 
@@ -187,7 +224,7 @@ public static partial class Module
         RequireServer(ctx);
         if (ctx.Db.DeviceJob.StructureId.Find(timer.StructureId) is not { } job || job.Token != timer.Token) return;
         var def = Processes.Find(job.ProcessId);
-        if (def is null) { ctx.Db.DeviceJob.StructureId.Delete(job.StructureId); return; }
+        if (def is null) { DeleteDeviceJob(ctx, job.StructureId); return; }
 
         // What the same work by hand would come out at. Clay, grit and the other flat-quality
         // materials always come out of the hands at the raw quality, so a device is judged
@@ -208,7 +245,7 @@ public static partial class Module
 
         job.Remaining -= job.RoundUnits;
         if (job.Remaining == 0 || ctx.Db.Structure.Id.Find(job.StructureId) is null)
-            ctx.Db.DeviceJob.StructureId.Delete(job.StructureId);
+            DeleteDeviceJob(ctx, job.StructureId);
         else
             StartDeviceRound(ctx, job);
     }

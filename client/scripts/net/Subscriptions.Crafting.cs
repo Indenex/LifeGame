@@ -16,7 +16,7 @@ public static partial class Subscriptions
         "SELECT * FROM my_hotbar",
         "SELECT * FROM player_equip",
         "SELECT * FROM my_craft_job",
-        "SELECT * FROM device_job",
+        "SELECT * FROM device_status",
         "SELECT * FROM device_output",
     };
 }
