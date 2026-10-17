@@ -102,6 +102,8 @@ public partial class SimmerView : Node3D
         ramp.SetColor(ramp.GetPointCount() - 1, new Color(1f, 1f, 1f, 0f));
         return new CpuParticles3D
         {
+            // A particle's card would cast a hard square shadow that flickers (bugfix-65).
+                        CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             Amount = 10,
             Lifetime = 2.2f,
             Emitting = false,

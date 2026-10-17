@@ -139,6 +139,8 @@ public partial class KilnView : Node3D
         ramp.SetColor(ramp.GetPointCount() - 1, new Color(0.7f, 0.7f, 0.7f, 0f));
         return new CpuParticles3D
         {
+            // A particle's card would cast a hard square shadow that flickers (bugfix-65).
+                        CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             Amount = 24,
             Lifetime = 5f,
             Emitting = false,

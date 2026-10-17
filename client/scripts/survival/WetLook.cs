@@ -46,6 +46,8 @@ void fragment() {
 
         drip = new GpuParticles3D
         {
+            // A particle's card would cast a hard square shadow that flickers (bugfix-65).
+                        CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             Amount = 24,
             Lifetime = 0.7f,
             Emitting = false,
