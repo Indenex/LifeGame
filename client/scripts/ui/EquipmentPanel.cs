@@ -26,7 +26,7 @@ public partial class EquipmentPanel : CanvasLayer
     public readonly BagGrid Bag = new();
     // The tools section of the doll (Justin): tools here work by themselves, take no
     // bag space and add no weight. Shown once the server keeps it (Bag.Link.Arranges).
-    public const int ToolSlots = 6;
+    public const int ToolSlots = LifeGame.Shared.Bag.BeltSlots;
     readonly BagGrid belt = new() { Kind = "belt", Width = 3, Empty = "" };
     Control beltSection = null!;
     Button sort = null!;
@@ -218,7 +218,7 @@ public partial class EquipmentPanel : CanvasLayer
         belt.Positioned = () => true;
         belt.Capacity = () => ToolSlots;
         belt.Source = () => Bag.Link.Belt();
-        belt.Accepts = d => d["from"].AsString() == "bag" && Items.UseOf((Item)d["item"].AsInt32()) == UseAction.Tool;
+        belt.Accepts = d => d["from"].AsString() == "bag" && LifeGame.Shared.Bag.BeltOk((Item)d["item"].AsInt32());
         belt.ReceiveAt = (d, cell) => Bag.Link.ToBelt((ulong)d["id"].AsInt64(), cell);
         belt.Arrange = (d, cell) => Bag.Link.ToBelt((ulong)d["id"].AsInt64(), cell);
         Bag.Positioned = () => Bag.Link.Arranges;

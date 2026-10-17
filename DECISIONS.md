@@ -1137,3 +1137,23 @@ Owner: Claims.
 ## D-279 — 2026-10-17 — Survival's next addition is a hide waterskin only, no bark bowl
 **Decision:** Survival's next addition is a hide waterskin only, with no bark bowl. It is an early way to carry a little water before pottery. Owner: Survival.
 **Who:** Justin, picking the hide waterskin only (relayed by the PM; no direct quote).
+
+## D-280 — 2026-10-17 — Crafting menu becomes a twin of the build menu
+**Decision:** The crafting menu becomes a twin of the build menu. C opens a centred panel with category tabs and search, and a grid of picture cards. Each card shows its inputs (have/need) and the tool. Cards the player can't make are greyed, and hovering one says what is missing. Click a card to make it.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-281 — 2026-10-17 — Hold a key to repeat actions
+**Decision:** Holding the action key repeats the action (harvesting, digging and similar), so players don't have to click constantly. Integration builds it in the Use dispatcher. Repeating is never faster than clicking, and the server still validates each action.
+**Who:** Justin: "When harvesting things, digging etc let me hold the key down to repeat the action instead of clicking it constantly."
+
+## D-282 — 2026-10-17 — Pines darker, closer to the model image
+**Decision:** The pine trees are made darker, closer to the model image on the left of the comparison.
+**Who:** Justin: "make them darker, closer to the model image on the left."
+
+## D-283 — 2026-10-17 — One centre panel at a time, walking allowed
+**Decision:** Only one centre panel is open at a time, and the player can keep walking with panels open.
+**Who:** PM default; Justin didn't answer.
+
+## D-284 — 2026-10-17 — Renders get faster with three Render workers
+**Decision:** Renders get faster with three Render workers. Render A (session_015S96hNrEu92FrCoNZqZZjs) does look checks. Render B (session_01AkKLF7VETNCk9bZ7SvfjkG, Sonnet) does UI and stills. Render C (session_01KA7oA899HvQKhMWZhZYnuU, Sonnet) does clips. Justin's requests jump the queue.
+**Who:** Relayed by the PM; no direct quote.
