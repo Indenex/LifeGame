@@ -267,6 +267,7 @@ public static partial class Module
                 bool awake = watchers.Any(w => AnimalDist(w.X, w.Z, cx, cz) < FlockWakeRange);
                 if (awake) AnimalThinkFlock(ctx, flock, members, watchers, huddle, now);
             }
+            TrapTick(ctx, now);
         }
         finally
         {

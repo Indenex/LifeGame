@@ -45,5 +45,9 @@ public static partial class Module
             ChunkZ = World.ChunkOf(z),
         });
         OnPlayerDroppedItem(ctx, placed);
+        OnItemPlaced(ctx, placed);
     }
+
+    // After a placeable item is set down: lanes whose items need a row of their own add it (Traps.cs, snares).
+    static partial void OnItemPlaced(ReducerContext ctx, WorldItem placed);
 }

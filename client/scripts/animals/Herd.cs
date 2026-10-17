@@ -83,6 +83,11 @@ public partial class Herd : Node3D
         racks.ClaimGoodsOpenAt = (x, z) => ClaimGoodsOpenAt(x, z);
         racks.ClaimStandingAt = (x, z) => ClaimStandingAt(x, z);
         racks.Bind(conn, terrain);
+        var snares = new Snares();
+        AddChild(snares);
+        snares.ClaimGoodsOpenAt = (x, z) => ClaimGoodsOpenAt(x, z);
+        snares.ClaimStandingAt = (x, z) => ClaimStandingAt(x, z);
+        snares.Bind(conn, terrain);
     }
 
     const float BoltHintRange = 10f;

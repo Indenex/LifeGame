@@ -103,6 +103,8 @@ namespace LifeGame.Shared
         CookedRabbit = 215,
         BurntRabbit = 216,
         RabbitFur = 217,
+        // A cord noose on two sticks, set near a warren (animals-34, shared/Traps.cs).
+        RabbitSnare = 218,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -249,7 +251,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.RawRabbit, Name = "Raw rabbit", Plural = "Raw rabbit", HasQuality = true },
             new ItemDef { Id = Item.CookedRabbit, Name = "Roast rabbit", Plural = "Roast rabbit", HasQuality = true },
             new ItemDef { Id = Item.BurntRabbit, Name = "Burnt rabbit", Plural = "Burnt rabbit" },
-            new ItemDef { Id = Item.RabbitFur, Name = "Rabbit fur", Plural = "Rabbit fur", HasQuality = true });
+            new ItemDef { Id = Item.RabbitFur, Name = "Rabbit fur", Plural = "Rabbit fur", HasQuality = true },
+            new ItemDef { Id = Item.RabbitSnare, Name = "Rabbit snare", Plural = "Rabbit snares", HasQuality = true, Placeable = true });
 
         public static ItemDef Def(Item item) => All[item];
 

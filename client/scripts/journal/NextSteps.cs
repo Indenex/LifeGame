@@ -31,6 +31,7 @@ public static class NextSteps
         ["knap.flake"] = "Stone breaks sharp when it is struck with stone.",
         ["knap.hand_axe"] = "A stone shaped with patience makes a heavy tool for the hand.",
         ["cook.meat"] = "Raw meat is better over a fire.",
+        ["cord.snare"] = "A noose of cord on two sticks, set where rabbits run, may be waiting with a meal when you come back.",
         ["cook.rabbit"] = "A small animal cooks fast. A moment too long over the flames and it chars.",
         ["cook.chicken"] = "A plucked bird roasts quickly. Watch it so it doesn't blacken.",
         ["cook.venison"] = "A haunch of deer, turned over the fire, makes a richer meal than mutton.",
