@@ -1099,3 +1099,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-271 — 2026-10-17 — Interior props at 1.25x cover furniture only (refines D-231; PM default, Justin not yet asked)
 **Decision:** Interior props scaled to 1.25x cover furniture only: the crafting table and the repair table. The hearth, jars and baskets stay at 1x. This is the PM's default; Justin has not been asked.
 **Who:** PM default (Justin not yet asked).
+
+## D-272 — 2026-10-17 — Maker's mark: players pick from a glyph panel with a colour picker; inspecting an item shows its maker (refines D-266)
+**Decision:** Players pick their maker's mark from a panel with many glyphs (fantasy, scientific and more) and a colour picker. Inspecting any made item tells you who made it. Owner: Ceramics.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-273 — 2026-10-17 — Atmosphere builds morning frost next
+**Decision:** Atmosphere builds morning frost next (atmosphere-28).
+**Who:** Justin, picking morning frost (relayed by the PM; no direct quote).
