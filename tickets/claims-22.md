@@ -10,7 +10,8 @@ Both the Judge and the Elder hold `TownPower.BreakTies`. When both vote in a tie
 
 ## Progress log
 - 2026-10-17: `HoldersWith` now orders by office id, so the Judge's vote is looked at first and the Elder's only when the Judge has not voted. Server module builds.
-- Not done: tests for the Gatekeeper's gate barring and the Elder alone breaking a tie. Both need a finished gate (resources and crafting steps) or a vacant Judge seat, which SocialTest cannot set up cheaply. They belong in the building harness (BuildTest) and need Integration's help; proposed to the PM.
+- BuildTest (fence part): a claim member bars and unbars the claim's gate. Passes locally on a fresh database.
+- Not done: a roster signer who is no member failing to bar a gate, and the Gatekeeper succeeding. Those need a finished gate plus a second claim and a town in one run (B would have to lay out and sign its own claim). Elder alone breaking a tie needs a vacant Judge seat. Both are heavy to set up; asked House building how they would do the gate setup.
 
 ## Open questions / blockers
 - (none)
