@@ -98,6 +98,27 @@ public static partial class Module
         public List<uint> StageHelpers;
     }
 
+    // The stage being built, out of sight (bugfix-57, hidden values): the public StructureProgress
+    // row keeps only Quality, which store and trough capacities are drawn from, and carries 0 and an
+    // empty list in its stage columns. ProgressOf and SaveProgress put the two back together.
+    [SpacetimeDB.Table(Accessor = "StructureStage")]
+    public partial struct StructureStage
+    {
+        [PrimaryKey]
+        public ulong StructureId;
+        public uint StageQualitySum;
+        public uint StageItems;
+        public List<uint> StageHelpers;
+    }
+
+    static void SaveProgress(ReducerContext ctx, StructureProgress p)
+    {
+        ctx.Db.StructureProgress.StructureId.Update(p with { StageQualitySum = 0, StageItems = 0, StageHelpers = new List<uint>() });
+        var stage = new StructureStage { StructureId = p.StructureId, StageQualitySum = p.StageQualitySum, StageItems = p.StageItems, StageHelpers = p.StageHelpers };
+        if (ctx.Db.StructureStage.StructureId.Find(p.StructureId) is null) ctx.Db.StructureStage.Insert(stage);
+        else ctx.Db.StructureStage.StructureId.Update(stage);
+    }
+
     // Who added what to which structure. Private: credit for later (journal, claims).
     [SpacetimeDB.Table(Accessor = "StructureBuilder")]
     public partial struct StructureBuilder
@@ -225,7 +246,7 @@ public static partial class Module
         s = s with { Needs = needs };
         if (needs.All(n => n.Have >= n.Need))
             (s, p) = FinishStage(ctx, s, p);
-        ctx.Db.StructureProgress.StructureId.Update(p);
+        SaveProgress(ctx, p);
 
         if (RecordBuilder(ctx, structureId))
             s = s with { Builders = (byte)Math.Min(255, s.Builders + 1) };
@@ -291,6 +312,7 @@ public static partial class Module
         foreach (var row in ctx.Db.StructureBuilder.StructureId.Filter(s.Id).ToList())
             ctx.Db.StructureBuilder.Id.Delete(row.Id);
         ctx.Db.StructureProgress.StructureId.Delete(s.Id);
+        ctx.Db.StructureStage.StructureId.Delete(s.Id);
         ctx.Db.StructureDoor.StructureId.Delete(s.Id);
         ctx.Db.StructureTouch.StructureId.Delete(s.Id);
         DropMats(ctx, s);
@@ -397,10 +419,14 @@ public static partial class Module
             : (s with { Stage = next, Needs = NeedsFor((int)s.Kind, next) }, p);
     }
 
-    // Structures from before StructureProgress existed get a fresh row on first use.
+    // Structures from before StructureProgress existed get a fresh row on first use. A stage begun
+    // before bugfix-57 has no StructureStage row and still reads from the public columns.
     static StructureProgress ProgressOf(ReducerContext ctx, ulong structureId)
     {
-        if (ctx.Db.StructureProgress.StructureId.Find(structureId) is { } p) return p;
+        if (ctx.Db.StructureProgress.StructureId.Find(structureId) is { } p)
+            return ctx.Db.StructureStage.StructureId.Find(structureId) is { } stage
+                ? p with { StageQualitySum = stage.StageQualitySum, StageItems = stage.StageItems, StageHelpers = stage.StageHelpers }
+                : p;
         return ctx.Db.StructureProgress.Insert(new StructureProgress
         {
             StructureId = structureId,
