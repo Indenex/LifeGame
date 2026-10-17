@@ -50,10 +50,10 @@ public static class PaintedStructures
     static (string file, Color mean, float scale) KitSurface(Surface surface) => surface switch
     {
         // Sticks and logs carry UVs in metres: one repeat runs 1.6 m along the grain.
-        Surface.WoodLight => ("res://assets/quaternius/village/wood_light.png", Color.Color8(146, 100, 56), 1.6f),
-        Surface.WoodDark => ("res://assets/quaternius/village/wood_dark.png", Color.Color8(104, 67, 39), 1.6f),
-        Surface.Plaster => ("res://assets/quaternius/village/plaster.png", Color.Color8(175, 158, 127), 2.2f),
-        _ => ("res://assets/quaternius/village/round_rocks.png", Color.Color8(78, 76, 83), 1.4f),
+        Surface.WoodLight => ("res://assets/quaternius/village/textures/wood_light.png", Color.Color8(146, 100, 56), 1.6f),
+        Surface.WoodDark => ("res://assets/quaternius/village/textures/wood_dark.png", Color.Color8(104, 67, 39), 1.6f),
+        Surface.Plaster => ("res://assets/quaternius/village/textures/T_Plaster_BaseColor.png", Color.Color8(175, 158, 127), 2.2f),
+        _ => ("res://assets/quaternius/village/textures/T_RoundRocks_BaseColor.png", Color.Color8(78, 76, 83), 1.4f),
     };
 
     // A painted structure material with a kit surface laid over it. mix is how much of the kit

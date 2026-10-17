@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://j6d704vf1ybh"
-path="res://.godot/imported/wood_dark.png-d978a8115d555e97e41c652292b942b7.ctex"
+uid="uid://nmowc5ctakji"
+path="res://.godot/imported/wood_light.png-8d5e577fee4d64909d15e9d16d649839.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/quaternius/village/wood_dark.png"
-dest_files=["res://.godot/imported/wood_dark.png-d978a8115d555e97e41c652292b942b7.ctex"]
+source_file="res://assets/quaternius/village/textures/wood_light.png"
+dest_files=["res://.godot/imported/wood_light.png-8d5e577fee4d64909d15e9d16d649839.ctex"]
 
 [params]
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://du4d1sd6xdvc"
-path="res://.godot/imported/wood_light.png-2489a7c5399c9cb2fcfb77d422434cbb.ctex"
+uid="uid://dl85wm1teoha3"
+path="res://.godot/imported/T_UnevenBrick_BaseColor.png-5cc335aa8174a38964bce16b60571d47.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/quaternius/village/wood_light.png"
-dest_files=["res://.godot/imported/wood_light.png-2489a7c5399c9cb2fcfb77d422434cbb.ctex"]
+source_file="res://assets/quaternius/village/textures/T_UnevenBrick_BaseColor.png"
+dest_files=["res://.godot/imported/T_UnevenBrick_BaseColor.png-5cc335aa8174a38964bce16b60571d47.ctex"]
 
 [params]
 

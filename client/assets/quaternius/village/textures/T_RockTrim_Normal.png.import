@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cfspfhrqk5s56"
-path="res://.godot/imported/round_rocks.png-9323b3dc2f3857084bd9d8289dc6155c.ctex"
+uid="uid://dqvu6xtveb2de"
+path="res://.godot/imported/T_RockTrim_Normal.png-6e015f4c84f59cd49417191e2b1312fc.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/quaternius/village/round_rocks.png"
-dest_files=["res://.godot/imported/round_rocks.png-9323b3dc2f3857084bd9d8289dc6155c.ctex"]
+source_file="res://assets/quaternius/village/textures/T_RockTrim_Normal.png"
+dest_files=["res://.godot/imported/T_RockTrim_Normal.png-6e015f4c84f59cd49417191e2b1312fc.ctex"]
 
 [params]
 

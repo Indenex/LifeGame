@@ -41,7 +41,7 @@ public static partial class StructureModel
     static ShaderMaterial Thatch => thatch ??= Painted(Tinted(Look.Foliage, new Color(0.78f, 0.64f, 0.34f), sway: 0.012f), PaintedStructures.Family.Thatch);
     // Fired roof tiles (ceramics-10): a rough terracotta until the art direction is settled (D-232).
     internal static ShaderMaterial Tile => tile ??= Painted(Tinted(Look.Ground, new Color(0.70f, 0.34f, 0.21f)), PaintedStructures.Family.Clay);
-    internal static ShaderMaterial Clay => clay ??= Kit(Painted(Tinted(Look.Ground, Look.Clay.Lightened(0.06f)), PaintedStructures.Family.Clay), PaintedStructures.Surface.Plaster, 0.45f);
+    internal static ShaderMaterial Clay => clay ??= Kit(Painted(Tinted(Look.Ground, Look.Clay.Lightened(0.06f)), PaintedStructures.Family.Clay), PaintedStructures.Surface.Plaster, 0.85f);
     internal static ShaderMaterial Stone => stone ??= Painted(Tinted(Look.RockSurface, Look.Rock), PaintedStructures.Family.Stone);
     static ShaderMaterial? weave, paleWood;
     // Freshly cut wood, for things that should catch the eye (a door's bar).
@@ -160,6 +160,9 @@ public static partial class StructureModel
             float y0 = -0.05f + c * (wallTop + 0.05f) / courses, y1 = -0.05f + (c + 1) * (wallTop + 0.05f) / courses;
             Add(list, 2, Clay, Wall(r, 0.17f, y0, y1, door - 0.06f, Mathf.Tau - door + 0.06f, top: c == courses - 1));
         }
+
+        // A hewn door frame set into the daub (building-26, the village kit's chunky trim).
+        DoorFrame(list, 2, Mathf.Sin(door - 0.08f) * r - 0.06f, wallTop - 0.08f, Mathf.Cos(door) * r + 0.06f);
 
         // Roof: rafters to a peak, then a thatched cone in layers from the eaves up.
         const float peak = 3.15f, eave = 2.25f;

@@ -1,0 +1,5 @@
+Medieval Village MegaKit (SOURCE version) by Quaternius (https://quaternius.com)
+Godot 4.3 project with custom shaders: villagekit-godot.zip
+License: CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
+https://creativecommons.org/publicdomain/zero/1.0/
+(Copied from the pack's License_Source.txt, 2026-10-17.)

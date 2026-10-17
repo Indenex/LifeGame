@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bj3dj1ywaev67"
-path="res://.godot/imported/plaster.png-4218edbf7e45dbb0ed4200e0e463404b.ctex"
+uid="uid://ca86ii3rlj5ol"
+path="res://.godot/imported/T_Plaster_Normal.png-7330d1b40dfbd11ffb7fe4d13227896f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/quaternius/village/plaster.png"
-dest_files=["res://.godot/imported/plaster.png-4218edbf7e45dbb0ed4200e0e463404b.ctex"]
+source_file="res://assets/quaternius/village/textures/T_Plaster_Normal.png"
+dest_files=["res://.godot/imported/T_Plaster_Normal.png-7330d1b40dfbd11ffb7fe4d13227896f.ctex"]
 
 [params]
 
