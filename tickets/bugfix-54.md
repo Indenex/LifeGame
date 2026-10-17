@@ -19,8 +19,10 @@ Part of audit item 7 (see tickets/bugfix-53.md for the audit, the rules and the 
 
 - 2026-10-17 15:15: PM named 63df5531 as the code sha to merge. Commits after it on this branch are ticket-only (no code changes), so the PR head moves but the code is the same. CI result: no check runs were reported on #819 for 63df553 or the later ticket-only heads when this was written (the Main priority workflow may be holding PR runs). Earlier code heads 3623cc0 and 50fc658 had run or been superseded. Do not re-run or push to retrigger; look at the PR's check runs, and merge once the head's CI is fully green.
 
+- 2026-10-17 15:33: CI fully green (all 14 checks, incl. Upgrade check and the aggregate) on head 95751402cb83158bfb8fad2ce97eea8363dd9517, run https://github.com/Indenex/LifeGame/actions/runs/39043809437. This head differs from the code sha 63df5531 only by ticket files. Ready for the PM to merge #819.
+
 ## Open questions / blockers
 - Rows live at upgrade time: `BackfillHiddenValues` (HiddenBackfill.cs, called from PlayerConnected) gives every DeviceJob without a DeviceStatus its row, and moves the quality of any roast already on a fire into RoastQuality (zeroing the public column). It runs on each connection and skips rows already carried over. Checked with a throwaway reducer (not committed) that faked a pre-upgrade job and roast: status row appeared, quality 77 moved to the private row, public column 0, and a second run changed nothing. A walk-away device therefore shows again as soon as anyone connects after the upgrade.
 
 ## Next step
-Check CI on #819 head 63df553 (github check runs for the PR); when fully green send the PM the full sha. Then family 3 (BasketItem, ClayPiece) per tickets/bugfix-53.md once the PM relays the Ceramics and Crafting field answers.
+Merge #819 (green on 9575140, see the log); then family 3 (BasketItem, ClayPiece) per tickets/bugfix-53.md once the PM relays the Ceramics and Crafting field answers.
