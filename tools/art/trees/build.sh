@@ -11,7 +11,7 @@ work=$(mktemp -d)
 dest=$repo/client/assets/art/trees
 mkdir -p "$dest"
 for tree in birch pine; do
-  "$blender" -b --factory-startup -P "$here/blender_build.py" -- "$work" "$tree" 2>&1 | grep -E "^(baked|exported)|Error" || true
+  "$blender" -b --factory-startup -P "$here/blender_build.py" -- "$work" "$tree" 2>&1 | grep -E "^(exported|bounds)|Error" || true
   python3 -I "$here/paint.py" "$work" "$work" "$tree"
   cp "$work/$tree.glb" "$work/${tree}_albedo.png" "$dest/"
 done

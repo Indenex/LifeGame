@@ -7,16 +7,21 @@ texel, from blender_build.py) and writes <out>/<tree>_albedo.png. Every stroke i
 placed by the texel's position on the tree, not by its UV, so the painting runs across
 the UV seams.
 
-Leaves, the Golden Skull way: the crown is covered in leaf clusters (cells of a jittered
-3D grid). Each cluster is lit on its upper half and has a dark, violet-leaning crescent
-under its lower edge where it overlaps the one below, which gives the scalloped
-leaf-cluster strokes. Over that, the crown's own form picks one of four crisp tones:
-pale lit tops, a fresh mid green, a shade green and a violet-leaning deep tone in the
-undersides and the crevices between clumps (the AO). The shader's banded light and
-violet shade then model it once more as a whole.
+The painting is clean and soft (D-313, and Justin: "the weird pitted look is not
+cutesy"): smooth colour blocks joined by soft, broad gradients, soft cocoa or
+violet-green crevice lines, gentle highlights, and only a few large, soft strokes. No
+noise grain, speckle or small dabs anywhere.
 
-Bark: birch is warm white with lavender-grey shade, dark horizontal lenticel dashes and
-a darker, rougher foot; pine is warm brown in vertical plates with cocoa crevices.
+Leaves: the crown's form picks the tone (pale lit tops, a fresh mid green, a shade
+green, and a violet-leaning deep tone in the undersides and in the crevices between
+clumps, from the AO). Over that, a few large leaf clusters (cells of a jittered 3D grid,
+about a third of a clump across) each get a soft shade crescent under their lower edge
+and a gentle light on their top: the big scalloped leaf-cluster strokes of the Golden
+Skull trees. The shader's banded light and violet shade then model it once more.
+
+Bark: birch is warm white with lavender-grey shade, a few soft cocoa marks across the
+trunk and a darker foot; pine is warm brown in long vertical plates with soft cocoa
+crevices.
 """
 import os
 import sys
@@ -38,15 +43,19 @@ def smooth(e0, e1, x):
     return t * t * (3 - 2 * t)
 
 
+def mix(a, b, t):
+    return a + (b - a) * np.asarray(t)[:, None]
+
+
 def hash3(i, j, k, seed):
     h = (i * 73856093) ^ (j * 19349663) ^ (k * 83492791) ^ (seed * 2654435761)
     h = (h ^ (h >> 13)) * 1274126177
     return ((h ^ (h >> 16)) & 0xFFFFFF) / float(0xFFFFFF)
 
 
-def cells(p, size, seed, jitter=0.85):
+def cells(p, size, seed, jitter=0.8):
     """Jittered-grid Voronoi in 3D: (nearest distance, second distance, offset from the
-    nearest seed, a random value per cell). size is the cell size per axis."""
+    nearest seed in metres, a random value per cell). size is the cell size per axis."""
     q = p / size
     base = np.floor(q).astype(np.int64)
     d1 = np.full(len(p), 1e9)
@@ -69,19 +78,12 @@ def cells(p, size, seed, jitter=0.85):
     return d1, d2, off, rnd
 
 
-def noise3(p, scale, seed):
-    """Cheap smooth-ish 3D value noise in 0..1."""
-    q = p / scale
-    b = np.floor(q).astype(np.int64)
-    f = q - b
-    f = f * f * (3 - 2 * f)
-    acc = 0
-    for dx in (0, 1):
-        for dy in (0, 1):
-            for dz in (0, 1):
-                w = (f[:, 0] if dx else 1 - f[:, 0]) * (f[:, 1] if dy else 1 - f[:, 1]) * (f[:, 2] if dz else 1 - f[:, 2])
-                acc = acc + w * hash3(b[:, 0] + dx, b[:, 1] + dy, b[:, 2] + dz, seed)
-    return acc
+def ramp(v, tones, edges, soft):
+    """Colour blocks with soft joins: tones[i] below edges[i], blended over +-soft."""
+    col = np.repeat(tones[:1], len(v), 0)
+    for e, t in zip(edges, tones[1:]):
+        col = mix(col, np.repeat(t[None], len(v), 0), smooth(e - soft, e + soft, v))
+    return col
 
 
 # Blender bakes -> Godot space (x, y up, z forward).
@@ -96,65 +98,56 @@ leaf = d["leaf"][..., 0].reshape(-1) > 0.5
 SIZE = d["ao"].shape[0]
 img = np.zeros((SIZE * SIZE, 3))
 
+COCOA = c(92, 64, 58)
 if TREE == "birch":
-    LEAF = [c(70, 88, 104), c(98, 140, 96), c(146, 188, 98), c(192, 218, 112), c(228, 240, 158)]
-    CELL = np.array([0.2, 0.17, 0.2])
-    BARK = dict(lit=c(246, 241, 228), mid=c(226, 220, 210), shade=c(184, 178, 198), mark=c(70, 60, 68), foot=c(150, 140, 146))
+    # deep (violet-leaning), shade, mid, lit, highlight
+    LEAF = np.array([c(74, 86, 104), c(88, 128, 86), c(120, 166, 82), c(164, 200, 94), c(204, 224, 128)])
+    EDGES = [0.2, 0.42, 0.66, 0.9]
+    CLUSTER = np.array([0.36, 0.26, 0.36])
+    BARK = dict(lit=c(244, 238, 224), mid=c(224, 216, 206), shade=c(182, 174, 196), mark=c(86, 66, 64), foot=c(146, 130, 132))
 else:
-    LEAF = [c(48, 64, 84), c(62, 100, 86), c(88, 138, 92), c(130, 174, 100), c(176, 206, 124)]
-    CELL = np.array([0.17, 0.11, 0.17])
-    BARK = dict(lit=c(186, 128, 86), mid=c(150, 98, 68), shade=c(110, 74, 70), mark=c(72, 46, 46), foot=c(120, 84, 66))
-LEAF = np.array(LEAF)
+    LEAF = np.array([c(46, 58, 78), c(50, 86, 74), c(66, 114, 78), c(100, 146, 84), c(138, 176, 102)])
+    EDGES = [0.2, 0.42, 0.66, 0.92]
+    CLUSTER = np.array([0.3, 0.17, 0.3])
+    BARK = dict(lit=c(182, 124, 84), mid=c(148, 96, 68), shade=c(112, 76, 72), mark=c(86, 56, 52), foot=c(120, 84, 66))
 
 # ---- Leaves ----
 m = valid & leaf
 p, n, a = P[m], N[m], ao[m]
-d1, d2, off, rnd = cells(p, CELL, 3)
-edge = d2 - d1                                  # 0 on a border between clusters
-oy = off[:, 1] / CELL[1]                        # -0.6..0.6 down..up within a cluster
 # The crown's form: up-facing is lit, down-facing and occluded is shade.
-form = 0.5 + 0.42 * n[:, 1] + 0.9 * (a - 0.82)
-# Each cluster: lighter on its upper half, a little random per cluster.
-cluster = 0.2 * smooth(-0.25, 0.35, oy) + 0.08 * (rnd - 0.5)
-wob = 0.06 * (noise3(p, 0.09, 9) - 0.5)
-v = form + cluster + wob
-tone = np.digitize(v, [0.18, 0.4, 0.66, 0.9])   # 0 deep .. 4 highlight
-# A dark crescent under each cluster's lower edge (where it overlaps the next one
-# down), one tone darker, deepest in the shade.
-under = (edge < 0.16 + 0.1 * rnd) & (oy < -0.05)
-tone = np.where(under, np.maximum(tone - 1 - (form < 0.45), 0), tone)
-# Highlights only on the lit tops of clusters, as small strokes.
-hi = (tone >= 3) & (oy > 0.18) & (edge > 0.22)
-tone = np.where(hi & (form > 0.72), 4, np.minimum(tone, 3))
-col = LEAF[tone]
-# A soft AO glaze toward the deep tone in the crevices between clumps.
-col = col + (LEAF[0] - col) * (0.55 * smooth(0.75, 0.35, a))[:, None]
+form = 0.5 + 0.42 * n[:, 1] + 1.0 * (a - 0.85)
+d1, d2, off, rnd = cells(p, CLUSTER, 3)
+edge = d2 - d1                                  # 0 on a border between clusters
+oy = off[:, 1] / CLUSTER[1]                     # about -0.6..0.6, down..up in a cluster
+# Each cluster: a gentle light on its top half, a soft shade crescent under its lower
+# edge where it tucks over the one below.
+v = form + 0.1 * smooth(-0.1, 0.45, oy) * smooth(0.05, 0.3, edge) + 0.04 * (rnd - 0.5)
+crescent = smooth(0.24, 0.06, edge) * smooth(0.05, -0.3, oy)
+v = v - 0.2 * crescent
+col = ramp(v, LEAF, EDGES, 0.035)
+# The crevices between clumps: a soft glaze to the deep tone, then a soft cocoa line in
+# the deepest of them.
+col = mix(col, np.repeat(LEAF[:1], len(a), 0), 0.6 * smooth(0.8, 0.4, a))
+col = mix(col, np.repeat(COCOA[None], len(a), 0), 0.35 * smooth(0.5, 0.25, a))
 img[m] = col
 
 # ---- Bark ----
 m = valid & ~leaf
 p, n, a = P[m], N[m], ao[m]
-lit = 0.5 + 0.5 * n[:, 1] + 0.12 * (noise3(p, 0.12, 21) - 0.5)
-col = np.where((lit > 0.62)[:, None], BARK["lit"], BARK["mid"])
-col = np.where((lit < 0.42)[:, None], BARK["shade"], col)
+lit = 0.5 + 0.5 * n[:, 1]
+col = ramp(lit, np.array([BARK["shade"], BARK["mid"], BARK["lit"]]), [0.42, 0.62], 0.05)
 if TREE == "birch":
-    # Horizontal lenticel dashes and a few bigger dark marks; more and darker at the foot.
-    f = smooth(0.9, 0.0, p[:, 1])
-    d1, d2, off, rnd = cells(p, np.array([0.11, 0.032, 0.11]), 31)
-    dash = (rnd < 0.16 + 0.3 * f) & (d1 < 0.55)
-    d1b, _, offb, rndb = cells(p, np.array([0.3, 0.16, 0.3]), 37)
-    patch = (rndb < 0.14) & (d1b < 0.42 + 0.1 * noise3(p, 0.05, 3)) & (p[:, 1] > 0.6)
-    col = np.where((dash | patch)[:, None], BARK["mark"], col)
-    foot = (f * (0.6 + 0.6 * noise3(p, 0.07, 5))) > 0.55
-    col = np.where((foot & ~dash)[:, None], BARK["foot"], col)
+    # A few soft cocoa marks across the trunk, wider than tall, and a darker foot.
+    d1, d2, off, rnd = cells(p, np.array([0.3, 0.13, 0.3]), 31)
+    mark = (rnd < 0.3) * smooth(0.5, 0.36, np.linalg.norm(off / np.array([1.0, 0.28, 1.0]), axis=1) / 0.3) * (p[:, 1] > 0.35)
+    col = mix(col, np.repeat(BARK["mark"][None], len(a), 0), 0.85 * mark)
+    col = mix(col, np.repeat(BARK["foot"][None], len(a), 0), smooth(0.45, 0.12, p[:, 1]))
 else:
-    # Vertical plates with cocoa crevices and a pale stroke on each plate's lit side.
-    d1, d2, off, rnd = cells(p, np.array([0.07, 0.26, 0.07]), 41)
-    crev = (d2 - d1) < 0.12
-    stroke = (off[:, 1] > 0.04) & (rnd > 0.55) & ((d2 - d1) > 0.3) & (lit > 0.45)
-    col = np.where(stroke[:, None], BARK["lit"], col)
-    col = np.where(crev[:, None], BARK["mark"], col)
-col = col * (0.7 + 0.3 * smooth(0.2, 0.85, a))[:, None]
+    # Long vertical plates with soft cocoa crevices and a pale top on each plate.
+    d1, d2, off, rnd = cells(p, np.array([0.12, 0.4, 0.12]), 41)
+    col = mix(col, np.repeat(BARK["lit"][None], len(a), 0), 0.35 * smooth(0.1, 0.4, off[:, 1] / 0.4) * smooth(0.2, 0.4, d2 - d1))
+    col = mix(col, np.repeat(BARK["mark"][None], len(a), 0), 0.8 * smooth(0.16, 0.05, d2 - d1))
+col = mix(col, np.repeat(COCOA[None], len(a), 0), 0.45 * smooth(0.8, 0.3, a))
 img[m] = col
 
 # Unused texels: the mid leaf green, so mip levels don't bleed black.

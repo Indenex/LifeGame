@@ -124,19 +124,19 @@ wood_parts = []          # (verts, faces) in Godot space
 
 if TREE == "birch":
     # The trunk: white, slender, leaning gently to +x with a soft S, a little root flare.
-    TOP = 3.25
+    TOP = 3.0
     ys = np.linspace(0, TOP, 24)
     path = np.stack([0.24 * (ys / TOP) ** 1.7, ys, 0.06 * np.sin(ys * 1.3)], -1)
-    radii = 0.075 + 0.075 * (1 - ys / TOP) ** 1.2 + 0.07 * np.exp(-ys / 0.16)
+    radii = 0.085 + 0.08 * (1 - ys / TOP) ** 1.2 + 0.08 * np.exp(-ys / 0.16)
     wood_parts.append(tube(path, radii, 12))
 
     def trunk_at(y):
         return np.array([0.24 * (y / TOP) ** 1.7, y, 0.06 * np.sin(y * 1.3)])
 
     # The crown: clumps on an egg-shaped envelope round the crown's heart.
-    heart = np.array([0.22, 3.0, 0.0])
-    env = np.array([1.08, 0.98, 1.08])
-    clumps = [(heart + np.array([0.02, 0.95, 0.0]), 0.6)]
+    heart = np.array([0.2, 2.78, 0.0])
+    env = np.array([1.0, 1.0, 1.0])
+    clumps = [(heart + np.array([0.02, 1.0, 0.0]), 0.66)]
     golden = np.pi * (3 - np.sqrt(5))
     n = 15
     for i in range(n):
@@ -147,7 +147,7 @@ if TREE == "birch":
         # Leave a couple of low clumps out, so gaps show the branches.
         if i in (11, 13):
             continue
-        rad = rng.uniform(0.46, 0.64) * (1.0 if y > -0.3 else 0.88)
+        rad = rng.uniform(0.5, 0.66) * (1.0 if y > -0.3 else 0.88)
         clumps.append((heart + d * env * rng.uniform(0.86, 1.0), rad))
     # Two inner clumps hold the middle together.
     clumps.append((heart + np.array([0.1, -0.05, 0.1]), 0.7))
@@ -155,7 +155,7 @@ if TREE == "birch":
 
     # Branches from the trunk up into the lower and outer clumps.
     for i, (c, rad) in enumerate(clumps[1:14:2]):
-        y0 = 1.95 + 0.22 * (i % 4)
+        y0 = 1.8 + 0.2 * (i % 4)
         p0 = trunk_at(y0)
         ctrl = p0 + np.array([0, (c[1] - p0[1]) * 0.6 + 0.2, 0])
         t = np.linspace(0, 1, 8)[:, None]
@@ -192,7 +192,7 @@ if TREE == "birch":
     apply_modifier(crown, "SMOOTH", factor=0.6, iterations=6)
     apply_modifier(crown, "DECIMATE", ratio=min(1.0, CROWN_TRIS / max(1, tri_count(crown))))
     crown_tris = tri_count(crown)
-    H_TOP, R_CROWN, AXIS = 4.4, 1.5, heart
+    H_TOP, R_CROWN, AXIS = 4.4, 1.7, heart
 else:
     # The trunk: short, warm brown, with a root flare.
     TOP = 2.6
@@ -290,6 +290,7 @@ co = np.zeros(len(me.vertices) * 3)
 me.vertices.foreach_get("co", co)
 gp = from_blender(co.reshape(-1, 3))
 horiz = np.hypot(gp[:, 0] - AXIS[0], gp[:, 2] - AXIS[2])
+print("bounds", gp.min(0).round(2), gp.max(0).round(2))
 sway = np.clip(0.78 * (gp[:, 1] / H_TOP) ** 2 + 0.3 * np.clip(horiz / R_CROWN, 0, 1), 0, 1)
 me.color_attributes.new("Color", "FLOAT_COLOR", "POINT")
 me.color_attributes["Color"].data.foreach_set("color", np.stack([np.ones_like(sway)] * 3 + [sway], -1).ravel())
