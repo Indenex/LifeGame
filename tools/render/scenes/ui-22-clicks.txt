@@ -1,0 +1,15 @@
+# ui-22 race picker (--screenshot-look --chibi opens it): click Pebble in the Race row, then a Shell swatch.
+# Positions from the 1280x720 still: Race row y=224 (Bramble 657, Pebble 727); next rows y=290, 358, 425.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --screenshot-look --chibi
+wait 40
+snap
+click 727 224
+wait 4
+snap
+click 682 358
+wait 4
+snap
+click 724 358
+wait 4
+snap
