@@ -293,15 +293,21 @@ public partial class ShadeSquare : Control
         QueueRedraw();
     }
 
+    // The square spans exactly the colours a mark may have (Marks' saturation and value limits),
+    // so whatever is chosen sits inside it.
+    static float SatAt(float fx) => Mathf.Lerp(Marks.MinSaturation, Marks.MaxSaturation, fx);
+    static float ValAt(float fy) => Mathf.Lerp(Marks.MaxValue, Marks.MinValue, fy);
+
     public override void _Draw()
     {
         const int nx = 24, ny = 10;
         float w = Size.X / nx, h = Size.Y / ny;
         for (int x = 0; x < nx; x++)
             for (int y = 0; y < ny; y++)
-                DrawRect(new Rect2(x * w, y * h, w + 1, h + 1), Color.FromHsv(hue, x / (float)(nx - 1) * 0.8f, 0.9f - y / (float)(ny - 1) * 0.68f));
-        var at = new Vector2(s / 0.8f * Size.X, (0.9f - v) / 0.68f * Size.Y);
-        DrawArc(at, 6f, 0, Mathf.Tau, 16, Look.Cream, 2f, true);
+                DrawRect(new Rect2(x * w, y * h, w + 1, h + 1), Color.FromHsv(hue, SatAt(x / (float)(nx - 1)), ValAt(y / (float)(ny - 1))));
+        float fx = Mathf.Clamp(Mathf.InverseLerp(Marks.MinSaturation, Marks.MaxSaturation, s), 0f, 1f);
+        float fy = Mathf.Clamp(Mathf.InverseLerp(Marks.MaxValue, Marks.MinValue, v), 0f, 1f);
+        DrawArc(new Vector2(fx * Size.X, fy * Size.Y), 6f, 0, Mathf.Tau, 16, Look.Cream, 2f, true);
     }
 
     public override void _GuiInput(InputEvent e)
@@ -312,8 +318,8 @@ public partial class ShadeSquare : Control
 
     void Pick(Vector2 p)
     {
-        s = Mathf.Clamp(p.X / Size.X, 0f, 1f) * 0.8f;
-        v = 0.9f - Mathf.Clamp(p.Y / Size.Y, 0f, 1f) * 0.68f;
+        s = SatAt(Mathf.Clamp(p.X / Size.X, 0f, 1f));
+        v = ValAt(Mathf.Clamp(p.Y / Size.Y, 0f, 1f));
         QueueRedraw();
         Picked?.Invoke(s, v);
     }
