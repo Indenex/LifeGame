@@ -188,8 +188,8 @@ public partial class Showcase
         pot.AddChild(new MeshInstance3D { Mesh = CookingMeshes.Under });
         pot.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = line.X, BottomRadius = line.X, Height = 0.002f, RadialSegments = 20 }, MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.38f, 0.24f, 0.12f), Roughness = 0.2f }, Position = new Vector3(0, line.Y, 0) });
         pot.AddChild(new MeshInstance3D { Mesh = CookingMeshes.Floaters(CookingMeshes.Dish.Stew, line.X), Position = new Vector3(0, line.Y + 0.002f, 0) });
-        var camera = new Camera3D { Fov = 38f, Current = true };
+        var camera = new Camera3D { Fov = 50f, Current = true };
         AddChild(camera);
-        camera.LookAtFromPosition(new Vector3(-0.1f, 1.9f, 3.6f), new Vector3(-0.1f, 0.45f, -0.2f), Vector3.Up);
+        camera.LookAtFromPosition(new Vector3(-0.3f, 1.45f, 2.9f), new Vector3(-0.3f, 0.4f, -0.2f), Vector3.Up);
     }
 }
