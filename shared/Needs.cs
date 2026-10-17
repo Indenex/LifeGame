@@ -28,12 +28,20 @@ namespace LifeGame.Shared
         public const float BerryFood = 0.12f;
         public const float BerryWater = 0.02f;
         public const float SipWater = 0.2f;
+        // Hazelnuts (survival-30, a PM default): a nibble, a little under a berry; only the hazel bushes
+        // (about one in HazelEvery) have them, and only in autumn.
+        public const float HazelnutFood = 0.08f;
+        public const int HazelnutsPerPick = 3, HazelEvery = 3;
+        public static bool IsHazelBush(ulong bushId) => bushId % HazelEvery == 0;
+        public static bool HazelnutsRipe(Season season) => season == Season.Autumn;
         // Mutton (Justin, D-039): roast fills 40% of hunger. Burnt is a default of
         // ours; raw is not eaten for now.
         public const float RoastMuttonFood = 0.4f;
         public const float BurntMuttonFood = 0.1f;
         // Hens (animals-19): a raw egg is a snack, a roast chicken a little under mutton.
         public const float EggFood = 0.08f, RoastChickenFood = 0.3f, BurntChickenFood = 0.08f;
+        // Rabbit (animals-22): a small animal, so a small meal (D-075).
+        public const float RoastRabbitFood = 0.2f, BurntRabbitFood = 0.05f;
         // A boiled egg is a better snack than a raw one, still light (crafting-24).
         public const float BoiledEggFood = 0.2f, BurntEggFood = 0.05f;
         // Cooked in a pot (Justin, D-118; ceramics-7, agreed by Survival and Ceramics): better than

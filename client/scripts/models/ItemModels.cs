@@ -210,6 +210,8 @@ public static class ItemModels
         Item.Basket => (Basket, true),
         Item.BowDrill => (BowDrill, false),
         Item.Berries => (Berries, true),
+        // Stand-in until Modeling makes a hazelnut (survival-30).
+        Item.Hazelnuts => (Hazelnuts, true),
         Item.RawMutton => (k => Mutton(k, new Color(0.74f, 0.30f, 0.30f), new Color(0.93f, 0.87f, 0.77f), Bone, 1f), true),
         Item.CookedMutton => (k => Mutton(k, new Color(0.50f, 0.27f, 0.12f), new Color(0.74f, 0.54f, 0.28f), new Color(0.86f, 0.78f, 0.64f), 0.95f), true),
         Item.BurntMutton => (k => Mutton(k, new Color(0.10f, 0.08f, 0.07f), new Color(0.17f, 0.13f, 0.10f), new Color(0.32f, 0.28f, 0.23f), 0.88f), true),
@@ -218,20 +220,27 @@ public static class ItemModels
         Item.ScrapedHide => (k => RolledHide(k, false), true),
         Item.Leather => (Leather, true),
         Item.SleepingMat => (SleepingMat, true),
-        // Clothing (D-074), by number until the items reach main.
+        // Clothing (D-074).
         (Item)Garments.WoolTunic => (Tunic, true),
         (Item)Garments.FootWraps => (FootWraps, true),
-        // Bow and arrow (Crafting's ids, PR #266; animals-15), by number until on main.
-        (Item)16 => (Bow, false),
-        (Item)17 => (Arrow, false),
-        // Red deer (animals-14), by number until the items reach main.
-        (Item)202 => (Venison, true),
-        (Item)203 => (k => RolledHide(k, true, DeerCoat), true),
-        (Item)204 => (AntlerItem, false),
-        // Wool (animals-8), by number until the items reach main.
-        (Item)197 => (DropSpindle, false),
-        (Item)198 => (Yarn, true),
-        (Item)199 => (WoolCloth, true),
+        // Bow and arrow (Crafting's ids, PR #266; animals-15).
+        Item.Bow => (Bow, false),
+        Item.Arrow => (Arrow, false),
+        // Red deer (animals-14).
+        Item.RawVenison => (k => Venison(k, new Color(0.40f, 0.12f, 0.11f), new Color(0.46f, 0.15f, 0.13f), new Color(0.88f, 0.84f, 0.76f)), true),
+        // Roast and burnt venison (model-20's icon pass: they had no model and drew as a plain blob).
+        // Tallow and grog (model-20's icon pass: their stand-in shapes read as plain blobs).
+        Item.Tallow => (Tallow, true),
+        Item.Daub => (Daub, true),
+        Item.Grog => (Grog, true),
+        Item.CookedVenison => (k => Venison(k, new Color(0.45f, 0.24f, 0.11f), new Color(0.58f, 0.34f, 0.16f), new Color(0.72f, 0.52f, 0.28f)), true),
+        Item.BurntVenison => (k => Venison(k, new Color(0.1f, 0.08f, 0.07f), new Color(0.17f, 0.12f, 0.09f), new Color(0.3f, 0.26f, 0.21f)), true),
+        Item.DeerHide => (k => RolledHide(k, true, DeerCoat), true),
+        Item.Antler => (AntlerItem, false),
+        // Wool (animals-8).
+        Item.DropSpindle => (DropSpindle, false),
+        Item.Yarn => (Yarn, true),
+        Item.WoolCloth => (WoolCloth, true),
         // The hen (animals-19, model-7): eggs, a feather and chicken legs.
         Item.Egg => (k => Egg(k, EggShell, false), true),
         Item.Feather => (Feather, true),
@@ -241,11 +250,11 @@ public static class ItemModels
         // Boiled and burnt eggs (crafting-24).
         Item.BoiledEgg => (k => Egg(k, new Color(0.97f, 0.96f, 0.92f), false), true),
         Item.BurntEgg => (k => Egg(k, new Color(0.13f, 0.11f, 0.09f), true), true),
-        // Rabbit (animals-22), by number until the items reach main: raw, roast and burnt, and its fur.
-        (Item)214 => (k => Rabbit(k, new Color(0.84f, 0.56f, 0.52f), new Color(0.9f, 0.7f, 0.64f)), true),
-        (Item)215 => (k => Rabbit(k, new Color(0.56f, 0.32f, 0.15f), new Color(0.72f, 0.5f, 0.24f)), true),
-        (Item)216 => (k => Rabbit(k, new Color(0.11f, 0.09f, 0.07f), new Color(0.2f, 0.15f, 0.11f)), true),
-        (Item)217 => (RabbitFur, true),
+        // Rabbit (animals-22): raw, roast and burnt, and its fur.
+        Item.RawRabbit => (k => Rabbit(k, new Color(0.84f, 0.56f, 0.52f), new Color(0.9f, 0.7f, 0.64f)), true),
+        Item.CookedRabbit => (k => Rabbit(k, new Color(0.56f, 0.32f, 0.15f), new Color(0.72f, 0.5f, 0.24f)), true),
+        Item.BurntRabbit => (k => Rabbit(k, new Color(0.11f, 0.09f, 0.07f), new Color(0.2f, 0.15f, 0.11f)), true),
+        Item.RabbitFur => (RabbitFur, true),
         // Spade (Crafting's crafting-shovel).
         Item.Spade => (Spade, false),
         // Waterskins (survival-20).
@@ -319,18 +328,54 @@ public static class ItemModels
 
     // A sharp flake knocked off a core: thin, with a ridge down its back.
     // Loose flakes are drawn half again as big as life, so they show in the grass.
-    static void Flake(Kit k) =>
-        k.Stone.Paint(Flint).Loft(new Vector3(0, 0.045f, 0), new Vector3(0, -0.15f, 0), new MeshKit.Ring[]
+    // Its face shows the swelling bulb where it was struck and two ripples below it
+    // (model-23), so the icon reads as knapped flint rather than a grey slab.
+    static void Flake(Kit k)
+    {
+        var flint = Flint.Darkened(0.12f);
+        k.Stone.Paint(flint).Loft(new Vector3(0, 0.045f, 0), new Vector3(0, -0.15f, 0), new MeshKit.Ring[]
         {
             new(0f, 0.009f, 0.033f), new(0.3f, 0.016f, 0.063f), new(0.7f, 0.012f, 0.054f), new(1f, 0.003f, 0.009f),
         }, 5, 0.3f, 0f);
+        k.Stone.Paint(flint.Lightened(0.12f)).Ellipsoid(new Vector3(0.011f, 0.02f, 0), new Vector3(0.006f, 0.022f, 0.02f), 7, 3);
+        for (int i = 0; i < 2; i++)
+            k.Stone.Paint(flint.Darkened(0.18f)).Ellipsoid(new Vector3(0.0125f, -0.02f - i * 0.04f, 0), new Vector3(0.002f, 0.006f, 0.045f - i * 0.006f), 7, 2);
+    }
 
     // A teardrop of knapped stone, worked on both faces.
-    static void HandAxe(Kit k) =>
+    // Both faces carry the shallow scars of the flakes taken off it (model-23), lighter and
+    // darker by turns, so it reads as worked stone, not a pebble.
+    static void HandAxe(Kit k)
+    {
         k.Stone.Paint(FlintBrown).Loft(new Vector3(0, 0.06f, 0), new Vector3(0, -0.21f, 0), new MeshKit.Ring[]
         {
             new(0f, 0.02f, 0.038f), new(0.2f, 0.035f, 0.07f), new(0.55f, 0.038f, 0.078f), new(0.85f, 0.022f, 0.05f), new(1f, 0.005f, 0.01f),
         }, 6, 0.3f, 0f);
+        for (int side = -1; side <= 1; side += 2)
+            for (int i = 0; i < 6; i++)
+            {
+                float y = 0.02f - (i / 2) * 0.07f, z = (i % 2 == 0 ? -1f : 1f) * 0.035f * (1f - (i / 2) * 0.25f);
+                float bulge = 0.032f - (i / 2) * 0.007f;
+                k.Stone.Paint(FlintBrown, i % 2 == 0 ? 0.82f : 1.12f).Ellipsoid(new Vector3(side * bulge, y, z), new Vector3(0.006f, 0.03f, 0.026f), 7, 3, new Basis(Vector3.Forward, side * 0.2f));
+            }
+    }
+
+    // A slapped handful of daub (model-23): wet earth and clay worked with chopped straw,
+    // a lumpy pat with stalks sticking out of it and a palm print pressed in the top.
+    static void Daub(Kit k)
+    {
+        var mud = new Color(0.48f, 0.36f, 0.24f);
+        k.Plain.Paint(mud).Ellipsoid(new Vector3(0, 0.03f, 0), new Vector3(0.09f, 0.035f, 0.075f), 10, 5, null, 0.5f);
+        k.Plain.Paint(mud, 1.06f).Ellipsoid(new Vector3(0.03f, 0.045f, -0.015f), new Vector3(0.05f, 0.03f, 0.045f), 8, 4, null, 0.5f);
+        k.Plain.Paint(mud, 0.82f).Ellipsoid(new Vector3(-0.015f, 0.062f, 0.01f), new Vector3(0.035f, 0.006f, 0.03f), 8, 2);
+        for (int i = 0; i < 8; i++)
+        {
+            float a = i * 2.39996f;
+            var root = new Vector3(Mathf.Cos(a) * 0.055f, 0.03f + H(i, 88) * 0.02f, Mathf.Sin(a) * 0.045f);
+            var tip = root + new Vector3(Mathf.Cos(a + 0.4f) * 0.05f, 0.01f + H(i, 89) * 0.03f, Mathf.Sin(a + 0.4f) * 0.05f);
+            k.Plant.Paint(Straw, 0.85f + H(i, 87) * 0.2f).Blade(root, tip, Vector3.Up, 0.006f, 0.002f);
+        }
+    }
 
     // A hank of twisted cord, coiled.
     static void Cordage(Kit k)
@@ -498,6 +543,46 @@ public static class ItemModels
         k.Plant.Paint(Look.LeafLight).Blade(new Vector3(-0.04f, 0.035f, -0.015f), new Vector3(-0.11f, 0.02f, -0.06f), Vector3.Up, 0.035f, 0.008f);
     }
 
+    // A small handful of hazelnuts (model-21, for Survival's autumn wild food, D-323):
+    // round tan shells, paler toward the top, with a pale, flat base and a little point,
+    // one still in its frilled green husk.
+    static void Hazelnuts(Kit k)
+    {
+        var shell = new Color(0.56f, 0.42f, 0.27f);
+        var spots = new[] { new Vector3(-0.025f, 0, 0.01f), new Vector3(0.022f, 0, 0.018f), new Vector3(0.0f, 0, -0.025f) };
+        for (int i = 0; i < spots.Length; i++)
+        {
+            var at = spots[i] + new Vector3(0, 0.018f, 0);
+            var tilt = new Basis(new Vector3(H(i, 93) - 0.5f, 0, H(i, 94) - 0.5f).Normalized(), 0.5f + H(i, 95) * 0.6f);
+            Nut(k, at, tilt, shell.Darkened(H(i, 96) * 0.12f), i == 2);
+        }
+    }
+
+    // One hazelnut: an egg of shell with a pale scar at its base and a small tip; husked
+    // wraps it in a ragged cup of bracts.
+    static void Nut(Kit k, Vector3 at, Basis tilt, Color shell, bool husked, float size = 1f)
+    {
+        var up = tilt * Vector3.Up;
+        k.Plain.Paint(shell).Ellipsoid(at, new Vector3(0.017f, 0.019f, 0.017f) * size, 9, 6, tilt);
+        k.Plain.Paint(new Color(0.85f, 0.76f, 0.6f)).Ellipsoid(at - up * 0.016f * size, new Vector3(0.011f, 0.004f, 0.011f) * size, 7, 2, tilt);
+        k.Plain.Paint(shell.Lightened(0.18f)).Ellipsoid(at + up * 0.009f * size, new Vector3(0.0145f, 0.01f, 0.0145f) * size, 9, 4, tilt);
+        k.Plain.Paint(shell.Darkened(0.2f)).Ellipsoid(at + up * 0.019f * size, new Vector3(0.004f, 0.005f, 0.004f) * size, 5, 3, tilt);
+        if (!husked) return;
+        // A leafy cup round the lower half, a frill of short teeth at its lip.
+        var husk = new Color(0.3f, 0.4f, 0.15f);
+        k.Plant.Paint(husk).Loft(at - up * 0.017f * size, at + up * 0.004f * size, new MeshKit.Ring[]
+        {
+            new(0f, 0.006f * size, 0.006f * size), new(0.45f, 0.018f * size, 0.018f * size), new(1f, 0.021f * size, 0.021f * size),
+        }, 9, 0.3f);
+        for (int j = 0; j < 7; j++)
+        {
+            float a = j * Mathf.Tau / 7f;
+            var side = tilt * new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
+            var lip = at + (up * 0.003f + side * 0.02f) * size;
+            k.Plant.Paint(husk, 0.9f + H(j, 99) * 0.2f).Blade(lip, lip + (up * (0.008f + H(j, 97) * 0.005f) + side * 0.006f) * size, side, 0.008f * size, 0.002f);
+        }
+    }
+
     // A leg chop: lean meat, a rind of fat round one side, the end of a bone.
     static void Mutton(Kit k, Color meat, Color fat, Color bone, float size)
     {
@@ -642,12 +727,43 @@ public static class ItemModels
 
     static readonly Color DeerCoat = new(0.55f, 0.32f, 0.2f);
 
-    // A lean, dark-red cut of venison, no rind of fat like mutton.
-    static void Venison(Kit k)
+    // A lean cut of venison, no rind of fat like mutton: the body, a raised top and a
+    // pale sliver of sinew along one edge; raw dark red, roast browned, or burnt black.
+    static void Venison(Kit k, Color meat, Color top, Color sinew)
     {
-        k.Plain.Paint(new Color(0.40f, 0.12f, 0.11f)).Ellipsoid(new Vector3(0, 0.035f, 0), new Vector3(0.12f, 0.035f, 0.08f), 8, 4, new Basis(Vector3.Up, 0.3f), 0.5f);
-        k.Plain.Paint(new Color(0.46f, 0.15f, 0.13f)).Ellipsoid(new Vector3(0.03f, 0.05f, 0.01f), new Vector3(0.07f, 0.025f, 0.05f), 7, 3, new Basis(Vector3.Up, 0.5f), 0.5f);
-        k.Plain.Paint(new Color(0.88f, 0.84f, 0.76f)).Ellipsoid(new Vector3(-0.07f, 0.04f, -0.02f), new Vector3(0.03f, 0.012f, 0.05f), 6, 3, new Basis(Vector3.Up, 0.3f), 0.5f);
+        k.Plain.Paint(meat).Ellipsoid(new Vector3(0, 0.035f, 0), new Vector3(0.12f, 0.035f, 0.08f), 8, 4, new Basis(Vector3.Up, 0.3f), 0.5f);
+        k.Plain.Paint(top).Ellipsoid(new Vector3(0.03f, 0.05f, 0.01f), new Vector3(0.07f, 0.025f, 0.05f), 7, 3, new Basis(Vector3.Up, 0.5f), 0.5f);
+        k.Plain.Paint(sinew).Ellipsoid(new Vector3(-0.07f, 0.04f, -0.02f), new Vector3(0.03f, 0.012f, 0.05f), 6, 3, new Basis(Vector3.Up, 0.3f), 0.5f);
+    }
+
+    // A round cake of rendered tallow, pale and waxy with a slightly sunk top, set on a
+    // green leaf as it was poured to cool.
+    static void Tallow(Kit k)
+    {
+        for (int i = 0; i < 2; i++)
+        {
+            float a = 0.5f + i * 2.6f;
+            k.Plant.Paint(new Color(0.36f, 0.48f, 0.22f), 0.9f + i * 0.1f).Blade(new Vector3(Mathf.Cos(a) * -0.07f, 0.004f, Mathf.Sin(a) * -0.07f), new Vector3(Mathf.Cos(a) * 0.09f, 0.004f, Mathf.Sin(a) * 0.09f), Vector3.Up, 0.075f, 0.002f);
+        }
+        k.Plain.Paint(new Color(0.93f, 0.88f, 0.72f)).Loft(new Vector3(0, 0.008f, 0), new Vector3(0, 0.045f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.055f, 0.055f), new(0.7f, 0.058f, 0.058f), new(1f, 0.05f, 0.05f),
+        }, 12, 0.4f);
+        k.Plain.Paint(new Color(0.97f, 0.93f, 0.8f)).Ellipsoid(new Vector3(0, 0.043f, 0), new Vector3(0.048f, 0.006f, 0.048f), 12, 2);
+    }
+
+    // A small heap of grog: fired clay crushed to grit, with a few larger sharp crumbs
+    // of potsherd on top, so it reads as broken pot rather than earth.
+    static void Grog(Kit k)
+    {
+        var fired = new Color(0.68f, 0.38f, 0.24f);
+        k.Plain.Paint(fired, 0.8f).Ellipsoid(new Vector3(0, 0.01f, 0), new Vector3(0.08f, 0.02f, 0.07f), 10, 3, null, 0.4f);
+        for (int i = 0; i < 12; i++)
+        {
+            float a = i * 2.4f, r = 0.015f + H(i, 90) * 0.05f;
+            var at = new Vector3(Mathf.Cos(a) * r, 0.022f + (0.065f - r) * 0.35f, Mathf.Sin(a) * r);
+            k.Plain.Paint(fired, 0.7f + H(i, 91) * 0.55f).Ellipsoid(at, new Vector3(0.022f, 0.01f, 0.016f) * (0.8f + H(i, 92) * 0.7f), 4, 2, new Basis(Vector3.Up, a));
+        }
     }
 
     // A cast antler: a curved beam with a few tines, held by its base.
@@ -700,7 +816,7 @@ public static class ItemModels
             k.Plain.Paint(Crack).Ellipsoid(new Vector3(0.015f, -0.32f, 0.15f), new Vector3(0.016f, 0.016f, 0.03f), 6, 3);
             LooseEnd(k, new Vector3(0, -0.3f, 0.06f), w);
         },
-        [(Item)16] = (k, w) =>
+        [Item.Bow] = (k, w) =>
         {
             LooseEnd(k, new Vector3(0, 0.55f, -0.12f), w);
             if (w > 1) CrackLine(k, new Vector3(0.02f, 0.2f, -0.01f), new Vector3(0.02f, 0.38f, -0.03f));

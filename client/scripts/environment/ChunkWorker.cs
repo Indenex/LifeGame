@@ -111,6 +111,7 @@ public partial class Terrain
         _ = PropMeshes.Cattails;
         for (int v = 0; v < PropMeshes.RockVariants; v++) PropMeshes.Rock(v);
         for (int v = 0; v < PropMeshes.FallenLogVariants; v++) PropMeshes.FallenLog(v);
+        for (int v = 0; v < PropMeshes.FallenGiantLogVariants; v++) PropMeshes.FallenGiantLog(v);
         for (int v = 0; v < PropMeshes.BirchVariants; v++) PropMeshes.Birch(v);
         for (int v = 0; v < PropMeshes.HeatherVariants; v++) PropMeshes.Heather(v);
         for (int v = 0; v < PropMeshes.GorseVariants; v++) PropMeshes.Gorse(v);

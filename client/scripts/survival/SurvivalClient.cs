@@ -88,7 +88,7 @@ public partial class SurvivalClient : Node
             Id = "survival.forage",
             Priority = 10,
             Find = at => conn != null && NearestRipeBush() is { } bush
-                ? new UseOffer("Pick berries", new Vector2(bush.X - at.X, bush.Z - at.Z).Length(), () => conn.Reducers.Forage(bush.Id),
+                ? new UseOffer(Needs.IsHazelBush(bush.Id) ? "Gather hazelnuts" : "Pick berries", new Vector2(bush.X - at.X, bush.Z - at.Z).Length(), () => conn.Reducers.Forage(bush.Id),
                     Target: new Vector3(bush.X, 0, bush.Z), Again: Use.HoldInterval)
                 : null,
         });
@@ -188,6 +188,7 @@ public partial class SurvivalClient : Node
         if (ripenTimer <= 0 && conn != null)
         {
             ripenTimer = 1f;
+            UpdateSeason();
             foreach (var b in conn.Db.ForageBush.Iter())
                 if (bushes.TryGetValue(b.Id, out var node)) node.Ripe = IsRipe(b);
         }
@@ -365,7 +366,17 @@ public partial class SurvivalClient : Node
         return false;
     }
 
-    static bool IsRipe(ForageBush b) => NowMicros >= b.RipeAt.MicrosecondsSinceUnixEpoch;
+    // A hazel bush (survival-30) is ripe only in autumn, whatever its timer says; refreshed with the bushes.
+    Season season = Season.Spring;
+
+    void UpdateSeason()
+    {
+        if (conn?.Db.SeasonClock.Id.Find(0) is { } clock && conn.Db.WorldClock.Id.Find(0) is { } day)
+            season = Seasons.SeasonOf(Seasons.YearFraction(NowMicros, clock.YearStart.MicrosecondsSinceUnixEpoch, (int)day.DayLengthSeconds, clock.DaysPerSeason));
+    }
+
+    bool IsRipe(ForageBush b) =>
+        NowMicros >= b.RipeAt.MicrosecondsSinceUnixEpoch && (!Needs.IsHazelBush(b.Id) || Needs.HazelnutsRipe(season));
 
     // --- World objects -----------------------------------------------------
 

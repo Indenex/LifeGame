@@ -835,7 +835,7 @@ sealed class Tester
         if (clock.Elapsed.TotalSeconds - lastMove < 0.1) return false;
         lastMove = clock.Elapsed.TotalSeconds;
         float dx = tx - X, dz = tz - Z, d = MathF.Sqrt(dx * dx + dz * dz);
-        float step = MathF.Min(d, 5f * 0.1f);
+        float step = MathF.Min(d, BotWalker.StepMetres);
         if (d > 0.001f) { float px = X, pz = Z; X += dx / d * step; Z += dz / d * step; (X, Z) = (ground ??= new BotGround(Conn)).Slide(px, pz, X, Z); }
         Conn.Reducers.Move(X, Z, 0);
         return false;

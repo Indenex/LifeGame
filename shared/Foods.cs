@@ -45,6 +45,7 @@ namespace LifeGame.Shared
         public static readonly IReadOnlyList<FoodDef> All = new[]
         {
             new FoodDef { Id = Item.Berries, Food = Needs.BerryFood, Water = Needs.BerryWater },
+            new FoodDef { Id = Item.Hazelnuts, Food = Needs.HazelnutFood },
             new FoodDef { Id = Item.CookedMutton, Food = Needs.RoastMuttonFood, GoodMeal = true },
             new FoodDef { Id = Item.BurntMutton, Food = Needs.BurntMuttonFood },
             // Venison (animals-14) feeds like mutton for now: same numbers as the roast.
@@ -55,6 +56,8 @@ namespace LifeGame.Shared
             new FoodDef { Id = Item.BurntEgg, Food = Needs.BurntEggFood },
             new FoodDef { Id = Item.CookedChicken, Food = Needs.RoastChickenFood, GoodMeal = true },
             new FoodDef { Id = Item.BurntChicken, Food = Needs.BurntChickenFood },
+            new FoodDef { Id = Item.CookedRabbit, Food = Needs.RoastRabbitFood, GoodMeal = true },
+            new FoodDef { Id = Item.BurntRabbit, Food = Needs.BurntRabbitFood },
             new FoodDef { Id = Item.PotOfBroth, Food = Needs.BrothFood, Water = Needs.BrothWater, GoodMeal = true, LeavesBehind = Item.CoilPot },
             new FoodDef { Id = Item.PotOfStew, Food = Needs.StewFood, Water = Needs.StewWater, GoodMeal = true, LeavesBehind = Item.CoilPot },
         };
@@ -71,6 +74,7 @@ namespace LifeGame.Shared
         {
             new RoastDef { Raw = Item.RawMutton, Cooked = Item.CookedMutton, Burnt = Item.BurntMutton, Process = "cook.meat", Name = "Roast mutton", Doing = "Setting mutton over the fire" },
             new RoastDef { Raw = Item.RawVenison, Cooked = Item.CookedVenison, Burnt = Item.BurntVenison, Process = "cook.venison", Name = "Roast venison", Doing = "Setting venison over the fire" },
+            new RoastDef { Raw = Item.RawRabbit, Cooked = Item.CookedRabbit, Burnt = Item.BurntRabbit, Process = "cook.rabbit", Name = "Roast rabbit", Doing = "Setting a rabbit over the fire" },
             new RoastDef { Raw = Item.RawChicken, Cooked = Item.CookedChicken, Burnt = Item.BurntChicken, Process = "cook.chicken", Name = "Roast chicken", Doing = "Setting a chicken over the fire" },
             new RoastDef { Raw = Item.Egg, Cooked = Item.BoiledEgg, Burnt = Item.BurntEgg, Process = "cook.egg", Name = "Boil an egg", Doing = "Setting an egg in the embers" },
         };
