@@ -35,3 +35,6 @@ Compare the PR's run time with the before figures, fix anything the run shows, t
 - Draft PRs skip those three checks (module, upgrade and clients still run); `ready_for_review` is a pull_request trigger so the full set runs when the PR is marked ready.
 - A ticket/docs-only push already skips every heavy job (the `changes` filter), on PRs and on main.
 - Load test on PRs stays 5 bots for 5 s; main no longer runs the 20 bots / 20 s one.
+
+## integration-13 update: smart priority (Justin picked A)
+Pausing on every main push starved PRs (main merges every 3-5 min, a PR run takes ~9). Now `priority.yml` pauses PR Builds only while a main Build (push) or a Release has a queued run or queued jobs (main is waiting for a runner), and leaves any PR run that has been running 4 minutes or more to finish. It resumes (re-runs the newest cancelled run per open PR head) when no main Build or Release is queued or running. Also triggered by pull_request pushes and a 5-minute schedule, since starvation can begin after the push.

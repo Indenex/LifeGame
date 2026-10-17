@@ -1,20 +1,24 @@
 name: Main priority
 
-# Builds and releases of main come first (Justin, integration-13). GitHub has no job priority, so while a
-# main Build or Release is queued or running, queued and running pull request Builds are cancelled, which
-# frees the runners; when main is idle they are re-run (newest head per PR only). Merge-queue and manual
-# runs and Release runs are never touched. Nothing is stored: a PR run counts as paused when it was
-# cancelled and nothing newer ran for its head commit (a run a newer push replaced is left alone).
-# Triggers: a push to main pauses at once; each finished Build or Release and a 15-minute schedule do the
-# pass below, which pauses PR runs that started while main is still busy and resumes them once it is idle.
+# Builds and releases of main come first, but not at any price (Justin, integration-13, "smart priority").
+# GitHub has no job priority, so this frees runners when main is actually waiting for one: while a main
+# Build (a push) or a Release has a queued run or queued jobs, queued pull request Builds are cancelled, and
+# so are running ones that started under PAUSE_AFTER_MIN minutes ago; a PR run further along is left to
+# finish. When no main Build or Release is queued or running, the newest cancelled run per open PR head is
+# re-run. Merge-queue and manual runs and Release runs are never touched. Nothing is stored: a PR run counts
+# as paused when it was cancelled and nothing newer ran for its head commit.
+# Triggers: a push to main, a pull request push (a new PR run may start while main waits), a finished main
+# Build or Release, and a 5-minute schedule.
 on:
   push:
     branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_run:
     workflows: [Build, Release]
     types: [completed]
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -33,16 +37,33 @@ env:
 jobs:
   priority:
     name: Main first
+    # A finished run only matters when it is a main Build (a push) or a Release: pull request builds finish
+    # (or are cancelled by this very workflow) all the time and would otherwise each start a run here.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.event == 'push' || github.event.workflow_run.name == 'Release'
     runs-on: ubuntu-24.04
     steps:
       - name: Pause or resume pull request builds
         run: |
+          PAUSE_AFTER_MIN=4
           active() { for s in queued in_progress waiting pending; do gh api --paginate "repos/$REPO/actions/workflows/$1/runs?status=$s&per_page=100" --jq "$2"; done; }
-          # Main is busy when a push-triggered Build or any Release is queued or running (this push counts).
-          main_busy=$(( $(active build.yml '.workflow_runs[] | select(.event == "push") | .id' | wc -l) + $(active release.yml '.workflow_runs[] | .id' | wc -l) ))
-          if [ "$main_busy" -gt 0 ]; then
+          # Main runs (push Builds and Releases) that are queued or running: "id status".
+          main_runs=$( { active build.yml '.workflow_runs[] | select(.event == "push") | "\(.id) \(.status)"'; active release.yml '.workflow_runs[] | "\(.id) \(.status)"'; } )
+          starved=0
+          while read -r id status; do
+            [ -n "$id" ] || continue
+            if [ "$status" != in_progress ]; then starved=1; break; fi
+            queued=$(gh api "repos/$REPO/actions/runs/$id/jobs?per_page=100" --jq '[.jobs[] | select(.status == "queued")] | length')
+            if [ "$queued" -gt 0 ]; then starved=1; break; fi
+          done <<< "$main_runs"
+          if [ -n "$main_runs" ] && [ "$starved" = 0 ]; then echo "Main is running and not waiting for a runner; nothing to do."; exit 0; fi
+          if [ "$starved" = 1 ]; then
             echo "### Paused for a main build; re-runs automatically" >> "$GITHUB_STEP_SUMMARY"
-            active build.yml '.workflow_runs[] | select(.event == "pull_request") | "\(.id) \(.head_branch) \(.head_sha)"' | sort -u | while read -r id branch sha; do
+            now=$(date +%s)
+            active build.yml '.workflow_runs[] | select(.event == "pull_request") | "\(.id) \(.status) \(.run_started_at) \(.head_branch) \(.head_sha)"' | sort -u | while read -r id status started branch sha; do
+              age=$(( (now - $(date -d "$started" +%s)) / 60 ))
+              if [ "$status" = in_progress ] && [ "$age" -ge "$PAUSE_AFTER_MIN" ]; then
+                echo "- run $id ($branch): running for $age min, left to finish" | tee -a "$GITHUB_STEP_SUMMARY"; continue
+              fi
               if gh api -X POST "repos/$REPO/actions/runs/$id/cancel" >/dev/null 2>&1; then
                 echo "- run $id ($branch, ${sha:0:8}): paused for a main build; re-runs automatically" | tee -a "$GITHUB_STEP_SUMMARY"
               fi
