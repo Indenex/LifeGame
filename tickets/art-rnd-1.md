@@ -1,9 +1,9 @@
 # art-rnd-1: Art quality R&D, better modelling methods and a turtle-shell pilot
 Lane: Art quality R&D
 Owner: Art R&D session (session_019Ee5efaMp7ec6dhFqQfV6R)
-Status: in_review
+Status: blocked (waiting on Justin's tree-palette and rollout answers)
 Branch: claude/art-rnd-1
-PR: (none yet)
+PR: none for this branch (no CI run). The shell landed via Modeling's #623 (claude/model-14-authored-shell).
 
 ## Goal
 Justin found Pebble's turtle shell (#594, renders/model-11-pebble-shell-*.png on claude/model-11-pebble-shell) awful and asked for research into better modelling methods. Done means:
@@ -43,8 +43,9 @@ Justin found Pebble's turtle shell (#594, renders/model-11-pebble-shell-*.png on
 - 2026-10-17: merged rough-edge fixes (Pebble temple dip from the brow ridge, sheep wool -8% and blended puff seams, birch Spacing 4.7, Bramble side locks tucked in); sheets pebble-head, faces, bramble, sheep, birch changed; the PM told.
 
 ## Open questions / blockers
-- Justin (morning): tree palette (a) fresh greens, recommended, (b) partway to olive, (c) mixed; D-154, not defaulted.
-- Justin: is this the direction (painted texture on authored meshes) to roll out to other hero pieces?
+- WAITING ON JUSTIN (sent to the PM 2026-10-17, not defaulted): A. Tree palette (D-154, world palette): (a) fresh greens as shown, recommended, (b) partway to today's olive, (c) mixed, fresh birches and deeper pines.
+- WAITING ON JUSTIN: B. Rollout of the Blender pipeline: (a) piece by piece, recommended: heads and faces first (already behind ChibiFigure.AuthoredHeads), then trees (need a far LOD and a wind term; Modeling), then the sheep (Animals) and the axe; (b) only new content; (c) not yet.
+- Session state: final showcase sheets are at 59ed1e95 (renders/art-rnd-1-*.png); the index, numbers and rough edges are in docs/art-pipeline.md "Showcase". No helper sessions or worktrees are left running.
 
 ## Next step
-Wait for Justin's morning answers via the PM (tree palette A, rollout B). Then do what he picks; if rollout (a), start with the heads: a plan with Modeling (ChibiFigure.AuthoredHeads) and Animation (ChibiFace.SetExpression for blinks).
+Ask the PM for Justin's answers to A and B. If B is (a), write tickets/art-rnd-2.md for the heads rollout: Modeling switches on ChibiFigure.AuthoredHeads and authors the cropped haircut via tools/art/heads; Animation drives blinks with ChibiFace.SetExpression.
