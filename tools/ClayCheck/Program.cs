@@ -102,7 +102,7 @@ Log($"Clay at {clayX}, {clayZ}; water at {waterX}, {waterZ}");
 // Stones: a hammer that is never used up, one for the hand axe, two for the
 // potter's bench and up to two for grit. Sticks and fiber: also the axe's haft and
 // cordage, and the claim marker.
-Gather(Item.Stone, 6);
+Gather(Item.Stone, jarRun ? 14u : 6u);
 Gather(Item.Stick, 10 + 1 + Social.MarkerSticks);
 Gather(Item.Fiber, (kilnRun ? 12u : 4u) + 3 + Social.MarkerFiber);
 
