@@ -967,3 +967,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-238 — 2026-10-17 — Ceramics next: clay pipes and drain tiles for moving water (ceramics-13)
 **Decision:** Ceramics' next work is clay pipes and drain tiles for moving water (ceramics-13), design first. Justin chose it over slip decoration and a potter's wheel.
 **Who:** Justin, picking clay pipes and drain tiles (relayed by the PM; no direct quote).
+
+## D-239 — 2026-10-17 — Clay pipes and drains: trough only for now (follows D-238)
+**Decision:** For ceramics-13, Justin picked "Trough only": a fired clay trough filled by hand, with no pipe network for now. The network design (stream to cistern, roof gutters) stays on file in `tickets/ceramics-13.md` for later.
+**Who:** Justin, picking "Trough only" (relayed by the PM; no direct quote).
