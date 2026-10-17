@@ -43,6 +43,7 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM claim",
                 "SELECT * FROM my_claim_stash",
                 "SELECT * FROM craft_work",
+                "SELECT * FROM player_equip",
                 "SELECT * FROM my_skills",
             });
     })
@@ -59,18 +60,8 @@ float x = start.X, z = start.Z;
 
 // Every run begins from the same place (bugfix-31): new players wake at a random spot in the
 // spawn clearing, so walk to the origin first, at a pace the server accepts.
-for (var go = Stopwatch.StartNew(); go.Elapsed.TotalSeconds < 60; )
-{
-    float dx = -x, dz = -z, d = MathF.Sqrt(dx * dx + dz * dz);
-    if (d < 0.05f && conn.Db.PlayerPos.PlayerId.Find(myId) is { } at && MathF.Abs(at.X - x) + MathF.Abs(at.Z - z) < 0.1f) break;
-    if (d >= 0.05f && conn.Db.PlayerPos.PlayerId.Find(myId) is { } seen0 && MathF.Abs(seen0.X - x) + MathF.Abs(seen0.Z - z) < 1.5f)
-    {
-        float step = Math.Min(d, 0.5f);
-        x += dx / d * step; z += dz / d * step;
-    }
-    conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
-    Pump(() => false, 0.1f, null);
-}
+var walker = new BotWalker(conn, myId, "Crafting check", "bot", ms => Pump(() => false, ms / 1000f, null), Fail);
+WalkTo(0f, 0f, 0.1f);
 
 // CRAFTCHECK_PART splits the check in two for CI: "tools" (the tier 0 to 2 crafts, digging, fires, chopping)
 // and "stations" (claim, tables, placing, tool wear and repair). Unset runs both, as before.
@@ -108,6 +99,7 @@ if (runTools)
         .First(c => World.IsClay(c.cx, c.cz) && World.Height(c.cx, c.cz, 0) > Needs.WaterLevel + 0.4f
             && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(c.cx, c.cz)) is null);
     WalkTo(clayX * World.CellSize, clayZ * World.CellSize);
+    EquipTool(Item.DiggingStick);
     for (int dig = 0; dig <= World.MaxDigDepth; dig++)
     {
         uint clayBefore = CountOf(Item.Clay);
@@ -133,6 +125,18 @@ if (runTools)
     Console.WriteLine($"Fire lit at ({fire.X:F1}, {fire.Z:F1})");
     if (fire.FuelCapSeconds < Fires.MaxSeconds) Fail($"a fresh fire's fuel cap is {fire.FuelCapSeconds} s, under the base {Fires.MaxSeconds}");
     OffRocks(fire);
+
+    // Lighting a fire where the player chose (crafting-28): a spot out of reach, and a process
+    // that is not a fire, are refused before anything is used up.
+    lastError = null;
+    conn.Reducers.StartFireAt("fire.hand_drill", 1f, x + 300f, z);
+    Pump(() => lastError != null, 5, "a fire out of reach to be refused");
+    if (lastError?.Contains("out of reach") != true) Fail($"a fire far away: {lastError}");
+    lastError = null;
+    conn.Reducers.StartFireAt("cord.twist", 0f, x, z);
+    Pump(() => lastError != null, 5, "a spot for a non-fire to be refused");
+    if (lastError?.Contains("Only a fire") != true) Fail($"a spot for cord.twist: {lastError}");
+    Console.WriteLine($"Choosing a spot: {lastError}");
 
     // A failed drill loses its inputs and lights nothing.
     Gather(Item.Fiber, 2);
@@ -293,6 +297,15 @@ if (runStations)
         Pump(() => lastError != null, 5, "placing out of reach to be refused");
         Console.WriteLine($"Placing out of reach: {lastError}");
 
+        // Setting a thing down is a click on the item in hand (crafting-29): refused until it is held.
+        conn.Reducers.EquipSlot(255);
+        lastError = null;
+        conn.Reducers.PlaceItem(basket.Item, basket.Quality, basket.Wear, x + 1.8f, z, 0f);
+        Pump(() => lastError != null, 5, "placing a basket that is not in hand to be refused");
+        if (lastError?.Contains("hand") != true) Fail($"placing a basket not held: {lastError}");
+        Console.WriteLine($"Basket not in hand: {lastError}");
+        EquipTool(Item.Basket);
+
         bool placedOk = false;
         for (int k = 0; k < 12 && !placedOk; k++)
         {
@@ -379,6 +392,7 @@ if (runStations)
         var stick = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.DiggingStick);
         var (dx, dz) = (World.CellOf(x) + 1, World.CellOf(z) + 1);
         WalkTo(dx * World.CellSize, dz * World.CellSize);
+        EquipTool(Item.DiggingStick);
         for (int dig = 0; dig <= World.MaxDigDepth; dig++)
         {
             lastError = null;
@@ -433,6 +447,16 @@ if (runStations)
         WalkTo(ctrunk.X, ctrunk.Z);
         Craft("chop.log", 0, Item.Log);
         Console.WriteLine("The mended axe chops again");
+
+        // World tool actions need the tool equipped (crafting-29): put the axe away and a chop is refused.
+        conn.Reducers.EquipSlot(9);
+        Pump(() => conn.Db.PlayerEquip.Owner.Find(me!.Value) is null, 5, "the axe to be put away");
+        lastError = null;
+        conn.Reducers.StartCraft("chop.log", 0);
+        Pump(() => lastError != null, 5, "a chop without the axe equipped to be refused");
+        if (lastError?.Contains("equip") != true) Fail($"chopping with the axe only in the bag: {lastError}");
+        Console.WriteLine($"Axe not equipped: {lastError}");
+        EquipTool(Item.StoneAxe);
     }
 
     // Crafting-20: a bow and arrows (animals-15) are made at the bench by hand: the bow from
@@ -481,20 +505,36 @@ return 0;
 // Lights a fire (or tries to). The server sets a fire only on clear, level ground
 // near the crafter, away from other fires, hearths, boulders and trunks (Hearths.cs);
 // when it finds none here, step a few metres along and try again.
+// Lights a fire on a spot the shared ground rules accept (FireGround) and clear of other fires,
+// nearest first; if the server still refuses one, the next candidate is tried.
 void FireCraft(string processId, float score)
 {
-    for (int attempt = 0; ; attempt++)
+    var fires = conn.Db.Fire.Iter().ToList();
+    var spots = new List<(float X, float Z)>();
+    for (int ring = 0; ring <= 6; ring++)
     {
+        float r = 1.2f + ring * 0.35f;
+        int steps = ring == 0 ? 1 : 16;
+        for (int k = 0; k < steps; k++)
+        {
+            float a = k * MathF.Tau / steps;
+            float sx = x + MathF.Sin(a) * r, sz = z + MathF.Cos(a) * r;
+            if (!FireGround.Clear(sx, sz, (i, j) => conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j))?.Depth ?? 0)) continue;
+            if (fires.Any(f => MathF.Sqrt((f.X - sx) * (f.X - sx) + (f.Z - sz) * (f.Z - sz)) < Fires.Spacing)) continue;
+            spots.Add((sx, sz));
+        }
+    }
+    int tries = 0;
+    foreach (var spot in spots.Take(12))
+    {
+        tries++;
         lastError = null;
-        conn.Reducers.StartCraft(processId, score);
+        conn.Reducers.StartFireAt(processId, score, spot.X, spot.Z);
         Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
         if (lastError == null) break;
-        if (!lastError.Contains("clear, level ground") || attempt >= 8)
-            Fail($"{processId} at ({x:F1}, {z:F1}), try {attempt + 1}: {lastError}");
-        float a = attempt * MathF.PI / 4f;
-        Console.WriteLine($"No ground for a fire at ({x:F1}, {z:F1}); stepping along");
-        WalkTo(x + MathF.Cos(a) * 4f, z + MathF.Sin(a) * 4f);
+        if (!lastError.Contains("clear, level ground") && !lastError.Contains("too close")) Fail($"{processId} at ({spot.X:F1}, {spot.Z:F1}): {lastError}");
     }
+    if (lastError != null || conn.Db.MyCraftJob.Count == 0) Fail($"{processId}: no fire spot accepted near ({x:F1}, {z:F1}) after {tries} tries: {lastError}");
     var def = Processes.Find(processId)!;
     Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds * 1.2f + 5, $"{processId} to finish");
 }
@@ -540,8 +580,19 @@ Structure BuildHere(StructureKind kind)
     return conn.Db.Structure.Id.Find(s.Id)!;
 }
 
+// World tool actions need the tool on the bar and equipped (crafting-29): put it on slot 9 and equip that.
+void EquipTool(Item item)
+{
+    const byte slot = 9;
+    conn.Reducers.SetHotbarSlot(slot, (ushort)item);
+    if (conn.Db.PlayerEquip.Owner.Find(me!.Value) is { Slot: slot }) return;
+    conn.Reducers.EquipSlot(slot);
+    Pump(() => conn.Db.PlayerEquip.Owner.Find(me!.Value) is { Slot: slot }, 5, "the tool to be equipped");
+}
+
 void Craft(string processId, float score, Item? expect)
 {
+    if (Processes.Find(processId) is { Outcome: Outcome.Chop }) EquipTool(Item.StoneAxe);
     uint before = expect is { } e ? CountOf(e) : 0;
     lastError = null;
     conn.Reducers.StartCraft(processId, score);
@@ -632,71 +683,8 @@ void Gather(Item item, uint want)
     }
 }
 
-// Walks at a safe pace until within reach of a spot.
-void WalkTo(float tx, float tz)
-{
-    // Round trunks and boulders by a route, then straight in (bugfix-34).
-    var route = ground.Route(x, z, tx, tz);
-    for (int i = 0; i < route.Count - 1; i++) Leg(route[i].X, route[i].Z, 0.4f);
-    Leg(tx, tz, 1.5f);
-}
-
-void Leg(float tx, float tz, float tol)
-{
-    int lagged = 0;
-    for (int guard = 0; ; guard++)
-    {
-        float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
-        if (d < tol) break;
-        if (guard > 900)
-        {
-            var srv = conn.Db.PlayerPos.PlayerId.Find(myId);
-            var near = new List<string>();
-            for (int ix = (int)x - 3; ix <= (int)x + 3; ix++)
-                for (int iz = (int)z - 3; iz <= (int)z + 3; iz++)
-                    if (Obstacles.At(ground, ix, iz, out float ox, out float oz, out float r, out float h)) near.Add($"{(h == float.MaxValue ? "trunk" : "rock")}@({ox:F1},{oz:F1}) r{r:F2}");
-            foreach (var st in conn.Db.Structure.Iter())
-                if (MathF.Abs(st.X - x) < 6 && MathF.Abs(st.Z - z) < 6) near.Add($"{st.Kind}@({st.X:F1},{st.Z:F1}) done={st.Complete} stage={st.Stage}");
-            Console.WriteLine("  near: " + string.Join("; ", near));
-            Fail($"stuck walking to ({tx:F1}, {tz:F1}): bot at ({x:F1}, {z:F1}), server at ({srv?.X:F1}, {srv?.Z:F1}), {d:F1} m left");
-        }
-        float step = Math.Min(tol >= 1.5f ? d - 1f : d, 0.5f);
-        // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
-        // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
-        var behind = conn.Db.PlayerPos.PlayerId.Find(myId);
-        if (behind is { } held && MathF.Abs(held.X - x) + MathF.Abs(held.Z - z) >= 1.5f)
-        {
-            // The server has not followed for a second: it refused the last step (something solid in the
-            // way). Take its word for where we are and carry on from there, like a player would.
-            if (++lagged > 10) { x = held.X; z = held.Z; lagged = 0; }
-        }
-        else lagged = 0;
-        if (behind is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
-        {
-            float px = x, pz = z;
-            x += dx / d * step;
-            z += dz / d * step;
-            (x, z) = ground.Slide(px, pz, x, z); // round things and walls, as a player meets them
-        }
-        conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
-        Pump(() => false, 0.1f, null);
-    }
-    for (var settle = Stopwatch.StartNew(); ; )
-    {
-        if (conn.Db.PlayerPos.PlayerId.Find(myId) is { } p && MathF.Abs(p.X - x) < 0.1f && MathF.Abs(p.Z - z) < 0.1f) break;
-        if (settle.Elapsed.TotalSeconds > 15)
-        {
-            // Say where everyone is and what is near, so a blocked or too-slow walk can be told apart.
-            var at = conn.Db.PlayerPos.PlayerId.Find(myId);
-            var near = string.Join(", ", conn.Db.Structure.Iter()
-                .Select(st => $"{st.Kind}#{st.Id} d={MathF.Sqrt((st.X - x) * (st.X - x) + (st.Z - z) * (st.Z - z)):F1}")
-                .OrderBy(t => t).Take(6));
-            Fail($"timed out waiting for position to settle (target {x:F1},{z:F1}; server {at?.X:F1},{at?.Z:F1}; last error {lastError ?? "none"}; structures: {near})");
-        }
-        conn.Reducers.Move(x, z, 0f);
-        Pump(() => false, 0.1f, null);
-    }
-}
+// Walks at a safe pace until within reach of a spot (the shared walk: routes, stall detection, last-resort reposition).
+void WalkTo(float tx, float tz, float near = 1.5f) => walker.To(ref x, ref z, tx, tz, near);
 
 void Pump(Func<bool> until, float seconds, string? what)
 {

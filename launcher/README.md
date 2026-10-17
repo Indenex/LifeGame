@@ -42,3 +42,11 @@ Pass after `--`, e.g. `LifeGameLauncher.x86_64 -- --no-server --server=http://fr
 - `launcher.gd` is the whole app (GDScript, Godot 4.6). Open `launcher/project.godot` in the Godot 4.6 .NET editor.
 - Export: `godot --headless --path launcher --export-release Linux out/LifeGameLauncher.x86_64` (and `Windows out/LifeGameLauncher.exe`). The .NET editor needs the .NET 8 SDK on PATH even though the launcher has no C#.
 - Test without GitHub: pack releases with `tools/release/make-release.sh`, serve them with `tools/release/fake-api.py <dir>`, then run the launcher with `-- --api=http://127.0.0.1:8765 --home=/tmp/lg --auto --no-play --quit` against a local `spacetime start`. Exit code 0 ok, 1 failed, 2 stopped at a world wipe.
+
+## What's new (release-9)
+
+Each release body lists player-facing patch notes between `<!-- notes -->` and `<!-- /notes -->` (also `notes` in `release.json`). They come from `tools/release/merged-prs.sh`: the `Player note: <one plain sentence>` line in a PR body, else the PR title without its ticket prefix. PRs labelled or titled scribe, docs, ticket-only or ci-only are left out. Both launchers show a scrollable "What's new" box when an update is ready and after it lands, listing every build between the installed one and the newest, newest first. The "What's new" button reopens it.
+
+## Resizable window (release-10)
+
+Both launchers open at 860x560 and can be resized (minimum 640x540, and never smaller than the layout needs). The buttons wrap onto a second line when narrow, the "What's new" box takes the spare height, and the buttons stay at the bottom. On screens with a display scale above 100% (Windows DPI scaling) the window and everything in it is scaled to match. The size and position are remembered in `LifeGame/window.json` and restored on the next start if the window would still be on a screen. `--window-size=WxH` opens at a given size without restoring or saving (for screenshots).

@@ -11,16 +11,29 @@ public partial class Terrain
 {
     // One standing tree, as the chunk would draw it on cell (x, z), with only its trunk
     // and crown (TreeFall). Instances are in world space. Null where no tree grows.
-    public Node3D? StandingTree(int x, int z)
+    // felled: the same tree sawn off at the foot, with no roots, for the fall (env-23):
+    // Modeling's cut painted trees, and the cut trunk for birches.
+    public Node3D? StandingTree(int x, int z, bool felled = false)
     {
         Prewarm();
         var snapshot = TakeSnapshot(World.ChunkOfCell(x), World.ChunkOfCell(z));
         snapshot.Keep(x, z);
         var data = Compute(snapshot);
         var root = new Node3D { Name = $"Tree_{x}_{z}" };
-        foreach (var (mesh, material, items, shadow) in data.Batches)
-            if (material == Look.TreeBark || material == Look.TreeFoliage)
-                AddMulti(root, mesh, items.Select(i => (i.Item1, i.Item2, new Color(0, 0, 0, i.Item3.A))).ToList(), material, shadow);
+        foreach (var (mesh, material, items, shadow, range) in data.Batches)
+        {
+            bool painted = material == PaintedTrees.PineMaterial || material == PaintedTrees.BroadleafMaterial;
+            // Painted trees come as a near and a far batch; a falling tree is always near,
+            // so only the near one is drawn, with no distance limit.
+            if (painted && range.Item1 > 0f) continue;
+            var drawn = mesh;
+            // A crown on its own trunk (a birch) falls as it is; a whole painted tree is swapped
+            // for its sawn-off version.
+            if (felled && painted && !PaintedTrees.IsCrown(mesh)) drawn = PaintedTrees.Felled(material == PaintedTrees.PineMaterial, TreeVariant(x, z, material == PaintedTrees.PineMaterial ? 31u : 30u));
+            else if (felled && material == Painted.Bark) drawn = PropMeshes.CutTrunk;
+            if (painted || material == Painted.Bark || material == Painted.Leaves || material == Look.TreeBark || material == Look.TreeFoliage)
+                AddMulti(root, drawn, items.Select(i => (i.Item1, i.Item2, new Color(0, 0, 0, i.Item3.A))).ToList(), material, shadow);
+        }
         if (root.GetChildCount() == 0) { root.Free(); return null; }
         // A tree near the player fades out of the camera's way and its see-through copy
         // draws it; with one tree, that copy can simply stay on.
@@ -133,7 +146,7 @@ public partial class TreeFall : Node3D
         var foot = new Vector3(tx, terrain.TileHeight(x, z), tz);
         f.Stump = Stump(x, z, foot);
         AddChild(f.Stump);
-        if (fall && terrain.StandingTree(x, z) is { } tree)
+        if (fall && terrain.StandingTree(x, z, felled: true) is { } tree)
         {
             // Away from the chopper; with nobody near, the way the shader used to pick.
             Vector2 away = chopper is { } c && (new Vector2(tx, tz) - c).LengthSquared() > 0.01f

@@ -41,7 +41,7 @@ public static class SheepFigure
     public static Built Build(Fleece fleece, Material wool)
     {
         if (Cache.TryGetValue(fleece, out var done)) return done;
-        plain ??= Look.Solid(Colors.White);
+        plain ??= PaintedAnimals.Skin;
         var mesh = new ArrayMesh();
         int tris = 0;
 

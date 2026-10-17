@@ -125,6 +125,8 @@ public partial class Atmosphere : Node3D
         ReadySeasons();
         ReadyFronts();
         ReadyGrade();
+        ReadyLens();
+        ReadyFrost();
         ReadyImpacts();
         ReadyStorms();
         ReadyHomes();
@@ -329,6 +331,7 @@ public partial class Atmosphere : Node3D
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
         leaves.Follow(focus, Year, wind, woods, WindDirection);
         UpdateWater(dt, focus, env.FogLightColor.Lerp(sun.LightColor, 0.4f));
+        UpdateFrost(dt);
         UpdateImpacts(dt);
         sound.Foliage = wooded;
         Lightning(dt, focus);
@@ -464,6 +467,8 @@ public partial class Atmosphere : Node3D
             env.AmbientLightEnergy += flash * 1.6f;
             env.FogLightColor = env.FogLightColor.Lerp(bolt, flash * 0.5f);
         }
+        UpdateLens(sunHeight, daylight, overcast, sunDir);
+        CapFog();
     }
 
     // The campfires you can hear: louder the closer and the better they burn,
@@ -624,6 +629,8 @@ public partial class Atmosphere : Node3D
             uniform float storm = 0.0;
             uniform float flash = 0.0;
             uniform vec3 flash_dir = vec3(0.0, 0.25, -1.0);
+            // Soft glow (AtmosphereLens): a wide warm halo round the sun, 0 off.
+            uniform float halo = 0.0;
 
             float hash(vec3 p) {
                 p = fract(p * 0.3183099 + 0.1);
@@ -642,6 +649,7 @@ public partial class Atmosphere : Node3D
                 float sun_vis = smoothstep(-0.15, 0.05, sun_dir.y);
                 col += sun_color * (pow(s, 5.0) * 0.3 + pow(s, 60.0) * 0.5) * sun_vis;
                 col += sun_color * smoothstep(0.9993, 0.9997, s) * 6.0 * step(-0.02, sun_dir.y);
+                col += sun_color * vec3(1.0, 0.86, 0.72) * (pow(s, 3.0) * 0.08 + pow(s, 16.0) * 0.12) * sun_vis * halo;
 
                 float night = 1.0 - daylight;
                 float m = max(dot(d, moon_dir), 0.0);
