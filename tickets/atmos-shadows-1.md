@@ -1,8 +1,8 @@
 # atmos-shadows-1: steadier, crisper sun shadows
 Lane: Atmosphere (lighting), done by the Unity spike worker for the PM; Atmosphere owns the files
-Owner: session_017Weex8fujB3VFsrpg84jEP (Unity spike worker)
-Status: in_progress
-Branch: claude/atmos-shadows-1 (Justin approved via the PM). This session can't push it; a fresh lane session applies patches/atmos-shadows-1/ from claude/unity-spike
+Owner: Atmosphere lane session_014MSnDGYpnGPmnSQ4CjhF7c (landing it; written by the Unity spike worker session_017Weex8fujB3VFsrpg84jEP)
+Status: in_review
+Branch: claude/atmos-shadows-1 (Justin approved via the PM)
 PR: none yet
 
 ## Goal
@@ -51,9 +51,13 @@ before and after; Render shows noon and dusk, walking, before and after.
   Atmosphere: Steady() covers the moon; sun line before Grade(), CapFog() last; boltLight
   untouched; shade colour stays with Atmosphere's ambient (#608). Atmosphere wants the PR number
   to review.
+- 2026-10-17: landed by the Atmosphere lane: patches from claude/unity-spike ed3354f4 applied
+  cleanly on main efc00f3b; hook order checked against the rim light and cosy grade on main
+  (shadow lines before Grade(), CapFog() last). gen-bindings and client Release build green
+  locally (0 errors). Pushed claude/atmos-shadows-1.
 
 ## Open questions / blockers
-- None for the code. Publishing needs a session allowed to push claude/atmos-shadows-1.
+- None.
 
 ## Next step
-Push once the PM confirms the branch, wait for CI, send Render the before/after request (noon and dusk, walking), send the PM the green sha.
+Wait for CI on the PR, then send the PM the full green sha.
