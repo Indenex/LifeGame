@@ -27,12 +27,12 @@ public partial class GroundItems : Node3D
     public bool Has(ulong id) => batchOf.ContainsKey(id);
 
     // `mark` is the row's Wear number: for pots it is the maker's mark (shared/Marks.cs), drawn as
-    // a stamp, and pots with different marks are drawn in separate batches.
+    // a stamp, and slip round the rim (shared/Slip.cs); pots that look different are drawn in separate batches.
     public void Add(ulong id, Item item, Transform3D place, uint mark = 0)
     {
         if (batchOf.ContainsKey(id)) return;
         int px = Mathf.FloorToInt(place.Origin.X / PatchMeters), pz = Mathf.FloorToInt(place.Origin.Z / PatchMeters);
-        int variant = Marks.Has(mark) && Marks.Marked(item) ? (int)Marks.Maker(mark) + 1 : 0;
+        int variant = (int)ClayItemLook.Decoration(item, mark);
         if (!batches.TryGetValue((item, px, pz, variant), out var batch))
         {
             batch = new Batch
@@ -40,7 +40,7 @@ public partial class GroundItems : Node3D
                 Mesh = new MultiMesh
                 {
                     TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-                    Mesh = (variant > 0 && ClayItemLook.MarkedMesh(item, (uint)(variant - 1)) is { } marked ? PaintedItems.Paint(marked, PaintedItems.Family.Clay) : null) ?? ItemLook.MeshFor(item),
+                    Mesh = (variant != 0 && ClayItemLook.MarkedMesh(item, (uint)variant) is { } marked ? PaintedItems.Paint(marked, PaintedItems.Family.Clay) : null) ?? ItemLook.MeshFor(item),
                 },
                 // Unused slots collapse to a point inside the patch, so they draw
                 // nothing and don't stretch the batch's bounds.
