@@ -1,9 +1,9 @@
 # atmosphere-33: Heavy winter ground snow
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_review
+Status: done
 Branch: claude/atmosphere-33-snow
-PR: (none)
+PR: #627
 
 ## Goal
 Justin, on the first frost renders (atmosphere-28, Render B's stills renders/atmosphere-28-7c8b799-1..7 at full frost): "I like the snow." Frost is now lighter and autumn-only, but that heavy white look should become the basis for winter ground snow. Winter already has `snow_cover` in the painted and grass shaders (Look.cs: SNOW settles on upward faces, filling hollows first, and grass wears it on its tips). Compare it with the old full-frost look: an even, soft white over the ground, rocks, canopies and grass, with the brush texture still showing, sparkle glints, and a cool tint. Bring winter snow closer to that. Done: Render stills of a snowy morning shown to Justin, and merged.
@@ -16,9 +16,10 @@ Justin, on the first frost renders (atmosphere-28, Render B's stills renders/atm
   - Glints: step(0.985) sparkle cells, the same as the frost.
   - Grass: white to the tips, cool blue at the roots, cover 75 to 100%.
   - The client builds with 0 errors; the shader is not compiled in CI.
+- 2026-10-17 09:07: CI green on c94965c0; merged as #627.
 
 ## Open questions / blockers
 - None yet. Start once the painted-look work (Justin's top priority) allows.
 
 ## Next step
-Wait for Render B's `--snow-cover=1` stills (before on main, after on this branch) and CI; tune; send the green sha to the PM.
+None (done). Render B's `--snow-cover=1` before/after is queued; any tuning goes in a new ticket.
