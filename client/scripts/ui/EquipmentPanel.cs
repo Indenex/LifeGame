@@ -339,10 +339,12 @@ public partial class EquipmentFigure : Control
 
     public override void _Draw()
     {
-        var fill = new Color(Look.Cream, 0.13f);
-        var edge = new Color(Look.Cream, 0.32f);
+        // On warm paper the figure is a soft brown ink outline (ui-51); cream would vanish.
+        var fill = WarmLook.On ? new Color(WarmLook.Ink, 0.05f) : new Color(Look.Cream, 0.13f);
+        var edge = WarmLook.On ? new Color(WarmLook.Ink, 0.45f) : new Color(Look.Cream, 0.32f);
+        width = WarmLook.On ? 2 : 1;
         DrawCircle(new Vector2(110, 46), 26, fill);
-        DrawArc(new Vector2(110, 46), 26, 0, Mathf.Tau, 48, edge, 1.5f, true);
+        DrawArc(new Vector2(110, 46), 26, 0, Mathf.Tau, 48, edge, width + 0.5f, true);
         Part(new Rect2(96, 70, 28, 14), 4, fill, edge);    // neck
         Part(new Rect2(66, 84, 88, 128), 22, fill, edge);  // body
         Part(new Rect2(38, 92, 24, 118), 12, fill, edge);  // arms
@@ -351,10 +353,12 @@ public partial class EquipmentFigure : Control
         Part(new Rect2(114, 206, 32, 118), 14, fill, edge);
     }
 
+    int width = 1;
+
     void Part(Rect2 rect, int radius, Color fill, Color edge)
     {
         var style = new StyleBoxFlat { BgColor = fill, BorderColor = edge, AntiAliasing = true };
-        style.SetBorderWidthAll(1);
+        style.SetBorderWidthAll(width);
         style.SetCornerRadiusAll(radius);
         DrawStyleBox(style, rect);
     }

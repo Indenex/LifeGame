@@ -737,7 +737,7 @@ public partial class Terrain : Node3D
                 Xf(0, 1.6f + k * 0.7f, 0), new Color(0.9f + k * 0.06f, 0.9f + k * 0.06f, 0.9f + k * 0.06f));
         pineMesh = pine.Commit();
 
-        tuftMesh = BuildTuft();
+        tuftMesh = BuildTuft(GrassDetail.Keep);
     }
 
     internal static SphereMesh Blob(float radius) => new() { Radius = radius, Height = radius * 1.7f, RadialSegments = 10, Rings = 6 };
@@ -767,7 +767,8 @@ public partial class Terrain : Node3D
 
     // A one-meter patch of thin blades that fills its tile edge to edge. UV.y runs
     // from root to tip so the grass shader can color and bend each blade.
-    static Mesh BuildTuft()
+    // keep: the share of blades drawn (GrassDetail, Options -> Graphics -> Grass).
+    static Mesh BuildTuft(float keep = 1f, ArrayMesh? into = null)
     {
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
@@ -775,6 +776,7 @@ public partial class Terrain : Node3D
         for (int gx = 0; gx < grid; gx++)
             for (int gz = 0; gz < grid; gz++)
             {
+                if (keep < 1f && Hash01(gx, gz, 307) >= keep) continue;
                 float px = (gx + 0.5f) / grid - 0.5f + (Hash01(gx, gz, 300) - 0.5f) / grid;
                 float pz = (gz + 0.5f) / grid - 0.5f + (Hash01(gx, gz, 301) - 0.5f) / grid;
                 float angle = Hash01(gx, gz, 302) * Mathf.Pi;
@@ -787,7 +789,7 @@ public partial class Terrain : Node3D
                 Vertex(st, root + side, 0f);
                 Vertex(st, root + lean + new Vector3(0, height, 0), 1f);
             }
-        return st.Commit();
+        return into == null ? st.Commit() : st.Commit(into);
 
         static void Vertex(SurfaceTool st, Vector3 v, float h)
         {
@@ -796,6 +798,14 @@ public partial class Terrain : Node3D
             st.SetColor(Colors.White);
             st.AddVertex(v);
         }
+    }
+
+    // Redraws the grass tufts everywhere with a new share of their blades.
+    internal static void RebuildTufts(float keep)
+    {
+        if (tuftMesh is not ArrayMesh mesh) return;
+        mesh.ClearSurfaces();
+        BuildTuft(keep, mesh);
     }
 
     public static float Hash01(int x, int z, uint salt) => Trees.Hash01(x, z, salt);

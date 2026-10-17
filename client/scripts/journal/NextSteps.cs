@@ -35,6 +35,7 @@ public static class NextSteps
         ["cook.venison"] = "A haunch of deer, turned over the fire, makes a richer meal than mutton.",
         ["cook.broth"] = "Water and a handful of berries, kept hot in a pot, make something warm to sip on a cold evening.",
         ["cook.stew"] = "A pot left to simmer with meat and more besides becomes a meal that stays with you.",
+        ["carve.spade"] = "A flat of wood with a stone edge moves earth faster than a pointed stick.",
         ["carve.digging_stick"] = "A sharpened stick digs deeper than bare hands.",
         ["cord.twist"] = "Plant fiber, twisted tight, becomes cord.",
         ["lash.spear"] = "A sharp flake bound to a long stick reaches further.",
