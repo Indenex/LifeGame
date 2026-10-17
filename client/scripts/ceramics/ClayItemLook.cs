@@ -51,6 +51,16 @@ public static class ClayItemLook
 
     static readonly Dictionary<(Item, uint), Mesh?> MarkedMeshes = new();
 
+    // Raised when a maker's mark is added or changed, after the cached meshes are dropped, so
+    // pictures built earlier (bag icons) can rebuild.
+    public static event System.Action? MarksChanged;
+
+    public static void ClearMarked()
+    {
+        MarkedMeshes.Clear();
+        MarksChanged?.Invoke();
+    }
+
     // The decoration bits of an item row's Wear number: the maker (Marks) and slip (Slip), for the
     // clay items that show them; 0 for anything else. Two rows with the same value look the same.
     public static uint Decoration(Item item, uint wear)
@@ -68,6 +78,9 @@ public static class ClayItemLook
     {
         if (MarkedMeshes.TryGetValue((item, decor), out var cached)) return cached;
         var glyph = decor;
+        // The maker's mark may not have arrived yet (player_mark loads beside the items): build the
+        // mesh for now but do not remember it, so the next look picks the mark up.
+        bool markKnown = !Marks.Has(decor) || ClayLook.MarkLookup?.Invoke(Marks.Maker(decor)) != null;
         Mesh? mesh = item switch
         {
             Item.PinchPot => Pot(ClayForm.PinchPot, ClayStage.Fired, false, null, glyph),
@@ -82,7 +95,7 @@ public static class ClayItemLook
             Item.UnfiredStorageJar => Jar(ClayStage.Drying, glyph),
             _ => null,
         };
-        MarkedMeshes[(item, decor)] = mesh;
+        if (markKnown) MarkedMeshes[(item, decor)] = mesh;
         return mesh;
     }
 
