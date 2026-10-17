@@ -40,7 +40,7 @@ public static class Look
     public static readonly Color Cream = new(0.97f, 0.94f, 0.87f);
     public static readonly Color Water = new(0.14f, 0.34f, 0.40f, 0.9f);
 
-    public const float WaterLevel = -1.0f;
+    public const float WaterLevel = LifeGame.Shared.World.WaterLevel;
 
     static Shader? paintedShader, ghostShader, structureGhostShader, grassShader;
     static ShaderMaterial? ground, bark, rock, foliage, grass, grassTufts;
