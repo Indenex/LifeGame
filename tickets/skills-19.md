@@ -1,7 +1,7 @@
 # skills-19: Journal lines for new content as it lands (eggs, fletched arrows, waterskin, trough)
 Lane: Journal and skills
 Owner: Journal and skills lane (Sonnet)
-Status: in_progress
+Status: done
 Branch: claude/journal-skills-19
 PR: (not yet)
 
@@ -23,6 +23,8 @@ Add 'Things to try' hints (D-105, one sentence, goal not recipe) to client/scrip
 - 2026-10-17 04:00: #470 merged: added cook.egg and carve.fletched_arrows (Crafting wording). Harness 74/74. Waiting only on carve.spade and the clay trough.
 
 - 2026-10-17 09:20: #507 merged (waterskin, eggs, cook.egg, fletched arrows). clay.trough is on main (ceramics-13): line added on claude/journal-skills-20 (my wording, Ceramics gave none). carve.spade (#500) still not on main. Slip decoration and maker's marks (ceramics-14/15) are not process ids, so the journal has no slot for them (Ceramics' suggested line is not used).
+
+- 2026-10-17 09:25: #675 merged (clay.trough). #500 merged: carve.spade line added on claude/journal-skills-21 (harness 76/76). Queue empty.
 
 ## Open questions / blockers
 - Waiting on #454/crafting-eggs, #484, #417 to merge.
