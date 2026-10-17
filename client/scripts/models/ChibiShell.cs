@@ -14,19 +14,36 @@ namespace LifeGame;
 // shell colours tint the carapace from it (vertex colour red marks what is tinted).
 public static class ChibiShell
 {
-    // Draw Pebble with the authored shell; false keeps ChibiFigure's built shell.
-    public static bool Enabled = true;
     const string Dir = "res://assets/models/pebble_shell/";
 
+    // Draw Pebble with the authored shell; false keeps ChibiFigure's built shell. It also
+    // reads false when the asset can't be loaded (not imported yet), so Pebble always
+    // keeps a shell.
+    public static bool Enabled { get => enabled && Mesh != null; set => enabled = value; }
+    static bool enabled = true;
+
     static Mesh? mesh;
+    static bool loaded;
     static readonly Dictionary<string, ShaderMaterial> Materials = new();
 
-    public static Mesh Mesh => mesh ??= Load();
-
-    static Mesh Load()
+    public static Mesh? Mesh
     {
-        var scene = GD.Load<PackedScene>(Dir + "pebble_shell.glb").Instantiate();
-        var found = Find(scene) ?? throw new System.InvalidOperationException("pebble_shell.glb has no mesh");
+        get
+        {
+            if (!loaded) { loaded = true; mesh = Load(); }
+            return mesh;
+        }
+    }
+
+    static Mesh? Load()
+    {
+        if (!ResourceLoader.Exists(Dir + "pebble_shell.glb") || GD.Load<PackedScene>(Dir + "pebble_shell.glb") is not { } packed)
+        {
+            GD.PushWarning("ChibiShell: pebble_shell.glb could not be loaded; Pebble keeps the built shell.");
+            return null;
+        }
+        var scene = packed.Instantiate();
+        var found = Find(scene);
         scene.Free();
         return found;
     }
