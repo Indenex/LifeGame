@@ -149,6 +149,12 @@ public partial class BuildingSystem : Node
             MakeGhost();
             return;
         }
+        // --building-camp: a busy finished camp, for draw-call counts (BuildingSystem.Camp.cs).
+        if (OS.GetCmdlineUserArgs().Contains("--building-camp"))
+        {
+            ShowcaseCamp(Put);
+            return;
+        }
         // --building-leanto: finished lean-tos seen from the ridge side and from behind.
         if (OS.GetCmdlineUserArgs().Contains("--building-leanto"))
         {
