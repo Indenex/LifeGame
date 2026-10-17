@@ -62,7 +62,7 @@ public partial class CraftingUi : CanvasLayer
         grid.Make = Begin;
         grid.HandsOn = HandsOn;
         box.AddChild(grid);
-        box.AddChild(Text("Click one to make it, or press its number.  Tab switches category.  C or Esc closes.", 13, 0.65f));
+        box.AddChild(Text($"Click one to make it, or press its number.  Tab switches category.  {Controls.OrEsc("craft")} closes.", 13, 0.65f));
         panel.AddChild(box);
         panel.Visible = false;
 

@@ -55,7 +55,7 @@ public partial class JournalPanel : Control
         var header = new HBoxContainer();
         header.AddChild(Text("Journal", Ui.TitleSize, Ink));
         header.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
-        header.AddChild(Text("J to close", 14, Faint));
+        header.AddChild(Text($"{Controls.KeyFor("journal") ?? "Esc"} to close", 14, Faint));
         rows.AddChild(header);
 
         var columns = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
