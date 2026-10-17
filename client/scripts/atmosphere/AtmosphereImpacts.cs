@@ -27,15 +27,17 @@ public partial class Atmosphere
     static readonly Color Flint = new(0.55f, 0.56f, 0.58f), Ember = new(1f, 0.62f, 0.22f), Ash = new(0.55f, 0.53f, 0.50f);
 
     double connectedAt = -1;
+    DbConnection? impactConn;
     float? argImpacts;
     float impactClock;
     int impactStep;
 
     void ReadyImpacts() => argImpacts = ArgFloat("impacts");
 
-    // Avatar.Impact's handler (subscribed once anim-7 is on main).
-    void OnAvatarImpact(Node3D avatar, WorkMotion motion, Vector3 at, bool thrown) =>
-        OnToolContact(motion, at, -avatar.GlobalBasis.Z, thrown);
+    // Avatar.Impact's handler (subscribed once anim-7 is on main). Figures face +Z;
+    // at is the right hand's tool point; item is the tool (0 for bare hands).
+    void OnAvatarImpact(Node3D avatar, WorkMotion motion, Vector3 at, bool thrown, ushort item) =>
+        OnToolContact(motion, at, avatar.GlobalBasis.Z, thrown);
 
     // Only for --impacts: take turns at a chop, a dig and a tree coming down.
     void UpdateImpacts(float dt)
@@ -66,6 +68,7 @@ public partial class Atmosphere
 
     void ConnectImpacts(DbConnection conn)
     {
+        impactConn = conn;
         connectedAt = Time.GetTicksMsec() / 1000.0;
         conn.Db.ChoppedTree.OnUpdate += (_, before, after) => { if (!before.Felled && after.Felled) TreeFell(after); };
         // A tree felled since we connected arrives as a new row; the ones felled
@@ -109,7 +112,10 @@ public partial class Atmosphere
                 break;
             case WorkMotion.Feed:
             {
-                // Fuel lands on the fire: a flurry of sparks and a breath of ash.
+                // Fuel lands on the fire (the nearest within reach of the hand, which
+                // ends its toss a step short of it): a flurry of sparks and a breath of ash.
+                if (FireNear(at) is not { } fire) break;
+                at = fire;
                 var sparks = Burst(at, Vector3.Up, 35f, 1.2f, 2.6f, 14, 1.1f,
                     new SphereMesh { Radius = 0.012f, Height = 0.024f, RadialSegments = 4, Rings = 2 }, Ember, Ember.Lightened(0.3f), spin: false);
                 sparks.Gravity = new Vector3(0f, 0.6f, 0f);
@@ -154,6 +160,21 @@ public partial class Atmosphere
         leaves.Gravity = new Vector3(WindDirection.X * 0.6f, -1.2f, WindDirection.Y * 0.6f);
         leaves.DampingMin = 1.2f;
         leaves.DampingMax = 1.8f;
+    }
+
+    Vector3? FireNear(Vector3 hand)
+    {
+        if (impactConn == null) return null;
+        Vector3? best = null;
+        float bestD = 2.5f * 2.5f;
+        foreach (var f in impactConn.Db.Fire.Iter())
+        {
+            float d = new Vector2(f.X - hand.X, f.Z - hand.Z).LengthSquared();
+            if (d >= bestD) continue;
+            bestD = d;
+            best = new Vector3(f.X, (terrain?.HeightAt(f.X, f.Z) ?? hand.Y) + 0.25f, f.Z);
+        }
+        return best;
     }
 
     bool Near(Vector3 at) => Player is not { } p || !p.IsInsideTree() || p.GlobalPosition.DistanceSquaredTo(at) < ImpactReach * ImpactReach;

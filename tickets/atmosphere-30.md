@@ -17,8 +17,10 @@ The chop and dig effects fire on Animation's impact frame: anim-7's `Avatar.Impa
 
 - 2026-10-17 03:50: per the PM, switched to Animation's anim-7 event `Avatar.Impact(avatar, motion, toolPoint, thrown)` and dropped ToolContact. Added dig crumbs when the tool goes in, clods on a spade's throw (thrown = true), grey flakes on Knap, and sparks plus an ash puff when fuel lands (Feed). The handler `OnAvatarImpact` is ready; the subscribe line goes in once anim-7 is on main, so this PR doesn't depend on it.
 
+- 2026-10-17 03:55: following Animation's notes, figures face +Z, the handler takes the fifth `ushort item` argument, and Feed sparks rise from the nearest fire within 2.5 m of the hand (the Fire table), not from the hand.
+
 ## Open questions / blockers
-- anim-7 (branch claude/anim-7) must reach main before I can subscribe: `Avatar.Impact += (a, m, p, thrown) => OnAvatarImpact(a, m, p, thrown);` in ConnectImpacts. The handler is ready.
+- anim-7 (branch claude/anim-7) must reach main before I can subscribe: `Avatar.Impact += (a, m, p, thrown, item) => OnAvatarImpact(a, m, p, thrown, item);` (anim-7 PR opens after #485) in ConnectImpacts. The handler is ready.
 
 ## Next step
 Wait for #486 CI and send the PM the green sha. Animation and Render requests are sent.
