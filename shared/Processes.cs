@@ -223,7 +223,7 @@ namespace LifeGame.Shared
             {
                 Id = "weave.basket", Name = "Weave a basket", Doing = "Weaving a basket", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Stick, 3), new Ingredient(Item.Fiber, 10) },
-                Seconds = Base(2, 2.5f), Makes = Item.Basket, Station = StationKind.Table,
+                Seconds = Base(2, 2.5f), Makes = Item.Basket, Station = StationKind.Table, Motion = WorkMotion.Twist,
             },
             // A hide waterskin (survival-20): carries a little water before pottery. Hand craft.
             new ProcessDef
@@ -285,7 +285,7 @@ namespace LifeGame.Shared
             {
                 Id = "hide.scrape", Name = "Scrape a hide", Doing = "Scraping the hide clean", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.SheepHide) }, NeedsTool = ItemTags.Cutting,
-                Seconds = Base(2, 1f), Makes = Item.ScrapedHide, Station = StationKind.DryingRack,
+                Seconds = Base(2, 1f), Makes = Item.ScrapedHide, Station = StationKind.DryingRack, Motion = WorkMotion.Scrape,
             },
             new ProcessDef
             {
@@ -297,7 +297,7 @@ namespace LifeGame.Shared
             {
                 Id = "hide.stretch", Name = "Stretch a hide to dry", Doing = "Lacing the hide onto a rack", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.ScrapedHide), new Ingredient(Item.Stick, 2), new Ingredient(Item.Cordage) },
-                Seconds = Base(2, 0.5f), Outcome = Outcome.Placed, Station = StationKind.DryingRack,
+                Seconds = Base(2, 0.5f), Outcome = Outcome.Placed, Station = StationKind.DryingRack, Motion = WorkMotion.Wrap,
             },
 
             // Wool (Animals lane): a stick and a stone whorl make a drop spindle at the
@@ -308,19 +308,19 @@ namespace LifeGame.Shared
             {
                 Id = "carve.drop_spindle", Name = "Make a drop spindle", Doing = "Fitting a stone whorl onto a stick", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Stick), new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Cutting,
-                Seconds = Base(2, 0.5f), Makes = Item.DropSpindle, Station = StationKind.Table,
+                Seconds = Base(2, 0.5f), Makes = Item.DropSpindle, Station = StationKind.Table, Motion = WorkMotion.Carve,
             },
             new ProcessDef
             {
                 Id = "cord.spin_wool", Name = "Spin wool yarn", Doing = "Spinning wool into yarn", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Wool, 2) },
-                Seconds = Base(2, 1f), Minigame = Minigame.Spin, Makes = Item.Yarn, FailBelow = 0.1f, Station = StationKind.Spindle,
+                Seconds = Base(2, 1f), Minigame = Minigame.Spin, Makes = Item.Yarn, FailBelow = 0.1f, Station = StationKind.Spindle, Motion = WorkMotion.Twist,
             },
             new ProcessDef
             {
                 Id = "weave.wool_cloth", Name = "Weave wool cloth", Doing = "Weaving yarn over a stick frame", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Yarn, 4), new Ingredient(Item.Stick, 2) },
-                Seconds = Base(2, 2f), Makes = Item.WoolCloth, Station = StationKind.Spindle,
+                Seconds = Base(2, 2f), Makes = Item.WoolCloth, Station = StationKind.Spindle, Motion = WorkMotion.Wrap,
             },
 
             // Clothing (Animals lane): worn in the equipment panel, slows the cold (see
@@ -330,13 +330,13 @@ namespace LifeGame.Shared
             {
                 Id = "sew.wool_tunic", Name = "Sew a wool tunic", Doing = "Cutting and sewing a tunic", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.WoolCloth, 3), new Ingredient(Item.Yarn) }, NeedsTool = ItemTags.Cutting,
-                Seconds = Base(2, 2f), Makes = Item.WoolTunic, Station = StationKind.Table,
+                Seconds = Base(2, 2f), Makes = Item.WoolTunic, Station = StationKind.Table, Motion = WorkMotion.Wrap,
             },
             new ProcessDef
             {
                 Id = "sew.leather_wraps", Name = "Make leather foot wraps", Doing = "Cutting and lacing foot wraps", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Leather), new Ingredient(Item.Cordage) }, NeedsTool = ItemTags.Cutting,
-                Seconds = 10, Makes = Item.LeatherWraps, Station = StationKind.DryingRack,
+                Seconds = 10, Makes = Item.LeatherWraps, Station = StationKind.DryingRack, Motion = WorkMotion.Wrap,
             },
 
             // Tier 3: clay. Dug clay is cleaned, tempered so it survives the fire,
@@ -376,40 +376,40 @@ namespace LifeGame.Shared
             {
                 Id = "clay.pinch_pot", Name = "Pinch a pot", Doing = "Pinching a pot", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay) },
-                Seconds = Base(3, 0.75f), Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 0.75f), Minigame = Minigame.Shape, Station = StationKind.PottersBench, Motion = WorkMotion.Knead, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
                 Id = "clay.coil_pot", Name = "Build a clay pot", Doing = "Building a clay pot", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay, 3) },
-                Seconds = Base(3, 2f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 2f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Motion = WorkMotion.Knead, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
                 Id = "clay.lamp", Name = "Pinch a lamp", Doing = "Pinching a lamp", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay) },
-                Seconds = Base(3, 0.5f), Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 0.5f), Minigame = Minigame.Shape, Station = StationKind.PottersBench, Motion = WorkMotion.Knead, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
                 // A pat of clay pressed over a curve into a roof tile; kiln-fired only (ceramics-10).
                 Id = "clay.tile", Name = "Press a roof tile", Doing = "Pressing a roof tile", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay) },
-                Seconds = Base(3, 0.75f), Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 0.75f), Minigame = Minigame.Shape, Station = StationKind.PottersBench, Motion = WorkMotion.Knead, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
                 // A big coiled basin; kiln-fired only, set down to hold water (ceramics-13).
                 Id = "clay.trough", Name = "Build a clay trough", Doing = "Coiling a clay trough", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay, ClayRules.TroughClay) },
-                Seconds = Base(3, 3f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 3f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Motion = WorkMotion.Knead, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
                 // Too big for a campfire: it is fired in a kiln (ceramics-6).
                 Id = "clay.storage_jar", Name = "Build a storage jar", Doing = "Coiling a storage jar", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay, ClayRules.JarClay) },
-                Seconds = Base(3, 3f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 3f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Motion = WorkMotion.Knead, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {

@@ -12,7 +12,10 @@ public sealed class PlayerAnimator
     readonly Pose idle = new(), walk = new(), work = new(), act = new(), swim = new(), gesture = new(), pose = new(), restFrom = new(), restTo = new();
     // Set while a craft job runs; the figure kneels into it and back out.
     public WorkMotion Work;
+    // The craft job is at a station: its hand motion is worked standing (anim-26).
+    public bool WorkStanding;
     WorkMotion shownWork;
+    bool shownStanding;
     float workTime, workBlend;
     readonly float seed; // per-figure offset so a crowd never breathes or sways in step
     float time, phase;   // phase: walk cycle, a full turn is two steps
@@ -258,9 +261,11 @@ public sealed class PlayerAnimator
 
         // A new job while another still shows: ease out of the old pose first, then into
         // the new one, so nothing snaps.
-        if (Work != shownWork && Work != WorkMotion.None && (shownWork == WorkMotion.None || workBlend < 0.05f))
+        bool newJob = Work != shownWork || WorkStanding != shownStanding;
+        if (newJob && Work != WorkMotion.None && (shownWork == WorkMotion.None || workBlend < 0.05f))
         {
             shownWork = Work;
+            shownStanding = WorkStanding;
             workTime = 0f;
         }
         workTime += dt;
@@ -273,11 +278,11 @@ public sealed class PlayerAnimator
             if (crossed && workBlend > 0.7f) Impact?.Invoke(shownWork, false);
             lastWorkCycle = cycle;
         }
-        bool working = Work != WorkMotion.None && Work == shownWork && walkBlend < 0.5f;
+        bool working = Work != WorkMotion.None && Work == shownWork && WorkStanding == shownStanding && walkBlend < 0.5f;
         workBlend = Mathf.Lerp(workBlend, working ? 1f : 0f, 1f - Mathf.Exp(-8f * dt));
         if (workBlend > 0.005f)
         {
-            WorkMotions.Pose(work, shownWork, workTime, rig.LegLength);
+            WorkMotions.Pose(work, shownWork, workTime, rig.LegLength, shownStanding);
             pose.Blend(pose, work, workBlend > 0.995f ? 1f : workBlend);
         }
         else if (Work == WorkMotion.None) shownWork = WorkMotion.None;

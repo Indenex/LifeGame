@@ -11,7 +11,8 @@ namespace LifeGame;
 public static class WorkMotions
 {
     // A process names its motion on its Def (ProcessDef.Motion). Older entries leave it
-    // unset and get a guess from their id prefix; new families fall back to Gather.
+    // unset and get a guess from their id prefix; new families fall back to Gather. A
+    // station process with a Motion does that motion standing at the station (Standing).
     public static WorkMotion For(string? processId)
     {
         if (string.IsNullOrEmpty(processId)) return WorkMotion.None;
@@ -19,8 +20,6 @@ public static class WorkMotions
         if (def is { Motion: not WorkMotion.None }) return def.Motion;
         if (def is { Station: not StationKind.None }) return WorkMotion.Station;
         if (processId == "fire.bow_drill") return WorkMotion.BowDrill;
-        if (processId == "hide.scrape") return WorkMotion.Scrape;
-        if (processId == "hide.stretch") return WorkMotion.Wrap;
         string family = processId.Split('.')[0];
         return family switch
         {
@@ -36,8 +35,13 @@ public static class WorkMotions
         };
     }
 
-    // Writes the whole working pose into p; t is seconds since the work began.
-    public static void Pose(Pose p, WorkMotion work, float t, float legLength)
+    // Whether the process is worked standing at a waist-high station (anim-26).
+    public static bool Standing(string? processId) =>
+        !string.IsNullOrEmpty(processId) && Processes.Find(processId) is { Station: not StationKind.None };
+
+    // Writes the whole working pose into p; t is seconds since the work began. Hand
+    // motions are worked kneeling at the ground, or standing at a station's top.
+    public static void Pose(Pose p, WorkMotion work, float t, float legLength, bool standing = false)
     {
         p.Clear();
         if (work == WorkMotion.Station)
@@ -50,7 +54,8 @@ public static class WorkMotions
             Chop(p, t);
             return;
         }
-        Kneel(p, legLength);
+        if (standing) StandAt(p, t);
+        else Kneel(p, legLength);
         p[Joint.Neck].X = 0.15f;
         p[Joint.ShoulderL].Z = 0.12f;
         p[Joint.ShoulderR].Z = -0.12f;
@@ -166,7 +171,8 @@ public static class WorkMotions
                 break;
             }
         }
-        p[Joint.Spine].X = lean;
+        // At a station the work is at waist height, so the back bends less.
+        p[Joint.Spine].X = standing ? 0.15f + 0.4f * lean : lean;
         // Breathing goes on underneath.
         p[Joint.Spine].X += 0.01f * Mathf.Sin(t * 1.65f);
     }
@@ -615,7 +621,18 @@ public static class WorkMotions
     // the weight shifting a little with the work.
     static void Station(Pose p, float t)
     {
-        float work = Mathf.Sin(t * 2.6f), sway = Mathf.Sin(t * 0.9f);
+        float work = Mathf.Sin(t * 2.6f);
+        StandAt(p, t);
+        p[Joint.Spine] = new Vector3(0.3f + 0.01f * Mathf.Sin(t * 1.65f), 0.05f * work, 0);
+        p[Joint.Neck].X = 0.2f;
+        Arm(p, true, -0.55f + 0.12f * work, -0.12f, -0.95f - 0.15f * work);
+        Arm(p, false, -0.55f - 0.12f * work, 0.12f, -0.95f + 0.15f * work);
+    }
+
+    // Standing at a station: knees soft, weight shifting slowly from foot to foot.
+    static void StandAt(Pose p, float t)
+    {
+        float sway = Mathf.Sin(t * 0.9f);
         p.HipsOffset = new Vector3(0.015f * sway, -0.02f, 0);
         p[Joint.HipL] = new Vector3(-0.08f, 0, -0.02f * sway);
         p[Joint.HipR] = new Vector3(-0.08f, 0, -0.02f * sway);
@@ -623,10 +640,6 @@ public static class WorkMotions
         p[Joint.KneeR].X = 0.14f;
         p[Joint.FootL].X = -0.06f;
         p[Joint.FootR].X = -0.06f;
-        p[Joint.Spine] = new Vector3(0.3f + 0.01f * Mathf.Sin(t * 1.65f), 0.05f * work, 0);
-        p[Joint.Neck].X = 0.2f;
-        Arm(p, true, -0.55f + 0.12f * work, -0.12f, -0.95f - 0.15f * work);
-        Arm(p, false, -0.55f - 0.12f * work, 0.12f, -0.95f + 0.15f * work);
     }
 
     // Chop cycles a second, and where in the cycle the axe bites.

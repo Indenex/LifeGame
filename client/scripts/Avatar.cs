@@ -90,6 +90,8 @@ public partial class Avatar : Node3D
 
     // What this player's hands are doing, from their running craft job (AvatarWork).
     public WorkMotion Work { set => animator.Work = value; }
+    // Whether that job is worked standing at a station rather than kneeling.
+    public bool WorkStanding { set => animator.WorkStanding = value; }
 
     // Sit or lie down (anim-12), from the player's rest state: seat is the hips' height
     // when sitting on something (0 on the ground). RestKind.None gets up again. The
