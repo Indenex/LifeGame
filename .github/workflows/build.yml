@@ -153,6 +153,10 @@ jobs:
             parts: clay-hut
           - part: other structures
             parts: lean-to,basket,fence
+          # House building's claim-only buildings (coop, stone hearth, sundial and its town path); a new one
+          # adds its part name to this list, or starts a part of its own if this one nears 5 minutes.
+          - part: coop, hearth, sundial
+            parts: coop,stone-hearth,sundial
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-stdb
