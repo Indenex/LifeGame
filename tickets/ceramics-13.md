@@ -41,6 +41,11 @@ Not fluid physics: a **graph**.
 - **Animals:** sheep could drink from a trough (a later hook).
 - **A future farming lane:** garden sinks.
 
+## Progress log
+- 2026-10-17 02:00: Trough built (branch claude/clay-ceramics-13-kfr4kr). ClayForm.Trough (kiln-only), items 122 Unfired clay trough / 123 Clay trough, clay.trough at the bench (6 tempered clay, coil minigame), StructureKind.ClayTrough appended after RepairTable (Shapes row with Trough flag, category Storage, one stage "Set the trough" costing one Clay trough), TroughWater table + PourIntoTrough / DrinkFromTrough / ScoopFromTrough in server/spacetimedb/Troughs.cs, quality sets size (20 to 40 L), client TroughModel / TroughView / CeramicsView.Troughs.cs with the Use prompts. ClayCheck --kiln --jar fires a trough, sets it down, pours, drinks (c13t3 PASSED). Upgrade check vs origin/main PASSED. Server, client, ClayCheck build.
+- Drain tiles: LEFT OUT. Nothing in the game makes the ground under a building wet or dry, so a drain has no purpose yet. Revisit with a farming or weather-on-floors lane.
+- Animals: no thirst need exists for sheep. The trough_water table is public (StructureId, Litres) for a later Animals hook.
+
 ## Core loop options (sent to the PM 2026-10-17 for Justin)
 1. (Recommended) Stream to home cistern: a pipe run from a stream or pond into a cistern in your claim. Free water at home for filling pots and drinking; no tending. Slope and length limit the run; pipes and cistern are fired clay.
 2. Rain cistern first: gutters from a tiled roof into a cistern. No terrain slope, simple graph, but only fills when it rains and needs a tiled roof first.
@@ -53,4 +58,5 @@ Not fluid physics: a **graph**.
 - Slip decoration is parked as ceramics-14.
 
 ## Next step
+Open the PR, send the PM the green sha and the 'drains left out' note, send Render a request (a trough set down by a hut: empty, half full, full; a player pouring in a pot), then watch CI. Older text follows.
 When the PM relays Justin's pick: ask Environment for the `WaterAt` query, wait for building-12 (so the cistern and pipe are single Def entries), then build `ClayForm.Pipe`, `clay.pipe` and the Water graph for the picked option. Also still to do: re-run `ClayCheck --kiln --jar` once House building's #362 (claim-only kiln and bench) is on main.
