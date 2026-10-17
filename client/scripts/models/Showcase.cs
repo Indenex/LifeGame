@@ -632,8 +632,18 @@ public partial class Showcase : Node3D
         // A forest edge behind, a meadow in front.
         string[] needles = { "Forest_big_tree_needle_04", "Forest_big_tree_needle_04" };
         string[] cypress = { "Forest_big_cypress_01", "Forest_big_cypress_02", "Forest_big_cypress_03" };
+        // --trees=meshes shows variant D's 3D scalloped pines instead of the cards.
+        bool meshTrees = args.GetValueOrDefault("trees", "cards") == "meshes";
+        var bark = MaterialLook.For(MaterialLook.Pattern.Bark, MaterialLook.Variant.D, Look.Bark);
+        var needlesMat = MaterialLook.For(MaterialLook.Pattern.Leaves, MaterialLook.Variant.D, Look.Pine);
         foreach (var (x, z) in new[] { (-6.5f, -6f), (-8.5f, -3f), (-4.5f, -9f), (7f, -7.5f), (-10f, -8f), (9.5f, -4f), (4f, -10f) })
-            Card(needles[rng.RandiRange(0, 1)], new Vector3(x, 0, z), 6.5f + rng.Randf() * 1.5f);
+        {
+            float tall = 6.5f + rng.Randf() * 1.5f;
+            if (!meshTrees) { Card(needles[rng.RandiRange(0, 1)], new Vector3(x, 0, z), tall); continue; }
+            var scale = Vector3.One * tall / 4.6f;
+            AddChild(new MeshInstance3D { Mesh = PropMeshes.Trunk, MaterialOverride = bark, Position = new Vector3(x, 0, z), Scale = scale });
+            AddChild(new MeshInstance3D { Mesh = PropMeshes.ScallopPine, MaterialOverride = needlesMat, Position = new Vector3(x, 0, z), Scale = scale, Rotation = new Vector3(0, x, 0) });
+        }
         foreach (var (x, z) in new[] { (5.5f, -3.5f), (-2.5f, -8.5f) })
             Card(cypress[rng.RandiRange(0, 2)], new Vector3(x, 0, z), 5.5f + rng.Randf());
         Card("Forest_big_tree_leaf_01", new Vector3(8f, 0, -1f), 6f);
@@ -647,16 +657,31 @@ public partial class Showcase : Node3D
         Card("forest_bush_5", new Vector3(-7f, 0, 0.5f), 1.0f);
         Card("sone_2", new Vector3(1.6f, 0, 3.6f), 0.5f);
         Card("sone_31", new Vector3(-1.2f, 0, 0.4f), 0.25f);
-        // Thick ground cover: grass tufts, clover, ferns, flowers and mushrooms.
-        string[] cover = { "Forest_small_grass_01", "Forest_small_grass_02", "Forest_small_grass_03", "Forest_small_grass_04", "Forest_small_grass_05", "Forest_small_grass_06", "Forest_small_grass_07", "Forest_small_grass_08" };
-        string[] extras = { "Forest_small_clover_01", "Forest_small_fern_01", "Forest_small_fern_02", "Forest_small_flower_01", "Forest_small_flower_02", "Forest_small_flower_03", "Forest_small_mushroom_01", "Forest_small_mushroom_03" };
-        for (int i = 0; i < 7000; i++)
+        // Ground cover: the game's blade grass (Justin wants it back, restyled; D-232),
+        // in the pack's olive-yellow, with only a few painted accents.
+        var terrainType = typeof(Terrain);
+        terrainType.GetMethod("EnsureMeshes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.Invoke(null, null);
+        var tuft = (Mesh)terrainType.GetField("tuftMesh", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
+        var spots = new List<Transform3D>();
+        for (int i = 0; i < 14000; i++)
         {
             var at = new Vector3(rng.RandfRange(-14f, 14f), 0, rng.RandfRange(-16f, 6f));
-            // Keep the cabin floor and the spot by the player clear.
             if (Mathf.Abs(at.X - 0.5f) < 2.6f && Mathf.Abs(at.Z + 4.5f) < 2.2f) continue;
-            bool extra = rng.Randf() < 0.14f;
-            Card(extra ? extras[rng.RandiRange(0, extras.Length - 1)] : cover[rng.RandiRange(0, cover.Length - 1)], at, extra ? 0.3f + rng.Randf() * 0.15f : 0.4f + rng.Randf() * 0.3f, false, 2.0f);
+            spots.Add(new Transform3D(new Basis(Vector3.Up, rng.Randf() * Mathf.Tau).Scaled(Vector3.One * (0.8f + rng.Randf() * 0.5f)), at));
+        }
+        var blades = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = tuft, InstanceCount = spots.Count };
+        for (int i = 0; i < spots.Count; i++)
+        {
+            blades.SetInstanceTransform(i, spots[i]);
+            blades.SetInstanceColor(i, new Color(0.6f, 0.63f, 0.34f).Lerp(new Color(0.76f, 0.75f, 0.42f), rng.Randf()));
+        }
+        AddChild(new MultiMeshInstance3D { Multimesh = blades, MaterialOverride = Look.GrassTufts, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        string[] extras = { "Forest_small_flower_01", "Forest_small_flower_02", "Forest_small_flower_03", "Forest_small_mushroom_01", "Forest_small_mushroom_03", "Forest_small_fern_01" };
+        for (int i = 0; i < 90; i++)
+        {
+            var at = new Vector3(rng.RandfRange(-12f, 12f), 0, rng.RandfRange(-12f, 6f));
+            if (Mathf.Abs(at.X - 0.5f) < 2.6f && Mathf.Abs(at.Z + 4.5f) < 2.2f) continue;
+            Card(extras[rng.RandiRange(0, extras.Length - 1)], at, 0.3f + rng.Randf() * 0.15f, false, 1.3f);
         }
 
         var camera = new Camera3D { Fov = 40f, Current = true };
