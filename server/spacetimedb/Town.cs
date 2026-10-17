@@ -216,6 +216,7 @@ public static partial class Module
         EnsureTownTimer(ctx);
         var town = ctx.Db.Town.Insert(new Town { Id = 0, Name = name, StartedAt = ctx.Timestamp });
         Sign(ctx, town.Id, claim, player);
+        TownLogLine(ctx, town.Id, $"{player.Name} started the town");
         // Invitations to other towns no longer apply once you have started your own.
         foreach (var invite in ctx.Db.TownInvite.Invitee.Filter(ctx.Sender).ToList()) ctx.Db.TownInvite.Id.Delete(invite.Id);
         // The founder is the first Mayor until the signers vote.
@@ -276,6 +277,7 @@ public static partial class Module
         if (ctx.Db.TownSigner.ByTown.Filter(town.Id).Count() >= Social.TownMaxClaims)
             throw new Exception($"A town holds at most {Social.TownMaxClaims} claims");
         Sign(ctx, town.Id, claim, player);
+        TownLogLine(ctx, town.Id, $"{player.Name} signed the roster");
         foreach (var mine in ctx.Db.TownInvite.Invitee.Filter(ctx.Sender).ToList())
             ctx.Db.TownInvite.Id.Delete(mine.Id);
     }
@@ -336,6 +338,7 @@ public static partial class Module
         if (name.Length == 0) throw new Exception("Give the town a name");
         var town = ctx.Db.Town.Id.Find(mine.TownId) ?? throw new Exception("That town is gone");
         ctx.Db.Town.Id.Update(town with { Name = name });
+        TownLogLine(ctx, mine.TownId, $"{mine.OwnerName} renamed the town {name}");
     }
 
     // The Herald (or Mayor) sends one word to every signer, not more than once a minute.
@@ -375,6 +378,7 @@ public static partial class Module
         if (ctx.Db.TownSigner.ByTown.Filter(mine.TownId).Any(r => r.Owner == s.Owner)) throw new Exception("Its builder is still on the roster");
         foreach (var row in ctx.Db.BasketItem.StructureId.Filter(s.Id).ToList()) ctx.Db.BasketItem.Id.Delete(row.Id);
         RemoveStructure(ctx, s);
+        TownLogLine(ctx, mine.TownId, $"{mine.OwnerName} cleared a ruin");
     }
 
     // Two towns join when a majority of each town's signers say yes within three days.
@@ -446,7 +450,10 @@ public static partial class Module
         if (ctx.Db.TownVoice.TownId.Find(gone.Id) != null) ctx.Db.TownVoice.TownId.Delete(gone.Id);
         foreach (var m in ctx.Db.TownMerge.Iter().Where(m => m.FromTownId == gone.Id || m.ToTownId == gone.Id || m.FromTownId == keep.Id || m.ToTownId == keep.Id).ToList())
             DeleteMerge(ctx, m);
+        foreach (var ban in ctx.Db.TownBan.ByTown.Filter(gone.Id).ToList()) ctx.Db.TownBan.Id.Update(ban with { TownId = keep.Id });
+        foreach (var line in ctx.Db.TownLog.ByTown.Filter(gone.Id).ToList()) ctx.Db.TownLog.Id.Update(line with { TownId = keep.Id });
         ctx.Db.Town.Id.Delete(gone.Id);
+        TownLogLine(ctx, keep.Id, $"{gone.Name} joined {keep.Name}");
         ctx.Db.TownOffice.Insert(new TownOffice { Id = 0, TownId = keep.Id, Office = Social.OfficeMayor, Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(VacancyMicros(ctx)) });
     }
 
@@ -475,6 +482,8 @@ public static partial class Module
     static void SeatOffice(ReducerContext ctx, ulong townId, byte office, TownSigner winner)
     {
         var term = ctx.Timestamp + new TimeDuration(TermMicros(ctx));
+        if (OfficeOf(ctx, townId, office) is not { } held || held.HolderId != winner.PlayerId)
+            TownLogLine(ctx, townId, $"{winner.OwnerName} became {Towns.Get(office)?.Name ?? "an officer"}");
         if (OfficeOf(ctx, townId, office) is { } seat)
             ctx.Db.TownOffice.Id.Update(seat with { Holder = winner.Owner, HolderId = winner.PlayerId, HolderName = winner.OwnerName, TermEndsAt = term });
         else
@@ -495,6 +504,7 @@ public static partial class Module
     static void SettleTerms(ReducerContext ctx)
     {
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
+        ExpireBans(ctx);
         foreach (var merge in ctx.Db.TownMerge.Iter().Where(m => m.ExpiresAt.MicrosecondsSinceUnixEpoch <= now).ToList())
             DeleteMerge(ctx, merge);
         foreach (var seat in ctx.Db.TownOffice.Iter().Where(o => o.TermEndsAt.MicrosecondsSinceUnixEpoch <= now).ToList())
@@ -525,6 +535,7 @@ public static partial class Module
     static void DropSigner(ReducerContext ctx, TownSigner row)
     {
         ctx.Db.TownSigner.Id.Delete(row.Id);
+        TownLogLine(ctx, row.TownId, $"{row.OwnerName} left the roster");
         foreach (var v in ctx.Db.TownVote.ByTown.Filter(row.TownId).Where(v => v.Voter == row.Owner || v.CandidateId == row.PlayerId).ToList())
             ctx.Db.TownVote.Id.Delete(v.Id);
         if (!ctx.Db.TownSigner.ByTown.Filter(row.TownId).Any())
@@ -535,6 +546,8 @@ public static partial class Module
                 ctx.Db.TownOffice.Id.Delete(seat.Id);
             foreach (var m in ctx.Db.TownMerge.Iter().Where(m => m.FromTownId == row.TownId || m.ToTownId == row.TownId).ToList()) DeleteMerge(ctx, m);
             if (ctx.Db.TownVoice.TownId.Find(row.TownId) != null) ctx.Db.TownVoice.TownId.Delete(row.TownId);
+            foreach (var ban in ctx.Db.TownBan.ByTown.Filter(row.TownId).ToList()) ctx.Db.TownBan.Id.Delete(ban.Id);
+            foreach (var line in ctx.Db.TownLog.ByTown.Filter(row.TownId).ToList()) ctx.Db.TownLog.Id.Delete(line.Id);
             ctx.Db.Town.Id.Delete(row.TownId);
             return;
         }
