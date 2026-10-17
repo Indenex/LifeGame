@@ -18,7 +18,8 @@ Short gameplay clips (5-15 s, 12 fps movie, 960x540) requested by lanes or the P
 1. water BEFORE on main 2d9e6e27 (AFTER done: renders/water-after-d02f740-water-after.mp4); both go to the PM and Atmosphere (session_01KvVF5vpkYEHTKNRpHC18WN)
 2. hold-repeat dig check (PR #495 0f4ecc5d): "one dig then Still working, no repeat" may be a real bug; reshoot cleanly, if it reproduces tell the PM and Crafting (session_01N9APthjRDfjknUvCweqzzN)
 3. anim-11 equip/hold in hand (main): scenes/anim-11-equip.txt; copy Animation (session_019roNRWQBPw4ozNLDhzseig)
-4. anim-12 sit/lie + anim-13 idle fidgets and hop in one clip (branch claude/anim-13 e2a67c28): scenes/anim-12-13-rest-idle.txt; copy Animation
+4. anim-12 sit/lie + anim-13 idle fidgets and hop in one clip (build claude/anim-15 head 41b33212, which includes anim-12 and 13): scenes/anim-12-13-rest-idle.txt; copy Animation
+4b. anim-15 (PR #633 claude/anim-15 41b33212): light a fire, stand 2-3 m away facing away, press H: turns to face the fire and sits; film ~40 s for fidgets; optional 30 s sitting in the open at night. Same build as 4.
 5. smoke signal #524 (c1fa9240): near, far; copy Atmosphere
 Dropped: painted trees, tree fall, painted items, chibi, anim-10, anim-9 idle, water rain/no-reflect/stream, crafting-29 equip, painted-2 walk-past. Scenes for some exist in tools/render/scenes if they come back.
 
