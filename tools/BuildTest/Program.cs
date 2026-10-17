@@ -13,7 +13,7 @@ using SpacetimeDB.Types;
 // What to build: "both" (the default: lean-to, clay hut, basket, fence and gate), or one or more of
 // lean-to, clay-hut, basket, fence, brick-house, log-cabin separated by commas. CI runs two parts at once.
 string which = args.Length > 0 ? args[0] : "both";
-bool Wants(string part) => which == "both" ? part is "lean-to" or "clay-hut" or "basket" or "fence" : which.Split(',').Contains(part);
+bool Wants(string part) => which == "both" ? part is "lean-to" or "clay-hut" or "basket" or "fence" or "coop" : which.Split(',').Contains(part);
 string uri = args.Length > 1 ? args[1] : "http://127.0.0.1:3000";
 string db = args.Length > 2 ? args[2] : "lifegame";
 
@@ -131,7 +131,7 @@ if (Wants("fence"))
         new() { [Item.Stick] = 2, [Item.Fiber] = 2 }));
 }
 
-if (which is "coop" or "both")
+if (Wants("coop"))
     BuildTogether(StructureKind.HenCoop,
         new() { [Item.Stick] = 5, [Item.Fiber] = 5 },
         new() { [Item.Stick] = 4, [Item.Fiber] = 5 });
