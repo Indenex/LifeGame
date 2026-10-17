@@ -31,8 +31,10 @@ Justin (via the PM, 2026-10-17): "this asset pack ... is closer to the style I w
 
 - 2026-10-17 18:00: Justin picked the kit trees as they come (trio middle row): trees now use the kit's own leaf and bark textures with plain Lambert light (kit_light), keeping our wind, autumn, wetness, fade and fall, plus a per-tree shade (7e2621dd, e51354d2). TreesTextured = false would switch to the kit's flat Godot-shader greens. Shots: /mnt/project-files/screenshots/naturekit/trees-kit-look-{noon,golden}.png. Sawn-off kit trees for TreeFall: NatureKit.Felled drops triangles below the stump cut (one-line hook in TreeFall.cs).
 
+- 2026-10-17 18:40: Justin: kit trees 'WAY too bright'. Trees now scaled by TreeValue (default 0.7, showcase --tree-value=) and eased to 0.88 saturation; steps 0.85/0.7/0.55 sent to the PM (screenshots/naturekit/trees-value-*.png). Giant pines pulled to our deep pine green (Justin's pick). Licences checked: both Source packs CC0 (licence txt beside the files). Felled falls back to vertex order for non-indexed surfaces.
+
 ## Open questions / blockers
 - Look pick for Justin (via the PM): how far to take it.
 
 ## Next step
-Watch CI on PR #853 and send the green sha to the PM; then Survival's wild-root patch (survival-36, #856: rosette with white umbels, dug mound, root item) in the blended plant look.
+Apply Justin's brightness pick (TreeValue in NatureKit.cs), push, send the PM the green sha for PR #853; then a cap disc on the felled kit trunk's cut.

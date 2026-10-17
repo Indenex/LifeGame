@@ -150,7 +150,9 @@ public static class NatureKit
             {
                 var arrays = source.SurfaceGetArrays(s);
                 var vertices = arrays[(int)Godot.Mesh.ArrayType.Vertex].AsVector3Array();
-                var indices = arrays[(int)Godot.Mesh.ArrayType.Index].AsInt32Array();
+                var indices = arrays[(int)Godot.Mesh.ArrayType.Index].VariantType == Variant.Type.Nil
+                    ? System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Range(0, vertices.Length))
+                    : arrays[(int)Godot.Mesh.ArrayType.Index].AsInt32Array();
                 var kept = new List<int>(indices.Length);
                 for (int i = 0; i + 2 < indices.Length; i += 3)
                     if (vertices[indices[i]].Y >= cut && vertices[indices[i + 1]].Y >= cut && vertices[indices[i + 2]].Y >= cut)
@@ -265,6 +267,20 @@ public static class NatureKit
 
     const bool TreesTextured = true;
 
+    // How bright the kit trees' textures sit (Justin, 2026-10-17: "WAY too bright"): their
+    // value scaled down and colour eased a little toward grey, into our forest's range. The
+    // showcase takes --tree-value=0.85 and so on to compare steps.
+    static readonly float TreeValue = Arg("tree-value", 0.7f);
+    const float TreeSaturation = 0.88f;
+
+    static float Arg(string name, float fallback)
+    {
+        foreach (var arg in OS.GetCmdlineUserArgs())
+            if (arg.StartsWith("--" + name + "=") && float.TryParse(arg[(name.Length + 3)..], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v))
+                return v;
+        return fallback;
+    }
+
     static bool IsTreeModel(string model) =>
         model.StartsWith("CommonTree") || model.StartsWith("Pine") || model.StartsWith("GiantPine")
         || model.StartsWith("Birch") || model.StartsWith("TwistedTree") || model.StartsWith("DeadTree");
@@ -368,6 +384,13 @@ public static class NatureKit
             // Leaf cards: the crown is lit as one soft mass rather than card by card.
             m.SetShaderParameter("crown_normals", kind == Kind.Leaves && !tree ? 1f : 0f);
             m.SetShaderParameter("kit_light", tree);
+            if (tree)
+            {
+                m.SetShaderParameter("tree_value", TreeValue);
+                m.SetShaderParameter("tree_saturation", TreeSaturation);
+                // Giant pines in our pines' deep green (Justin's pick) rather than the kit's fresher one.
+                if (textured && kind == Kind.Leaves && model.StartsWith("GiantPine")) m.SetShaderParameter("albedo", new Color(0.83f, 0.81f, 0.9f));
+            }
             m.SetShaderParameter("rim", kind is Kind.Rock ? 1f : 0f);
             // Rocks take half the hue of the world's stone tint and each one's own darkening.
             m.SetShaderParameter("tint_blend", kind is Kind.Rock ? 0.5f : 0f);
@@ -435,6 +458,8 @@ public static class NatureKit
         uniform vec3 shade_tint : source_color = vec3(0.66, 0.64, 0.8);
         uniform bool see_through = false;
         uniform bool kit_light = false;
+        uniform float tree_value = 1.0;
+        uniform float tree_saturation = 1.0;
         uniform float fade_size = 1.0;
         global uniform vec3 player_position;
         global uniform vec3 view_camera_position;
@@ -562,7 +587,10 @@ public static class NatureKit
             }
             if (has_normal) NORMAL_MAP = texture(normal_tex, UV).rgb;
             // Each kit tree a shade lighter or darker than its neighbours, as ours are.
-            if (kit_light) color *= 0.9 + 0.1 * tree_seed;
+            if (kit_light) {
+                color *= 0.9 + 0.1 * tree_seed;
+                color = mix(vec3(dot(color, vec3(0.3, 0.59, 0.11))), color, tree_saturation) * tree_value;
+            }
             color *= mix(1.0, 0.8, wetness);
             ALBEDO = color;
         #ifdef GHOST
