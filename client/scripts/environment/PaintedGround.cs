@@ -325,14 +325,14 @@ public static class PaintedGround
         void fragment() {
             // The base matches the ground between the blades (PaintedGround.Ground), so a
             // patch without a tuft never shows as a square.
-            vec3 base = tint * vec3(0.42, 0.44, 0.56);
+            vec3 base = tint * vec3(0.34, 0.36, 0.5);
             vec3 lit = mix(tint * vec3(1.15, 1.2, 1.0), pow(vec3(0.88, 0.89, 0.62), vec3(2.2)), 0.5 + 0.2 * patch);
-            float low = 0.3 + 0.1 * patch, high = 0.66 + 0.12 * patch;
+            float low = 0.34 + 0.1 * patch, high = 0.6 + 0.12 * patch;
             vec3 color = mix(base, tint, smoothstep(low - 0.04, low + 0.04, tip));
             color = mix(color, lit, smoothstep(high - 0.04, high + 0.04, tip));
             color += vec3(0.04, 0.04, 0.01) * gust * step(high, tip);
             // A soft dark rim along each blade's edges, as the painted leaves have.
-            color *= mix(1.0, 0.62, smoothstep(0.55, 0.95, abs(across)));
+            color *= mix(1.0, 0.55, smoothstep(0.5, 0.95, abs(across)));
             color *= mix(1.0, 0.88, wetness);
             vec3 straw = vec3(0.42, 0.36, 0.20) * (0.7 + 0.5 * tip);
             color = mix(color, straw, 0.55 * max(0.0, -season_warmth));
