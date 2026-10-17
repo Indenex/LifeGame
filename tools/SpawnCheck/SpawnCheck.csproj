@@ -13,6 +13,7 @@
     <Compile Include="../../shared/**/*.cs" LinkBase="Shared" />
     <Compile Include="../common/*.cs" LinkBase="Common" />
     <Compile Include="../../client/scripts/net/Subscriptions.cs" LinkBase="Client" />
+    <Compile Include="../../client/scripts/net/Me.cs" LinkBase="Client" />
   </ItemGroup>
 
 </Project>

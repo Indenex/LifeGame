@@ -14,6 +14,7 @@ public static class Subscriptions
         "SELECT * FROM my_player_pos",
         "SELECT * FROM my_active_character",
         "SELECT * FROM my_characters",
+        "SELECT * FROM my_character_looks",
         // Only a login's first character matches these (its key is the login). Kept so the bot
         // tools, which only ever play that one, still find their own Player row first.
         "SELECT * FROM player WHERE identity = :sender",

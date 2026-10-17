@@ -22,6 +22,8 @@ public static partial class Module
         public Identity Login;
         public uint PlayerId;
         public Timestamp Created;
+        // A copy of Player.Name so the menu can list characters that are not in the world.
+        public string Name;
     }
 
     // Which character a login is playing, or last played. In the world only while that
@@ -36,6 +38,12 @@ public static partial class Module
 
     [SpacetimeDB.View(Accessor = "MyCharacters", Public = true)]
     public static List<Character> MyCharacters(ViewContext ctx) => ctx.Db.Character.Login.Filter(ctx.Sender).ToList();
+
+    // The looks of your characters, for their portraits on the menu.
+    [SpacetimeDB.View(Accessor = "MyCharacterLooks", Public = true)]
+    public static List<PlayerLook> MyCharacterLooks(ViewContext ctx) =>
+        ctx.Db.Character.Login.Filter(ctx.Sender).Select(c => ctx.Db.PlayerLook.PlayerId.Find(c.PlayerId))
+            .Where(l => l.HasValue).Select(l => l!.Value).ToList();
 
     [SpacetimeDB.View(Accessor = "MyActiveCharacter", Public = true)]
     public static List<ActiveCharacter> MyActiveCharacter(ViewContext ctx) =>
@@ -66,7 +74,7 @@ public static partial class Module
     {
         if (ctx.Db.Character.Login.Filter(login).Any()) return;
         if (ctx.Db.Player.Identity.Find(login) is not { } old) return;
-        ctx.Db.Character.Insert(new Character { Key = login, Login = login, PlayerId = old.PlayerId, Created = ctx.Timestamp });
+        ctx.Db.Character.Insert(new Character { Key = login, Login = login, PlayerId = old.PlayerId, Created = ctx.Timestamp, Name = old.Name });
         if (ctx.Db.ActiveCharacter.Login.Find(login) == null)
             ctx.Db.ActiveCharacter.Insert(new ActiveCharacter { Login = login, Key = login });
     }
@@ -95,7 +103,7 @@ public static partial class Module
     static Player MakeCharacter(ReducerContext ctx, Identity login, Identity key, string name)
     {
         var player = ctx.Db.Player.Insert(new Player { Identity = key, PlayerId = 0, Name = name, Online = false });
-        ctx.Db.Character.Insert(new Character { Key = key, Login = login, PlayerId = player.PlayerId, Created = ctx.Timestamp });
+        ctx.Db.Character.Insert(new Character { Key = key, Login = login, PlayerId = player.PlayerId, Created = ctx.Timestamp, Name = name });
         float x = (float)(ctx.Rng.NextDouble() * 16 - 8);
         float z = (float)(ctx.Rng.NextDouble() * 16 - 8);
         ctx.Db.PlayerPos.Insert(new PlayerPos

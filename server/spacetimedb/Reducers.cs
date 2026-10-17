@@ -72,6 +72,7 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         RequireNameFree(ctx, name, player.PlayerId);
         ctx.Db.Player.Identity.Update(player with { Name = name });
+        if (ctx.Db.Character.Key.Find(player.Identity) is { } character) ctx.Db.Character.Key.Update(character with { Name = name });
     }
 
     // How much walking a player has banked (World.MoveAllowance). Private.

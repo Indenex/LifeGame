@@ -108,6 +108,10 @@ Subscribe(Subscriptions.Self, 20, "own player subscribed after reconnect");
 var back = MyPos();
 Check(back != null && MathF.Abs(back.X - far.X) < 1.5f && MathF.Abs(back.Z - far.Z) < 1.5f,
     $"own position is where we logged off ({back?.X:F1}, {back?.Z:F1})");
+// A login that already has a character waits at the character menu (survival-24): play it.
+Check(!Me.InWorld(conn), "a returning login starts at the character menu");
+conn.Reducers.SelectCharacter(Me.Key(conn)!.Value);
+WaitFor(() => Me.InWorld(conn), 10, "the returning character in the world");
 Subscribe(Subscriptions.Area(AreaAround(back!.X, back.Z)), 20, "area around the saved position subscribed");
 Check(conn.Db.PlayerPos.Iter().Any(p => p.PlayerId == back.PlayerId), "the area includes us too");
 Check(conn.Db.PlayerSneaking.PlayerId.Find(myId) == null, "logging off stood us up again");

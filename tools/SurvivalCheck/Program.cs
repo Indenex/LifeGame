@@ -82,7 +82,8 @@ if (MathF.Abs(v0.FoodRate + Needs.FoodDrain) > Needs.FoodDrain * 0.02f)
 Ok("hunger is not eased");
 
 // --- Items come from the admin give; make this bot an admin through the CLI ---
-string name = "survcheck" + Random.Shared.Next(10000, 99999);
+// Names are letters only (Names.Problem, ui-31).
+string name = "Surv" + new string(Enumerable.Range(0, 8).Select(_ => (char)('a' + Random.Shared.Next(26))).ToArray());
 conn.Reducers.SetName(name);
 Settle(400);
 var psi = new ProcessStartInfo("spacetimedb-cli", new[] { "call", db, "--server", server, "make_admin", $"\"{name}\"" })

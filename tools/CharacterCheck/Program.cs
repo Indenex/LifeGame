@@ -41,6 +41,7 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM my_player",
                 "SELECT * FROM my_active_character",
                 "SELECT * FROM my_characters",
+                "SELECT * FROM my_character_looks",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_admin",
             });
@@ -145,6 +146,10 @@ if (Me.Player(conn)?.Name != name2) Fail($"the new character is called {Me.Playe
 Pump(() => Berries() == 0, 5, "the new character's bag to be empty");
 if (conn.Db.MyAdmin.Iter().Any()) Fail("the new character should not be an admin");
 Ok("the second character is its own: new key, own name, empty bag, not an admin");
+if (Chars().First(c => c.Key == second.Key).Name != name2) Fail("the menu list should carry the new character's name");
+if (Chars().First(c => c.Key == first.Key).Name != name1) Fail("the menu list should carry the renamed first character's name");
+Pump(() => conn.Db.MyCharacterLooks.Iter().Any(l => l.PlayerId == second.PlayerId), 5, "the new character's look on the menu list");
+Ok("the menu list carries every character's name and look");
 
 MustWork("a move as the second character", () => conn.Reducers.Move(0, 0, 0));
 Ok("the second character can act");
