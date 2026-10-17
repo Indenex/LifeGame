@@ -95,8 +95,9 @@ public sealed class ServerBagLink : IBagLink
 
     public IEnumerable<BagStack> Carried() => conn.Db.MyInventory.Iter()
         .Where(i => i.Count > 0 && Items.IsKnown(i.Item))
-        .GroupBy(i => (i.Item, i.Quality))
-        .Select(g => new BagStack((Item)g.Key.Item, g.Key.Quality, (uint)g.Sum(i => i.Count)));
+        // Pots from different makers stay apart (Ceramics keeps the maker in Wear).
+        .GroupBy(i => (i.Item, i.Quality, Maker: Marks.MakerOf((Item)i.Item, i.Wear)))
+        .Select(g => new BagStack((Item)g.Key.Item, g.Key.Quality, (uint)g.Sum(i => i.Count), Maker: g.Key.Maker));
 
     public void Drop(Item item, byte quality) => conn.Reducers.Drop((ushort)item, quality);
 

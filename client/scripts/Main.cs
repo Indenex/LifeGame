@@ -412,6 +412,8 @@ public partial class Main : Node3D
         hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
         placing.Attach(new ServerPlaceLink(conn, crafting, terrain.HeightAt));
         equipment.Bag.Link = new ServerBagLink(conn);
+        markPicker.Attach(new ServerMarkLink(conn, () => myId));
+        BagGrid.Makers = markPicker.Link;
         buildMenu.Carried = item => conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));

@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Godot;
+using LifeGame.Shared;
 
 namespace LifeGame;
 
@@ -13,19 +14,15 @@ namespace LifeGame;
 public partial class MarkPicker : CanvasLayer
 {
     public IMarkLink Link = new MockMarkLink();
-    // Options opens it through this; Available is false while only the mock is wired, so a
-    // live game shows no "Your mark" button until Ceramics' server side lands.
+    // Options opens it through this; Available is false until the server link is attached
+    // (or in the --screenshot-mark preview), so Options shows "Your mark" only when it works.
     public static Action? OpenFromMenu;
     public static bool Available;
 
     public bool IsOpen => panel.Visible;
 
-    static readonly Color[] Presets =
-    {
-        new(0.62f, 0.32f, 0.22f), new(0.45f, 0.25f, 0.15f), new(0.78f, 0.55f, 0.28f), new(0.85f, 0.75f, 0.5f),
-        new(0.35f, 0.42f, 0.22f), new(0.5f, 0.58f, 0.32f), new(0.25f, 0.38f, 0.45f), new(0.42f, 0.55f, 0.62f),
-        new(0.45f, 0.3f, 0.45f), new(0.6f, 0.25f, 0.3f), new(0.3f, 0.28f, 0.26f), new(0.85f, 0.82f, 0.74f),
-    };
+    // Ceramics' earthy presets (shared Marks.Presets).
+    static readonly Color[] Presets = Marks.Presets.Select(MarkColour.ToColor).ToArray();
 
     Control panel = null!;
     HBoxContainer tabs = null!;
@@ -36,7 +33,7 @@ public partial class MarkPicker : CanvasLayer
     Label glyphName = null!;
     int group;
     ushort glyph;
-    Color ink = Presets[0];
+    Color ink = MarkColour.ToColor(Marks.DefaultColor);
 
     public override void _Ready()
     {
@@ -50,10 +47,18 @@ public partial class MarkPicker : CanvasLayer
         if (preview) GetTree().CreateTimer(1.5).Timeout += Open;
     }
 
+    // The live game's link; Ceramics' bench prompt "Choose your mark" opens the picker too.
+    public void Attach(IMarkLink link)
+    {
+        Link = link;
+        Available = true;
+        CeramicsView.OpenMarkPicker = Open;
+    }
+
     public void Open()
     {
         if (Link.Mine is { } m) { glyph = m.glyph; ink = m.color; }
-        else { glyph = Link.Groups[0].Glyphs[0].Id; ink = Presets[0]; }
+        else { glyph = Link.Groups[0].Glyphs[0].Id; ink = MarkColour.ToColor(Marks.DefaultColor); }
         group = Math.Max(0, Link.Groups.ToList().FindIndex(g => g.Glyphs.Any(x => x.Id == glyph)));
         panel.Visible = true;
         Refresh();
@@ -209,10 +214,10 @@ public partial class MarkPicker : CanvasLayer
 // A plain clay pot with the mark pressed into its belly, for the preview.
 public partial class PotStamp : Control
 {
-    MarkGlyph? glyph;
+    Glyph? glyph;
     Color ink;
 
-    public void Show(MarkGlyph? g, Color c)
+    public void Show(Glyph? g, Color c)
     {
         glyph = g;
         ink = c;
@@ -240,7 +245,7 @@ public partial class PotStamp : Control
         var origin = c + new Vector2(-side / 2, -side / 2 + r * 0.1f);
         foreach (var stroke in glyph.Strokes)
             if (stroke.Length > 1)
-                DrawPolyline(stroke.Select(p => origin + p * side).ToArray(), ink, 3f, true);
+                DrawPolyline(stroke.Select(p => origin + new Vector2(p.x, p.y) * side).ToArray(), ink, 3f, true);
     }
 }
 
