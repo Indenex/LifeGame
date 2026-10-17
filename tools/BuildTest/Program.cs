@@ -274,7 +274,7 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     // Gather side by side.
     a.Wants = forA;
     b.Wants = forB;
-    var until = clock.Elapsed + TimeSpan.FromSeconds(420);
+    var until = clock.Elapsed + TimeSpan.FromSeconds(525);
     while (bots.Any(x => !x.HasWants) && clock.Elapsed < until)
     {
         foreach (var bot in bots) bot.GatherStep(0.1f);
@@ -305,7 +305,7 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     // left B 0.1 m outside the work reach (hut radius + 2.2 m) and every Build was refused.
     b.WalkTo(front.x + 0.6f, front.z, 0.3f, Pump);
     a.WalkTo(front.x - 0.6f, front.z, 0.3f, Pump);
-    until = clock.Elapsed + TimeSpan.FromSeconds(180);
+    until = clock.Elapsed + TimeSpan.FromSeconds(225);
     while (a.Conn.Db.Structure.Id.Find(id) is { Complete: false } && clock.Elapsed < until)
     {
         foreach (var bot in bots) bot.TryBuild(id);
@@ -552,7 +552,7 @@ void BuildHearth(ulong hut)
     LeaveHut(hut);
     a.Wants = new() { [Item.Stone] = 4, [Item.Stick] = 2, [Item.Fiber] = 2 };
     b.Wants = new() { [Item.Clay] = 4, [Item.Fiber] = 2 };
-    var until = clock.Elapsed + TimeSpan.FromSeconds(300);
+    var until = clock.Elapsed + TimeSpan.FromSeconds(375);
     while (bots.Any(x => !x.HasWants) && clock.Elapsed < until)
     {
         foreach (var bot in bots) bot.GatherStep(0.1f);
@@ -1065,14 +1065,14 @@ sealed class Bot
         {
             detourLeft -= dt;
             float px = -dz / dist * detourSign, pz = dx / dist * detourSign;
-            X += px * 5f * dt; Z += pz * 5f * dt;
+            X += px * BotWalker.WalkMetresPerSecond * dt; Z += pz * BotWalker.WalkMetresPerSecond * dt;
             Conn.Reducers.Move(X, Z, MathF.Atan2(px, pz));
             return dist;
         }
         float moved = 0f; // how far this call really walked: waiting for the server is not progress
         if (dist > 0.05f)
         {
-            float step = MathF.Min(dist, 5f * dt);
+            float step = MathF.Min(dist, BotWalker.WalkMetresPerSecond * dt);
             // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once
             // it has caught up, and keep reporting where we are, as a real client does (bugfix-24).
             if (Conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) < 0.8f)
