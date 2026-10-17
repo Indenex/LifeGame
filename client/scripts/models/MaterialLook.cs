@@ -168,6 +168,19 @@ public static class MaterialLook
         return material;
     }
 
+    // The same painted look for PropMeshes.PaintedBroadleaf: light follows the egg-shaped
+    // crown round its heart instead of a cone.
+    public static ShaderMaterial CardBroadleaf(Texture2D card)
+    {
+        var material = CardPine(card);
+        material.SetShaderParameter("crown_y", PropMeshes.BroadleafCrownY);
+        // The card broadleaf's warmer leaf olive.
+        material.SetShaderParameter("shade_col", new Color(0.1f, 0.13f, 0.1f));
+        material.SetShaderParameter("base_col", new Color(0.17f, 0.22f, 0.15f));
+        material.SetShaderParameter("lit_col", new Color(0.26f, 0.32f, 0.2f));
+        return material;
+    }
+
     // A tiling noise of soft blobs, read in world space as brush dabs: where it is
     // high, light lands as a dab even across neighbouring boughs, and it breaks the
     // edges of the light bands so they look painted rather than smooth.
@@ -198,6 +211,9 @@ public static class MaterialLook
         // How much the light follows the whole tree's cone instead of each bough,
         // so light and shade fall in big painted shapes across the tree.
         uniform float cone_light = 0.75;
+        // Below 0 the crown is a cone round the trunk (a pine); otherwise an egg round
+        // a heart this high (a broadleaf), and the light follows that instead.
+        uniform float crown_y = -1.0;
         varying vec3 obj;
         varying vec3 world_pos;
         varying vec3 world_n;
@@ -218,7 +234,8 @@ public static class MaterialLook
             world_n = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
             // The cone's own normal at this point: out from the trunk and a little up.
             vec3 out_dir = length(VERTEX.xz) > 1e-4 ? normalize(vec3(VERTEX.x, 0.0, VERTEX.z)) : vec3(0.0, 0.0, 1.0);
-            cone_n = normalize((MODELVIEW_MATRIX * vec4(out_dir + vec3(0.0, 0.45, 0.0), 0.0)).xyz);
+            vec3 crown = crown_y < 0.0 ? out_dir + vec3(0.0, 0.45, 0.0) : (VERTEX - vec3(0.0, crown_y, 0.0)) * vec3(1.0, 0.75, 1.0);
+            cone_n = normalize((MODELVIEW_MATRIX * vec4(crown, 0.0)).xyz);
         }
         void fragment() {
             vec3 col;

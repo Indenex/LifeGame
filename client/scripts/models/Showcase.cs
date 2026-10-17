@@ -29,7 +29,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "wear" or "devices" or "materials" or "painted" or "crowd" or "pinetest")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "wear" or "devices" or "materials" or "painted" or "crowd" or "pinetest" or "leafytest")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -43,6 +43,7 @@ public partial class Showcase : Node3D
             else if (view == "painted") PaintedScene();
             else if (view == "crowd") Crowd();
             else if (view == "pinetest") PineTest();
+            else if (view == "leafytest") LeafyTest();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -822,6 +823,27 @@ public partial class Showcase : Node3D
         {
             float h = tall * (0.82f + MeshKit.Hash(i, 61) * 0.36f);
             AddChild(new MeshInstance3D { Mesh = PropMeshes.PaintedPine(i), MaterialOverride = material, Position = new Vector3(-8.5f + i * 3.3f, 0, (i % 2) * -1.2f), Scale = Vector3.One * h, Rotation = new Vector3(0, i * 2.1f, 0) });
+        }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(1f, 4.5f, 24f), new Vector3(1f, 3.0f, 0), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
+
+    // The artist's card broadleaf beside eight painted 3D broadleaf variants, each a
+    // different height and turn (Justin: "repaint like the pines").
+    void LeafyTest()
+    {
+        var image = Image.LoadFromFile(ProjectSettings.GlobalizePath("res://../docs/art-packs/golden-skull/foliage/Forest_big_tree_leaf_01.png"));
+        image.GenerateMipmaps();
+        var card = ImageTexture.CreateFromImage(image);
+        const float tall = 6f;
+        AddChild(new Sprite3D { Texture = card, PixelSize = tall / card.GetHeight(), Billboard = BaseMaterial3D.BillboardModeEnum.FixedY, Shaded = true, DoubleSided = true, AlphaCut = SpriteBase3D.AlphaCutMode.Discard, Centered = false, Offset = new Vector2(-card.GetWidth() * 0.5f, 0), Position = new Vector3(-12f, 0, 0) });
+        var material = MaterialLook.CardBroadleaf(card);
+        for (int i = 0; i < 8; i++)
+        {
+            float h = tall * (0.82f + MeshKit.Hash(i, 71) * 0.36f);
+            AddChild(new MeshInstance3D { Mesh = PropMeshes.PaintedBroadleaf(i), MaterialOverride = material, Position = new Vector3(-8.2f + i * 3.4f, 0, (i % 2) * -1.2f), Scale = Vector3.One * h, Rotation = new Vector3(0, i * 2.1f, 0) });
         }
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);

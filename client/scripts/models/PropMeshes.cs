@@ -231,82 +231,7 @@ public static class PropMeshes
             k.Paint(Colors.White).Tube(new[] { dir * 0.012f + Vector3.Up * 0.05f, dir * 0.065f + Vector3.Up * 0.004f }, 0.012f, 4, 0.004f);
         }
 
-        var st = new SurfaceTool();
-        st.Begin(Mesh.PrimitiveType.Triangles);
-        void Vert(Vector3 p, Vector3 n, Vector2 uv, Vector2 uv2)
-        {
-            st.SetColor(tint);
-            st.SetNormal(n);
-            st.SetUV(uv);
-            st.SetUV2(uv2);
-            st.AddVertex(Lean(p));
-        }
-        // One triangle, wound so its front faces along the hint.
-        void Tri(Vector3 a, Vector3 b, Vector3 c, Vector2 ua, Vector2 ub, Vector2 uc, Vector3 hint, Vector2 uv2)
-        {
-            var face = (c - a).Cross(b - a);
-            if (face.LengthSquared() < 1e-12f) return;
-            if (face.Dot(hint) < 0f) { (b, c) = (c, b); (ub, uc) = (uc, ub); }
-            var n = hint.Normalized();
-            Vert(a, n, ua, uv2);
-            Vert(b, n, ub, uv2);
-            Vert(c, n, uc, uv2);
-        }
-        // A bough: a strip from root out and down to its tip, folded along a raised
-        // ridge, widest past halfway. Its tip splits into three points, the side ones
-        // shorter, like the card's lobes.
-        void Bough(Vector3 root, Vector3 dir, float length, float droop, float wide, float rnd)
-        {
-            var side = new Vector3(dir.Z, 0, -dir.X);
-            float bend = (rnd - 0.5f) * 0.3f;
-            Vector3 At(float t) => root + (dir + side * bend * t) * length * t + Vector3.Down * droop * Mathf.Pow(t, 1.7f);
-            const int segs = 5;
-            var uv2 = new Vector2(2f, rnd);
-            for (int i = 0; i < segs; i++)
-            {
-                float t0 = (float)i / segs, t1 = (float)(i + 1) / segs;
-                Vector3 p0 = At(t0), p1 = At(t1);
-                float w0 = wide * Profile(t0), w1 = wide * Profile(t1);
-                var up0 = (Vector3.Up + dir * 0.6f).Normalized();
-                var ridge = up0 * wide * 0.12f;
-                // Left, ridge, right at both ends of the segment.
-                Vector3 l0 = p0 - side * w0, l1 = p1 - side * w1, r0 = p0 + side * w0, r1 = p1 + side * w1;
-                Vector3 m0 = p0 + ridge * Profile(t0), m1 = p1 + ridge * Profile(t1);
-                Tri(l0, m0, m1, new(-1, t0), new(0, t0), new(0, t1), up0, uv2);
-                Tri(l0, m1, l1, new(-1, t0), new(0, t1), new(-1, t1), up0, uv2);
-                Tri(m0, r0, r1, new(0, t0), new(1, t0), new(1, t1), up0, uv2);
-                Tri(m0, r1, m1, new(0, t0), new(1, t1), new(0, t1), up0, uv2);
-            }
-            // The split tip: a long middle point and two short side points.
-            var end = At(1f);
-            var nUp = (Vector3.Up + dir * 0.6f).Normalized();
-            float tipW = wide * Profile(1f);
-            var tipC = end + (dir * 0.6f + Vector3.Down * 0.8f).Normalized() * length * 0.22f;
-            Tri(end - side * tipW, end + side * tipW, tipC, new(-1, 0.9f), new(1, 0.9f), new(0, 1f), nUp, uv2);
-            foreach (float s in new[] { -1f, 1f })
-            {
-                var baseA = At(0.6f) + side * s * wide * Profile(0.6f);
-                var baseB = end + side * s * tipW;
-                var tip = baseA.Lerp(baseB, 0.4f) + (side * s * 0.7f + dir * 0.4f + Vector3.Down * 0.7f).Normalized() * length * (0.2f + rnd * 0.12f);
-                Tri(baseA, baseB, tip, new(s, 0.8f), new(s, 0.9f), new(s * 0.2f, 1f), nUp, uv2);
-            }
-        }
-        // A dark cone at each tier's heart, so no light shows between the boughs.
-        void Core(float bottom, float top, float radius)
-        {
-            const int sides = 10;
-            var uv2 = new Vector2(1f, 0f);
-            for (int i = 0; i < sides; i++)
-            {
-                float a0 = i * Mathf.Tau / sides, a1 = (i + 1) * Mathf.Tau / sides;
-                var d0 = new Vector3(Mathf.Sin(a0), 0, Mathf.Cos(a0));
-                var d1 = new Vector3(Mathf.Sin(a1), 0, Mathf.Cos(a1));
-                var apex = new Vector3(0, top, 0);
-                Vector3 b0 = d0 * radius + Vector3.Up * bottom, b1 = d1 * radius + Vector3.Up * bottom;
-                Tri(apex, b0, b1, new(0, 0), new(0, 0), new(0, 0), (d0 + d1) * 0.5f + Vector3.Up * 0.4f, uv2);
-                Tri(new Vector3(0, bottom, 0), b1, b0, new(0, 0), new(0, 0), new(0, 0), Vector3.Down, uv2);
-            }
-        }
+        var f = new FoliageKit(tint, Lean);
 
         float foliage = trunkTop + 0.13f, span = 1f - foliage, step = span / (tiers + 0.3f);
         for (int t = 0; t < tiers; t++)
@@ -315,7 +240,7 @@ public static class PropMeshes
             float frac = (rootY - foliage) / span;
             float length = (0.015f + 0.215f * Mathf.Pow(1f - frac, 1.05f)) * width;
             float droop = Mathf.Max(length * 0.72f, step * 1.2f);
-            Core(rootY - droop * 0.75f, Mathf.Min(rootY + step * 1.3f, 1f), length * 0.5f);
+            f.Core(rootY - droop * 0.75f, Mathf.Min(rootY + step * 1.3f, 1f), length * 0.5f);
             int count = Mathf.Max(5, Mathf.RoundToInt(Mathf.Tau * length / (0.07f * width)));
             float wide = Mathf.Tau * length * 0.5f / count * 1.15f;
             float turn = R(30 + t) * Mathf.Tau;
@@ -333,17 +258,209 @@ public static class PropMeshes
                     float hang = H(v * 53 + t * 11, i + 700);
                     float len = length * full * (ring == 0 ? 0.8f + rnd * 0.3f + (hang > 0.75f ? 0.18f : 0f) : 0.55f);
                     float y = rootY + (ring == 0 ? 0f : step * 0.5f) + (rnd - 0.5f) * step * 0.25f;
-                    Bough(new Vector3(0, y, 0) + dir * length * 0.08f, dir, len, droop * (ring == 0 ? 0.85f + rnd * 0.3f + (hang > 0.75f ? 0.25f : 0f) : 0.7f), wide * (ring == 0 ? 1f : 0.85f), rnd);
+                    f.Bough(new Vector3(0, y, 0) + dir * length * 0.08f, dir, len, droop * (ring == 0 ? 0.85f + rnd * 0.3f + (hang > 0.75f ? 0.25f : 0f) : 0.7f), wide * (ring == 0 ? 1f : 0.85f), rnd);
                 }
             }
         }
         // The leader: a small upright spike at the top.
-        Core(1f - step * 0.6f, 1.01f, 0.014f * width);
+        f.Core(1f - step * 0.6f, 1.01f, 0.014f * width);
 
         var mesh = new ArrayMesh();
         mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, k.CommitToArrays());
-        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, st.CommitToArrays());
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, f.Commit());
         return mesh;
+    }
+
+
+    // A broadleaf tree matched to the Golden Skull card (Forest_big_tree_leaf_01), one
+    // unit tall: a short stout trunk under a tall egg-shaped crown of drooping leaf
+    // lobes laid in rows, each row hanging over the one below, round a dark heart.
+    // Seeded per variant (D-166): row count, width, crown height and squash, lean, a
+    // fuller side and a slight colour shift. Drawn with MaterialLook.CardBroadleaf.
+    public const int BroadleafVariants = 16;
+    public static Mesh PaintedBroadleaf(int variant) => Variant("paintedbroadleaf", variant, BroadleafVariants, BuildPaintedBroadleaf);
+
+    // Where the crown's heart sits, for the shader's crown-wide light.
+    public const float BroadleafCrownY = 0.58f;
+
+    static ArrayMesh BuildPaintedBroadleaf(int v)
+    {
+        float R(int salt) => H(v * 89 + 11, salt + 800);
+        float width = 0.86f + R(1) * 0.28f;
+        int rows = 12 + (int)(R(2) * 4f);
+        float squash = 0.92f + R(3) * 0.16f;
+        float leanAmount = R(4) * 0.04f, leanAngle = R(5) * Mathf.Tau;
+        var leanDir = new Vector3(Mathf.Sin(leanAngle), 0, Mathf.Cos(leanAngle));
+        float fullAngle = R(6) * Mathf.Tau, fullAmount = 0.06f + R(7) * 0.14f;
+        float value = 0.9f + R(8) * 0.18f, warm = (R(9) - 0.5f) * 0.14f;
+        var tint = new Color(value * (1f + warm), value, value * (1f - warm));
+        Vector3 Lean(Vector3 p) => p + leanDir * leanAmount * p.Y * p.Y;
+        var center = new Vector3(0, BroadleafCrownY, 0);
+        var radii = new Vector3(0.25f * width, 0.4f * squash, 0.25f * width);
+
+        var k = Kit();
+        k.Paint(Colors.White).Loft(Vector3.Zero, Lean(center), new MeshKit.Ring[]
+        {
+            new(0f, 0.058f, 0.058f), new(0.12f, 0.045f, 0.045f), new(1f, 0.032f, 0.032f),
+        }, 8, 0.2f);
+        for (int i = 0; i < 5; i++)
+        {
+            float a = i * Mathf.Tau / 5 + R(13 + i) * 0.6f;
+            var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
+            k.Paint(Colors.White).Tube(new[] { dir * 0.02f + Vector3.Up * 0.07f, dir * 0.1f + Vector3.Up * 0.005f }, 0.018f, 4, 0.005f);
+        }
+
+        var f = new FoliageKit(tint, Lean);
+        f.Blob(center, radii * 0.84f);
+        // Rows of lobes from the crown's top down to its underside.
+        for (int r = 0; r < rows; r++)
+        {
+            float lat0 = 0.22f + r * 2.3f / (rows - 1);
+            float ringR0 = radii.X * Mathf.Sin(lat0);
+            float length = (0.05f + 0.045f * Mathf.Sin(lat0)) * width;
+            int count = Mathf.Max(4, Mathf.RoundToInt(Mathf.Tau * ringR0 / (0.05f * width)));
+            float wide = Mathf.Tau * ringR0 / count * 0.7f + 0.015f;
+            float turn = R(30 + r) * Mathf.Tau;
+            for (int i = 0; i < count; i++)
+            {
+                float rnd = H(v * 151 + r * 19, i + 900);
+                float a = (i + (rnd - 0.5f) * 0.45f) * Mathf.Tau / count + turn;
+                var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
+                float full = 1f + fullAmount * Mathf.Cos(a - fullAngle);
+                // Each lobe sits a little above or below its row, so rows don't read as plates.
+                float lat = lat0 + (H(v * 157 + r * 23, i + 950) - 0.5f) * 2.3f / (rows - 1) * 1.1f;
+                float ringR = radii.X * Mathf.Sin(lat), y = center.Y + radii.Y * Mathf.Cos(lat);
+                var root = new Vector3(0, y, 0) + dir * ringR * full * 0.85f;
+                // Lobes near the top reach out more; lower ones hang down the crown's side.
+                float droop = length * (0.35f + 0.75f * Mathf.Clamp(lat / 1.6f, 0f, 1.2f)) * (0.85f + rnd * 0.3f);
+                f.Bough(root, dir, length * (0.85f + rnd * 0.35f), droop, wide * (0.9f + rnd * 0.2f), rnd);
+            }
+        }
+        // A tuft of short lobes on top.
+        for (int i = 0; i < 5; i++)
+        {
+            float a = i * Mathf.Tau / 5 + R(60) * Mathf.Tau;
+            var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
+            f.Bough(center + new Vector3(0, radii.Y * 1.0f, 0) + dir * 0.02f, dir, 0.07f * width, 0.03f, 0.06f, H(v, i + 990));
+        }
+
+        var mesh = new ArrayMesh();
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, k.CommitToArrays());
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, f.Commit());
+        return mesh;
+    }
+
+    // Painted foliage built for MaterialLook.CardPine: boughs (UV across and along,
+    // UV2.x 2) and dark hearts (UV2.x 1), the vertex colour carrying a variant's tint,
+    // each point passed through warp (a lean) as it is written.
+    sealed class FoliageKit
+    {
+        readonly SurfaceTool st = new();
+        readonly Color tint;
+        readonly System.Func<Vector3, Vector3> warp;
+
+        public FoliageKit(Color tint, System.Func<Vector3, Vector3> warp)
+        {
+            this.tint = tint;
+            this.warp = warp;
+            st.Begin(Mesh.PrimitiveType.Triangles);
+        }
+
+        public Godot.Collections.Array Commit() => st.CommitToArrays();
+
+        // A dark ellipsoid heart for a round crown.
+        public void Blob(Vector3 center, Vector3 radii, int segments = 12, int rings = 8)
+        {
+            var uv2 = new Vector2(1f, 0f);
+            Vector3 P(int i, int j)
+            {
+                float lat = Mathf.Pi * j / rings, lon = Mathf.Tau * i / segments;
+                return new Vector3(Mathf.Sin(lat) * Mathf.Sin(lon), Mathf.Cos(lat), Mathf.Sin(lat) * Mathf.Cos(lon));
+            }
+            for (int j = 0; j < rings; j++)
+                for (int i = 0; i < segments; i++)
+                {
+                    Vector3 a = P(i, j), b = P(i + 1, j), c = P(i + 1, j + 1), d = P(i, j + 1);
+                    var n = (a + b + c + d).Normalized();
+                    Tri(center + a * radii, center + b * radii, center + c * radii, default, default, default, n, uv2);
+                    Tri(center + a * radii, center + c * radii, center + d * radii, default, default, default, n, uv2);
+                }
+        }
+
+            void Vert(Vector3 p, Vector3 n, Vector2 uv, Vector2 uv2)
+            {
+                st.SetColor(tint);
+                st.SetNormal(n);
+                st.SetUV(uv);
+                st.SetUV2(uv2);
+                st.AddVertex(warp(p));
+            }
+            // One triangle, wound so its front faces along the hint.
+            public void Tri(Vector3 a, Vector3 b, Vector3 c, Vector2 ua, Vector2 ub, Vector2 uc, Vector3 hint, Vector2 uv2)
+            {
+                var face = (c - a).Cross(b - a);
+                if (face.LengthSquared() < 1e-12f) return;
+                if (face.Dot(hint) < 0f) { (b, c) = (c, b); (ub, uc) = (uc, ub); }
+                var n = hint.Normalized();
+                Vert(a, n, ua, uv2);
+                Vert(b, n, ub, uv2);
+                Vert(c, n, uc, uv2);
+            }
+            // A bough: a strip from root out and down to its tip, folded along a raised
+            // ridge, widest past halfway. Its tip splits into three points, the side ones
+            // shorter, like the card's lobes.
+            public void Bough(Vector3 root, Vector3 dir, float length, float droop, float wide, float rnd)
+            {
+                var side = new Vector3(dir.Z, 0, -dir.X);
+                float bend = (rnd - 0.5f) * 0.3f;
+                Vector3 At(float t) => root + (dir + side * bend * t) * length * t + Vector3.Down * droop * Mathf.Pow(t, 1.7f);
+                const int segs = 5;
+                var uv2 = new Vector2(2f, rnd);
+                for (int i = 0; i < segs; i++)
+                {
+                    float t0 = (float)i / segs, t1 = (float)(i + 1) / segs;
+                    Vector3 p0 = At(t0), p1 = At(t1);
+                    float w0 = wide * Profile(t0), w1 = wide * Profile(t1);
+                    var up0 = (Vector3.Up + dir * 0.6f).Normalized();
+                    var ridge = up0 * wide * 0.12f;
+                    // Left, ridge, right at both ends of the segment.
+                    Vector3 l0 = p0 - side * w0, l1 = p1 - side * w1, r0 = p0 + side * w0, r1 = p1 + side * w1;
+                    Vector3 m0 = p0 + ridge * Profile(t0), m1 = p1 + ridge * Profile(t1);
+                    Tri(l0, m0, m1, new(-1, t0), new(0, t0), new(0, t1), up0, uv2);
+                    Tri(l0, m1, l1, new(-1, t0), new(0, t1), new(-1, t1), up0, uv2);
+                    Tri(m0, r0, r1, new(0, t0), new(1, t0), new(1, t1), up0, uv2);
+                    Tri(m0, r1, m1, new(0, t0), new(1, t1), new(0, t1), up0, uv2);
+                }
+                // The split tip: a long middle point and two short side points.
+                var end = At(1f);
+                var nUp = (Vector3.Up + dir * 0.6f).Normalized();
+                float tipW = wide * Profile(1f);
+                var tipC = end + (dir * 0.6f + Vector3.Down * 0.8f).Normalized() * length * 0.22f;
+                Tri(end - side * tipW, end + side * tipW, tipC, new(-1, 0.9f), new(1, 0.9f), new(0, 1f), nUp, uv2);
+                foreach (float s in new[] { -1f, 1f })
+                {
+                    var baseA = At(0.6f) + side * s * wide * Profile(0.6f);
+                    var baseB = end + side * s * tipW;
+                    var tip = baseA.Lerp(baseB, 0.4f) + (side * s * 0.7f + dir * 0.4f + Vector3.Down * 0.7f).Normalized() * length * (0.2f + rnd * 0.12f);
+                    Tri(baseA, baseB, tip, new(s, 0.8f), new(s, 0.9f), new(s * 0.2f, 1f), nUp, uv2);
+                }
+            }
+            // A dark cone at each tier's heart, so no light shows between the boughs.
+            public void Core(float bottom, float top, float radius)
+            {
+                const int sides = 10;
+                var uv2 = new Vector2(1f, 0f);
+                for (int i = 0; i < sides; i++)
+                {
+                    float a0 = i * Mathf.Tau / sides, a1 = (i + 1) * Mathf.Tau / sides;
+                    var d0 = new Vector3(Mathf.Sin(a0), 0, Mathf.Cos(a0));
+                    var d1 = new Vector3(Mathf.Sin(a1), 0, Mathf.Cos(a1));
+                    var apex = new Vector3(0, top, 0);
+                    Vector3 b0 = d0 * radius + Vector3.Up * bottom, b1 = d1 * radius + Vector3.Up * bottom;
+                    Tri(apex, b0, b1, new(0, 0), new(0, 0), new(0, 0), (d0 + d1) * 0.5f + Vector3.Up * 0.4f, uv2);
+                    Tri(new Vector3(0, bottom, 0), b1, b0, new(0, 0), new(0, 0), new(0, 0), Vector3.Down, uv2);
+                }
+            }
     }
 
     // A bough's half-width along its length: narrow at the trunk, broadest past
