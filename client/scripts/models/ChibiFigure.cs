@@ -38,6 +38,9 @@ public static class ChibiFigure
     static Material? flat;
     // The painted banded look (ChibiLook); false draws them with today's shader.
     public static bool Painted = true;
+    // art-rnd-1: true leaves Bramble's and Pebble's head, face, hair and daisy off the
+    // body mesh, for the Blender-authored heads (ChibiFace) on the Head bone. Off by default.
+    public static bool AuthoredHeads = false;
     static readonly Color Eye = new(0.1f, 0.08f, 0.07f);
     static readonly Color Nose = new(0.15f, 0.1f, 0.09f);
     static readonly Color Boot = new(0.24f, 0.18f, 0.16f);
@@ -52,7 +55,7 @@ public static class ChibiFigure
 
     public static HumanFigure.Built Build(Look look)
     {
-        string key = look.ToString() + Painted + ChibiShell.Enabled;
+        string key = look.ToString() + Painted + ChibiShell.Enabled + AuthoredHeads;
         if (Cache.TryGetValue(key, out var done)) return done;
         var material = Painted ? (Material)ChibiLook.Material : flat ??= LifeGame.Look.Solid(Colors.White);
         bool kit = look.Race == Race.Kit, pebble = look.Race == Race.Pebble, bramble = look.Race == Race.Bramble;
@@ -139,9 +142,10 @@ public static class ChibiFigure
         }
 
         // The head: big and round, a little wider than tall.
+        bool builtHead = kit || !AuthoredHeads;
         k.Bone(HumanRig.Head).Paint(body);
         var headC = new Vector3(0, chin + hh * 0.5f, 0.01f);
-        k.Ellipsoid(headC, new Vector3(hh * 0.54f, hh * 0.5f, hh * 0.48f), 16, 10);
+        if (builtHead) k.Ellipsoid(headC, new Vector3(hh * 0.54f, hh * 0.5f, hh * 0.48f), 16, 10);
         float faceZ = hh * 0.47f;
         if (kit)
         {
@@ -164,7 +168,7 @@ public static class ChibiFigure
                 }, 5, 0.1f);
             }
         }
-        else if (pebble)
+        else if (pebble && builtHead)
         {
             // A small daisy on the crown.
             var flower = headC + new Vector3(hh * 0.06f, hh * 0.5f, 0);
@@ -176,7 +180,7 @@ public static class ChibiFigure
             k.Paint(PetalHeart).Ellipsoid(flower + Vector3.Up * hh * 0.02f, Vector3.One * hh * 0.035f, 6, 4);
             k.Paint(PebbleFeet).Tube(new[] { flower + Vector3.Down * hh * 0.01f, flower + Vector3.Down * hh * 0.06f }, hh * 0.01f, 4);
         }
-        else
+        else if (builtHead)
         {
             // Bramble: a small nose, rosy cheeks, and a tousled cap of hair with a
             // fringe (style 0) or cropped close (style 1).
@@ -198,7 +202,7 @@ public static class ChibiFigure
                 }
         }
         // Eyes: big, dark and set wide, each with a catch-light; brows; cheeks.
-        for (int side = -1; side <= 1; side += 2)
+        for (int side = -1; side <= 1 && builtHead; side += 2)
         {
             var eye = headC + new Vector3(side * hh * 0.2f, hh * 0.02f, faceZ * 0.93f);
             k.Paint(Eye).Ellipsoid(eye, new Vector3(hh * 0.07f, hh * 0.085f, hh * 0.035f), 10, 6);
