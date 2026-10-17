@@ -27,3 +27,9 @@ Crafting check 7:31 (longest), Building check 6:11, Load/spawn/social 3:10, Upgr
 
 ## Next step
 Compare the PR's run time with the before figures, fix anything the run shows, then send the PM the green sha. Later: Godot .godot import cache.
+
+## Update 2026-10-17: main builds and ships only (Justin approved)
+- Push to main runs the module build, the Upgrade check (now also on main; the merged PR's `world-wipe` label is looked up through the API so a wipe merge doesn't go red) and the clients, plus the `server` summary job. The load, Building and Crafting checks run on PRs only, because they already ran before the merge.
+- Draft PRs skip those three checks (module, upgrade and clients still run); `ready_for_review` is a pull_request trigger so the full set runs when the PR is marked ready.
+- A ticket/docs-only push already skips every heavy job (the `changes` filter), on PRs and on main.
+- Load test on PRs stays 5 bots for 5 s; main no longer runs the 20 bots / 20 s one.

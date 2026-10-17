@@ -160,7 +160,10 @@ public partial class Main : Node3D
         // Choosing how you look (ui-21): opens by itself at first join, and from Options.
         lookPicker.Conn = () => conn;
         lookPicker.MyId = () => myId;
+        lookPicker.Note = hud.Note;
         AddChild(lookPicker);
+        // The sundial's time-of-day arc (ui-32); Has comes from House building's building-18 flag.
+        AddChild(new SundialArc { TimeOfDay = () => atmosphere.TimeOfDay });
         JournalPanel? journalPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
@@ -678,7 +681,9 @@ public partial class Main : Node3D
 
     void Walk(float dt)
     {
-        var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
+        // No walking while typing in any text box you can see (chat, a name, a search).
+        bool typing = social.Typing || GetViewport().GuiGetFocusOwner() is LineEdit { } box && box.IsVisibleInTree();
+        var input = typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
         if (flying) { Fly(dt, input); return; }
         bool sneak = Input.IsActionPressed(NSneak);
         float wading = Wading.SpeedFactor(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z)), SwimmingRank());
@@ -687,7 +692,7 @@ public partial class Main : Node3D
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
         // Jump (bugfix-25): a hop keeps its takeoff direction, and the server tells the others.
-        if (!social.Typing && Input.IsActionJustPressed(NJump) && jump.CanStart(sneak) && !Wading.Floating(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z))) && survival.TrySpendStamina(Stamina.JumpCost))
+        if (!typing && Input.IsActionJustPressed(NJump) && jump.CanStart(sneak) && !Wading.Floating(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z))) && survival.TrySpendStamina(Stamina.JumpCost))
         {
             jump.Start(velocity);
             conn?.Reducers.Jump();
