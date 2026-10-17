@@ -27,18 +27,22 @@ public static class PaintedTrees
     // Where the broadleaf crown's heart sits, as a fraction of the height.
     const float CrownY = 0.58f;
 
-    static readonly Dictionary<(bool, int, bool), Mesh> Meshes = new();
+    static readonly Dictionary<(bool, int, bool, bool), Mesh> Meshes = new();
 
-    public static Mesh Pine(int variant, bool coarse) => Get(true, variant, coarse);
-    public static Mesh Broadleaf(int variant, bool coarse) => Get(false, variant, coarse);
+    public static Mesh Pine(int variant, bool coarse) => Get(true, variant, coarse, false);
+    public static Mesh Broadleaf(int variant, bool coarse) => Get(false, variant, coarse, false);
 
-    static Mesh Get(bool pine, int variant, bool coarse)
+    // The same tree cut down (Environment's TreeFall): no root flare, the trunk sawn flat
+    // at its base. Detailed, as a falling tree is always close by.
+    public static Mesh Felled(bool pine, int variant) => Get(pine, variant, false, true);
+
+    static Mesh Get(bool pine, int variant, bool coarse, bool felled)
     {
         int v = ((variant % Variants) + Variants) % Variants;
         lock (Meshes)
         {
-            if (!Meshes.TryGetValue((pine, v, coarse), out var mesh))
-                Meshes[(pine, v, coarse)] = mesh = pine ? BuildPine(v, coarse) : BuildBroadleaf(v, coarse);
+            if (!Meshes.TryGetValue((pine, v, coarse, felled), out var mesh))
+                Meshes[(pine, v, coarse, felled)] = mesh = pine ? BuildPine(v, coarse, felled) : BuildBroadleaf(v, coarse, felled);
             return mesh;
         }
     }
@@ -47,11 +51,15 @@ public static class PaintedTrees
     public static void Prewarm()
     {
         for (int v = 0; v < Variants; v++)
+        {
             foreach (bool coarse in new[] { false, true })
             {
                 Pine(v, coarse);
                 Broadleaf(v, coarse);
             }
+            Felled(true, v);
+            Felled(false, v);
+        }
         GhostOf(PineMaterial);
         GhostOf(BroadleafMaterial);
     }
@@ -75,7 +83,7 @@ public static class PaintedTrees
         return mesh;
     }
 
-    static ArrayMesh BuildPine(int v, bool coarse)
+    static ArrayMesh BuildPine(int v, bool coarse, bool felled = false)
     {
         float R(int salt) => H(v * 97 + 5, salt + 400);
         float trunkTop = 0.16f + R(1) * 0.06f;
@@ -92,11 +100,12 @@ public static class PaintedTrees
         Vector3 Lean(Vector3 p) => p + leanDir * leanAmount * p.Y * p.Y;
 
         var k = Kit();
-        k.Paint(Colors.White).Loft(Vector3.Zero, Lean(new Vector3(0, trunkTop + 0.25f, 0)), new MeshKit.Ring[]
+        // A felled tree is cut through above its root flare, flat at the base.
+        k.Paint(Colors.White).Loft(new Vector3(0, felled ? 0.03f : 0f, 0), Lean(new Vector3(0, trunkTop + 0.25f, 0)), new MeshKit.Ring[]
         {
-            new(0f, 0.036f, 0.036f), new(0.1f, 0.027f, 0.027f), new(1f, 0.018f, 0.018f),
-        }, 7, 0.2f);
-        for (int i = 0; i < 4; i++)
+            new(0f, felled ? 0.028f : 0.036f, felled ? 0.028f : 0.036f), new(0.1f, 0.027f, 0.027f), new(1f, 0.018f, 0.018f),
+        }, 7, felled ? 0f : 0.2f);
+        for (int i = 0; i < (felled ? 0 : 4); i++)
         {
             float a = i * Mathf.Tau / 4 + 0.4f + R(13 + i) * 0.6f;
             var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
@@ -148,7 +157,7 @@ public static class PaintedTrees
 
 
 
-    static ArrayMesh BuildBroadleaf(int v, bool coarse)
+    static ArrayMesh BuildBroadleaf(int v, bool coarse, bool felled = false)
     {
         float R(int salt) => H(v * 89 + 11, salt + 800);
         float width = 0.86f + R(1) * 0.28f;
@@ -164,11 +173,11 @@ public static class PaintedTrees
         var radii = new Vector3(0.25f * width, 0.4f * squash, 0.25f * width);
 
         var k = Kit();
-        k.Paint(Colors.White).Loft(Vector3.Zero, Lean(center), new MeshKit.Ring[]
+        k.Paint(Colors.White).Loft(new Vector3(0, felled ? 0.04f : 0f, 0), Lean(center), new MeshKit.Ring[]
         {
-            new(0f, 0.058f, 0.058f), new(0.12f, 0.045f, 0.045f), new(1f, 0.032f, 0.032f),
-        }, 8, 0.2f);
-        for (int i = 0; i < 5; i++)
+            new(0f, felled ? 0.046f : 0.058f, felled ? 0.046f : 0.058f), new(0.12f, 0.045f, 0.045f), new(1f, 0.032f, 0.032f),
+        }, 8, felled ? 0f : 0.2f);
+        for (int i = 0; i < (felled ? 0 : 5); i++)
         {
             float a = i * Mathf.Tau / 5 + R(13 + i) * 0.6f;
             var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
