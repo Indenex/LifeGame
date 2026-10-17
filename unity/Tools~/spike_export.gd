@@ -124,7 +124,7 @@ func add_mesh_instance(n: MeshInstance3D, player: Vector3) -> void:
 	if n.skin != null or n.get_parent() is Skeleton3D:
 		var baked = n.bake_mesh_from_current_skeleton_pose()
 		if baked: mesh = baked
-	var d := draw_base(n, mesh)
+	var d := draw_base(n, mesh, n.mesh)
 	d["count"] = 1
 	d["offset"] = inst_floats
 	write_inst(n.global_transform, Color(1, 1, 1, 1), Color(0, 0, 0, 0))
@@ -133,7 +133,7 @@ func add_mesh_instance(n: MeshInstance3D, player: Vector3) -> void:
 
 func add_multimesh(n: MultiMeshInstance3D, player: Vector3) -> void:
 	var mm := n.multimesh
-	var d := draw_base(n, mm.mesh)
+	var d := draw_base(n, mm.mesh, mm.mesh)
 	d["offset"] = inst_floats
 	d["name"] = str(n.get_path())
 	var count := 0
@@ -152,7 +152,9 @@ func add_multimesh(n: MultiMeshInstance3D, player: Vector3) -> void:
 	if count > 0:
 		draws.append(d)
 
-func draw_base(n: GeometryInstance3D, mesh: Mesh) -> Dictionary:
+# `mesh` is what gets drawn (a skinned mesh baked into its current pose); materials
+# come from `source`, the node's own mesh, since a baked copy carries none.
+func draw_base(n: GeometryInstance3D, mesh: Mesh, source: Mesh) -> Dictionary:
 	var d := {"mesh": mesh_id(mesh), "shadow": n.cast_shadow,
 		"visibility_end": n.visibility_range_end, "visibility_begin": n.visibility_range_begin}
 	if n.material_override:
@@ -160,10 +162,10 @@ func draw_base(n: GeometryInstance3D, mesh: Mesh) -> Dictionary:
 	var surf := []
 	for i in mesh.get_surface_count():
 		var m = null
-		if n is MeshInstance3D and n.get_surface_override_material(i):
+		if n is MeshInstance3D and i < n.get_surface_override_material_count() and n.get_surface_override_material(i):
 			m = n.get_surface_override_material(i)
-		elif mesh.surface_get_material(i):
-			m = mesh.surface_get_material(i)
+		elif i < source.get_surface_count() and source.surface_get_material(i):
+			m = source.surface_get_material(i)
 		surf.append(mat_id(m) if m else -1)
 	d["surface_materials"] = surf
 	return d
