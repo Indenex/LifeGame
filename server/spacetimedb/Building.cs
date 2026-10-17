@@ -1,7 +1,7 @@
 using LifeGame.Shared;
 using SpacetimeDB;
 
-// Order matches Structures.Shapes in shared/Structures.cs; append new kinds at the end.
+// Each value is the kind's fixed id in shared/structures/ (its StructureDef); never renumber or reuse one.
 [SpacetimeDB.Type]
 public enum StructureKind
 {
@@ -99,7 +99,7 @@ public static partial class Module
     }
 
     // What each stage takes, by kind and stage: shared/Structures.cs, so the client can show it.
-    static (Item Item, uint Count)[][][] StageCosts => Structures.StageCosts;
+    static (Item Item, uint Count)[][] StageCosts(int kind) => Structures.Costs(kind);
 
     // Lays out a footprint. The structure exists from here on, at stage 0 with nothing added.
     [SpacetimeDB.Reducer]
@@ -108,7 +108,7 @@ public static partial class Module
         if (!float.IsFinite(x) || !float.IsFinite(z) || !float.IsFinite(yaw))
             throw new Exception("Invalid position");
         int k = (int)kind;
-        if (k < 0 || k >= StageCosts.Length || k >= Structures.Shapes.Length)
+        if (!Structures.Exists(k))
             throw new Exception("Unknown structure");
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);
@@ -232,7 +232,7 @@ public static partial class Module
             throw new Exception("Out of reach");
 
         var refund = new List<Item>();
-        var costs = StageCosts[(int)s.Kind];
+        var costs = StageCosts((int)s.Kind);
         for (int stage = 0; stage < s.Stage && stage < costs.Length; stage++)
             foreach (var (item, count) in costs[stage])
                 for (uint i = 0; i < count; i++) refund.Add(item);
@@ -338,7 +338,7 @@ public static partial class Module
     }
 
     static List<MaterialNeed> NeedsFor(int kind, int stage) =>
-        StageCosts[kind][stage].Select(c => new MaterialNeed { Item = (ushort)c.Item, Have = 0, Need = c.Count }).ToList();
+        StageCosts(kind)[stage].Select(c => new MaterialNeed { Item = (ushort)c.Item, Have = 0, Need = c.Count }).ToList();
 
     // A stage is done: everyone who helped with it practices that building skill,
     // and the work's quality (materials, capped by each builder's skill) is folded in.
@@ -358,7 +358,7 @@ public static partial class Module
         byte stageQuality = p.StageHelpers.Count > 0 ? (byte)Math.Clamp(MathF.Round(sum / p.StageHelpers.Count), 1, 100) : Items.RawQuality;
         byte overall = (byte)Math.Clamp(MathF.Round((p.Quality * s.Stage + stageQuality) / (float)(s.Stage + 1)), 1, 100);
 
-        int stages = StageCosts[(int)s.Kind].Length;
+        int stages = StageCosts((int)s.Kind).Length;
         byte next = (byte)(s.Stage + 1);
         p = p with { Quality = overall, StageQualitySum = 0, StageItems = 0, StageHelpers = new List<uint>() };
         return next >= stages
