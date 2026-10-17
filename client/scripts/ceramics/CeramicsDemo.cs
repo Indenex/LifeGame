@@ -27,6 +27,18 @@ public partial class CeramicsDemo : Node3D
     // --ceramics-demo=lamp shows three lit clay lamps and a cold one, for judging the glow at night (ceramics-9).
     static bool ShowLamps => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=lamp");
 
+    // --ceramics-demo=trough[:fill] shows a set-down clay trough beside a clay hut, filled to
+    // `fill` (0 to 1, default 0.5), for the Render lane (ceramics-13).
+    static bool ShowTrough(out float fill)
+    {
+        fill = 0.5f;
+        var arg = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).FirstOrDefault(a => a.StartsWith("--ceramics-demo=trough"));
+        if (arg == null) return false;
+        var colon = arg.IndexOf(':');
+        if (colon >= 0 && float.TryParse(arg[(colon + 1)..], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var f))
+            fill = Mathf.Clamp(f, 0f, 1f);
+        return true;
+    }
     // --ceramics-demo=marks shows kiln-fired coil pots with each of the twelve maker's marks
     // facing the camera, for judging the glyphs (ceramics-15, rough prototype art).
     const float SheetLift = 2.6f;
@@ -57,6 +69,30 @@ public partial class CeramicsDemo : Node3D
                 row.AddChild(pot);
                 pot.Show((ulong)i + 20, i == 1 ? ClayForm.PinchPot : ClayForm.CoilPot, ClayStage.Fired, FireKind.Kiln, 0f, 0, 0f, i == 2);
             }
+            AddChild(camera);
+            camera.MakeCurrent();
+            return;
+        }
+        if (ShowTrough(out var troughFill))
+        {
+            // Like a real building, clear the grass and trees on the cells it stands on (Terrain.Cleared).
+            var centre = anchor.Position + new Vector3(0, 0, -2.2f);
+            int x0 = Mathf.FloorToInt(centre.X - 4f), x1 = Mathf.CeilToInt(centre.X + 3f);
+            int z0 = Mathf.FloorToInt(centre.Z - 5f), z1 = Mathf.CeilToInt(centre.Z + 4.5f);
+            var before = terrain.Cleared;
+            terrain.Cleared = (cx, cz) => (cx >= x0 && cx <= x1 && cz >= z0 && cz <= z1) || before?.Invoke(cx, cz) == true;
+            for (int cx = x0; cx <= x1; cx++)
+                for (int cz = z0; cz <= z1; cz++) terrain.Refresh(cx, cz);
+            var hut = new Node3D { Position = new Vector3(-1.5f, 0, -3.3f), Rotation = new Vector3(0, 0.3f, 0) };
+            foreach (var piece in StructureModel.Pieces(1).Where(p => p.Stage >= 0))
+                hut.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material });
+            row.AddChild(hut);
+            foreach (var piece in TroughModel.Pieces().Where(p => p.Stage >= 0))
+                row.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material });
+            var water = new TroughView { ShowLabel = true };
+            int capacity = Structures.TroughLitres(80);
+            water.Show(Mathf.RoundToInt(troughFill * capacity), capacity);
+            row.AddChild(water);
             AddChild(camera);
             camera.MakeCurrent();
             return;
@@ -215,7 +251,7 @@ public partial class CeramicsDemo : Node3D
             camera.LookAt(at + new Vector3(0f, 0.2f, -0.5f), Vector3.Up);
             return;
         }
-        if (ShowLamps)
+        if (ShowLamps || ShowTrough(out _))
         {
             camera.Position = at + new Vector3(0f, 1.2f, 3.2f);
             camera.LookAt(at + new Vector3(0f, 0.1f, 0), Vector3.Up);
