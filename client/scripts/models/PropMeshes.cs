@@ -237,7 +237,7 @@ public static class PropMeshes
                 var sideways = new Vector3(dir.Z, 0, -dir.X) * (H(t * 31 + i, 11) - 0.5f) * r * 0.5f;
                 var tip = dir * r * (0.7f + H(t * 31 + i, 9) * 0.45f) + sideways + new Vector3(0, bottom - 0.03f - H(t * 31 + i, 10) * 0.08f, 0);
                 var normal = (Vector3.Up + dir * 0.9f).Normalized();
-                k.Paint(Colors.White).Blade(root, tip, normal, Mathf.Tau * r / fingers * 1.3f, 0.025f);
+                k.Paint(Colors.White).Blade(root, tip, normal, Mathf.Tau * r / fingers * 1.45f, 0.035f);
             }
         }
         return Done(k);

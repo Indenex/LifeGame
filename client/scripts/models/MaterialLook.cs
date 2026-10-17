@@ -186,12 +186,20 @@ public static class MaterialLook
             // them with the angle, so the clumps change as you walk round instead of
             // repeating in rings.
             float ang = atan(obj.x, obj.z);
-            float side = sin(ang * 1.5) >= -0.5 ? 1.0 : -1.0;
             float wobble = 0.03 * sin(ang * 5.0 + obj.y * 23.0);
-            for (int i = 0; i < 8 && c.a < 0.95; i++) {
+            float vv = clamp(v + wobble, 0.04, 0.97);
+            // Read from both halves of the card and blend between them with the
+            // angle, so the clumps change as you walk round without a seam.
+            vec4 lit = vec4(0.0), shade = vec4(0.0);
+            for (int i = 0; i < 8 && lit.a < 0.95; i++) {
                 float rr = r * (1.0 - float(i) * 0.12);
-                c = textureLod(card, vec2(centre + (trunk ? 0.0 : side * rr * aspect), clamp(v + wobble, 0.0, 0.97)), 0.0);
+                lit = textureLod(card, vec2(centre + (trunk ? 0.0 : rr * aspect), vv), 0.0);
             }
+            for (int i = 0; i < 8 && shade.a < 0.95; i++) {
+                float rr = r * (1.0 - float(i) * 0.12);
+                shade = textureLod(card, vec2(centre - (trunk ? 0.0 : rr * aspect), vv), 0.0);
+            }
+            c = mix(shade, lit, 0.35 + 0.65 * smoothstep(-0.8, 0.4, sin(ang * 1.5)));
             // A soft dark rim, like the card's ink line round each tier.
             float rim = 1.0 - clamp(abs(dot(NORMAL, VIEW)), 0.0, 1.0);
             ALBEDO = c.rgb * 0.9 * mix(1.0, 0.6, smoothstep(0.7, 0.92, rim));
@@ -200,7 +208,7 @@ public static class MaterialLook
         }
         void light() {
             float l = clamp(dot(NORMAL, LIGHT) * 0.5 + 0.5, 0.0, 1.0) * ATTENUATION;
-            float band = 0.34 + 0.22 * smoothstep(0.45, 0.55, l);
+            float band = 0.42 + 0.16 * smoothstep(0.45, 0.55, l);
             DIFFUSE_LIGHT += LIGHT_COLOR * band / PI;
         }
         """;
