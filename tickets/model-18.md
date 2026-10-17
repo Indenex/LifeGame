@@ -1,7 +1,7 @@
 # model-18: Wild rabbit figure and items
 Lane: Modeling
 Owner: Modeling lane session
-Status: in_review
+Status: done
 Branch: claude/model-18-rabbit
 PR: (see below)
 

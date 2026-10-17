@@ -62,6 +62,11 @@ public static partial class Module
         // How you woke after your last death (RestSpots.WokeAtEdge / WokeAtRestSpot / WokeBedGone), for the wake-up message.
         [Default((byte)0)]
         public byte WakeKind;
+        // Where the player last died, so their client can point back to what they dropped (survival-33).
+        [Default(0f)]
+        public float DiedX;
+        [Default(0f)]
+        public float DiedZ;
     }
 
     // How wet each player looks, from 0 (dry) to 10 (soaked), so everyone nearby
@@ -391,6 +396,8 @@ public static partial class Module
             WokeX = sx,
             WokeZ = sz,
             WakeKind = wakeKind,
+            DiedX = pos.X,
+            DiedZ = pos.Z,
         }, spawn, online: true));
         Log.Info($"{player.Name} died of {cause}");
     }

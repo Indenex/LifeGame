@@ -1,7 +1,7 @@
 # model-21: Hazelnuts
 Lane: Modeling
 Owner: Modeling lane session
-Status: in_review
+Status: done
 Branch: claude/model-21-hazelnut
 PR: (not yet)
 

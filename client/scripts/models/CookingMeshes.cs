@@ -14,6 +14,8 @@ public static class CookingMeshes
 
     static Mesh? under;
     static readonly Dictionary<(Dish, int), Mesh> floaters = new();
+    // On the painted look (painted-19): the stones as structure stone, the floaters as food.
+    static Material? Floating;
 
     static float H(int a, int b) => MeshKit.Hash(a, b + 130);
 
@@ -52,7 +54,7 @@ public static class CookingMeshes
             k.Paint(Look.Rock, 0.75f + H(i, 3) * 0.2f).Ellipsoid(at, radii, 6, 4, turn, 0.5f);
             k.Paint(new Color(0.18f, 0.15f, 0.13f)).Ellipsoid(at - dir * radii.X * 0.4f, radii * new Vector3(0.6f, 0.75f, 0.85f), 6, 3, turn, 0.5f);
         }
-        return Done(k, Relief(5f, 0.7f, 0.3f));
+        return Done(k, PaintedStructures.Of(Relief(5f, 0.7f, 0.3f), PaintedStructures.Family.Stone));
     }
 
     // The pot's radius where it meets the ground.
@@ -103,7 +105,7 @@ public static class CookingMeshes
                 var root = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius * 0.35f + Vector3.Up * 0.003f;
                 k.Paint(Look.Leaf.Lightened(0.1f)).Blade(root, root + new Vector3(Mathf.Cos(a + 1f), 0f, Mathf.Sin(a + 1f)) * radius * 0.35f, Vector3.Up, radius * 0.18f, 0.002f);
             }
-        mesh = Done(k, Look.Solid(Colors.White));
+        mesh = Done(k, Floating ??= PaintedItems.Of(Look.Solid(Colors.White), PaintedItems.Family.Food));
         floaters[(dish, key)] = mesh;
         return mesh;
     }

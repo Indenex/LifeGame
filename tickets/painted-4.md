@@ -1,7 +1,7 @@
 # painted-4: Painted animals
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm), Opus helper
-Status: in_review
+Status: done
 Branch: claude/painted-4-animals (includes painted-1 until #554 lands)
 PR: #560
 

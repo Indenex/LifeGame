@@ -16,6 +16,7 @@ public partial class HideRacks : Node3D
     static readonly Color Wet = new(0.84f, 0.69f, 0.62f);
     static readonly Color Dry = new(0.55f, 0.37f, 0.22f);
     static readonly Color Wood = new(0.42f, 0.31f, 0.20f);
+    static readonly ShaderMaterial HideSource = Look.Solid(Wet);
 
     readonly Dictionary<ulong, Rack> racks = new();
     Terrain terrain = null!;
@@ -68,10 +69,12 @@ public partial class HideRacks : Node3D
         return new UseOffer("Take the leather", best, () => conn.Reducers.TakeLeather(id), Again: Use.HoldInterval);
     }
 
-    partial class Rack : Node3D
+    internal partial class Rack : Node3D
     {
         readonly MeshInstance3D hide = new();
-        readonly StandardMaterial3D hideLook = new() { Roughness = 0.9f, CullMode = BaseMaterial3D.CullModeEnum.Disabled };
+        // Painted hide (painted-19): its own copy of the painted hide twin, since each rack
+        // dries at its own pace. Both faces show from the one sheet.
+        readonly ShaderMaterial hideLook = HideLook();
         float moisture = 1f, rate;
         double at;
         int lastStep = -1;
@@ -84,7 +87,7 @@ public partial class HideRacks : Node3D
             hide.MaterialOverride = hideLook;
             AddChild(hide);
             if (!frame) return;
-            var wood = Look.Solid(Wood);
+            var wood = FrameWood ??= PaintedStructures.Of(Look.Solid(Wood), PaintedStructures.Family.Wood);
             // An A-frame of two crossed sticks at each end, a crossbar resting in the forks.
             foreach (float side in new[] { -0.55f, 0.55f })
                 foreach (float foot in new[] { -1f, 1f })
@@ -105,6 +108,12 @@ public partial class HideRacks : Node3D
         }
 
         const float BarY = 0.99f;
+
+        static readonly StringName NAlbedo = "albedo", NLitDabs = "lit_dabs";
+        static Material? FrameWood;
+
+        static ShaderMaterial HideLook() =>
+            (ShaderMaterial)PaintedItems.Of(HideSource, PaintedItems.Family.Hide).Duplicate();
 
         // One side of a sheepskin, spine along the bar: u runs along the bar, v
         // down from it, with the leg flaps at the corners.
@@ -164,9 +173,9 @@ public partial class HideRacks : Node3D
             int step = Mathf.RoundToInt(wet * 40);
             if (step == lastStep) return;
             lastStep = step;
-            hideLook.AlbedoColor = Dry.Lerp(Wet, wet);
-            // Wet hide has a faint sheen; dry leather is matte.
-            hideLook.Roughness = Mathf.Lerp(0.95f, 0.6f, wet);
+            hideLook.SetShaderParameter(NAlbedo, Dry.Lerp(Wet, wet));
+            // Wet hide catches a few more lit dabs; dry leather is matte.
+            hideLook.SetShaderParameter(NLitDabs, Mathf.Lerp(0.06f, 0.2f, wet));
         }
     }
 }

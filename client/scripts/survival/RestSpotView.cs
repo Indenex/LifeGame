@@ -9,11 +9,17 @@ namespace LifeGame;
 // laid) asks "Wake here after a fall?" with Set and Not now; Set tells the server (SetRespawn, which
 // checks your right to the building, your reach and that the spot stands). Your waking place wears
 // a small ring and "Your waking place" when you are near. The server's data is RestSpots
-// (shared/RestSpots.cs); today the only rest spot is the sleeping mat, which House building lays.
+// (shared/RestSpots.cs): the sleeping mat, which House building lays, and the straw bed it builds.
 public partial class RestSpotView : CanvasLayer
 {
     // How close a laid mat counts as the one under your feet; matches House building's roll-up reach.
     const float OnMat = 1.1f;
+    // How close a built rest spot (the straw bed) must be to be offered; the server checks reach too.
+    const float OnBed = 1.6f;
+
+    // The rest spot the window is about: a laid mat or a built bed.
+    record Spot(RestSpotDef Def, ulong StructureId, float X, float Z);
+    Spot? current;
 
     DbConnection? conn;
     Node world = null!;
@@ -60,11 +66,10 @@ public partial class RestSpotView : CanvasLayer
             Priority = 30,
             Find = at =>
             {
-                if (conn == null || MyMat() is not { } mat) return null;
-                float d = new Vector2(mat.X - at.X, mat.Z - at.Z).Length();
-                if (d >= OnMat) return null;
-                return new UseOffer(IsMyPoint(mat) ? "Your waking place" : "Wake here after a fall?", d, () => Open(mat),
-                    Target: new Vector3(mat.X, at.Y, mat.Z));
+                if (conn == null || Nearest(at) is not { } near) return null;
+                var (spot, d) = near;
+                return new UseOffer(IsMyPoint(spot) ? "Your waking place" : "Wake here after a fall?", d, () => Open(spot),
+                    Target: new Vector3(spot.X, at.Y, spot.Z));
             },
         });
     }
@@ -75,15 +80,37 @@ public partial class RestSpotView : CanvasLayer
 
     RespawnPoint? MyPoint() => conn!.Db.MyRespawnPoint.Iter().Cast<RespawnPoint?>().FirstOrDefault();
 
-    bool IsMyPoint(SleepingMat mat) =>
-        MyPoint() is { } p && p.StructureId == mat.StructureId && Mathf.Abs(p.X - mat.X) < 0.01f && Mathf.Abs(p.Z - mat.Z) < 0.01f;
+    bool IsMyPoint(Spot spot) =>
+        MyPoint() is { } p && p.Spot == spot.Def.Id && p.StructureId == spot.StructureId && Mathf.Abs(p.X - spot.X) < 0.01f && Mathf.Abs(p.Z - spot.Z) < 0.01f;
+
+    Spot? OfMat(SleepingMat mat) =>
+        RestSpots.OfItem(Item.SleepingMat) is { } def ? new Spot(def, mat.StructureId, mat.X, mat.Z) : null;
+
+    // The closest rest spot in reach of a point: your laid mat, or a finished building whose kind is a
+    // RestSpotDef (shared/RestSpots.cs), so a new bed is only a data entry there.
+    (Spot, float)? Nearest(Vector3 at)
+    {
+        (Spot, float)? best = null;
+        if (MyMat() is { } mat && OfMat(mat) is { } m)
+        {
+            float d = new Vector2(m.X - at.X, m.Z - at.Z).Length();
+            if (d < OnMat) best = (m, d);
+        }
+        foreach (var s in conn!.Db.Structure.Iter())
+        {
+            if (!s.Complete || RestSpots.OfStructure((int)s.Kind) is not { } def) continue;
+            float d = new Vector2(s.X - at.X, s.Z - at.Z).Length();
+            if (d < OnBed && (best is not { } b || d < b.Item2)) best = (new Spot(def, s.Id, s.X, s.Z), d);
+        }
+        return best;
+    }
 
     void OnMatLaid(SleepingMat mat)
     {
         if (!ready || mat.PlayerId != MyId()) return;
         // Only the mat you just laid out beside you asks; one arriving from elsewhere is just a login.
         if (new Vector2(mat.X - player.Position.X, mat.Z - player.Position.Z).Length() > 2f) return;
-        Open(mat);
+        if (OfMat(mat) is { } spot) Open(spot);
     }
 
     void OnPoint(RespawnPoint point)
@@ -92,9 +119,11 @@ public partial class RestSpotView : CanvasLayer
         if (ready) hud.Note("You'll wake here.");
     }
 
-    void Open(SleepingMat mat)
+    void Open(Spot spot)
     {
-        bool already = IsMyPoint(mat);
+        current = spot;
+        bool already = IsMyPoint(spot);
+        rollButton.Visible = spot.Def.Item == Item.SleepingMat;
         Panels.Opening(this);
         title.Text = already ? "Your waking place" : "Wake here after a fall?";
         body.Text = already
@@ -110,8 +139,7 @@ public partial class RestSpotView : CanvasLayer
 
     void Set()
     {
-        if (conn != null && MyMat() is { } mat && RestSpots.OfItem(Item.SleepingMat) is { } spot)
-            conn.Reducers.SetRespawn(spot.Id, mat.StructureId);
+        if (conn != null && current is { } spot) conn.Reducers.SetRespawn(spot.Def.Id, spot.StructureId);
         Close();
     }
 
@@ -119,8 +147,7 @@ public partial class RestSpotView : CanvasLayer
     // or StandUp ends it. The server checks the same things as SetRespawn.
     void LieDown()
     {
-        if (conn != null && MyMat() is { } mat && RestSpots.OfItem(Item.SleepingMat) is { } spot)
-            conn.Reducers.LieOnRestSpot(spot.Id, mat.StructureId);
+        if (conn != null && current is { } spot) conn.Reducers.LieOnRestSpot(spot.Def.Id, spot.StructureId);
         Close();
     }
 

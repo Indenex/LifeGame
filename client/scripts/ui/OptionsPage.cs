@@ -64,7 +64,7 @@ public partial class OptionsPage : Control
         scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, MouseFilter = MouseFilterEnum.Pass };
         scroll.AddChild(column);
         this.column = column;
-        var panel = Ui.Window(scroll, roomy: true);
+        var panel = Ui.Window(WarmLook.On ? ScrollFade.Wrap(scroll, WarmLook.Paper) : scroll, roomy: true);
         AddChild(panel);
         Resized += Fit;
         column.MinimumSizeChanged += Fit;

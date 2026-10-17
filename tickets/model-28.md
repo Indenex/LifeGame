@@ -1,7 +1,7 @@
 # model-28: Boulder variety (D-166)
 Lane: Modeling
 Owner: Modeling lane session
-Status: in_review
+Status: done
 Branch: claude/model-28-rock-variety
 PR: (see below)
 

@@ -1,7 +1,7 @@
 # model-33: Rabbit snare
 Lane: Modeling
 Owner: Modeling lane (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/model-33-rabbit-snare
 PR: #818
 

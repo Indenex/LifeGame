@@ -25,6 +25,25 @@ public static partial class Module
         public Timestamp PutAt;
     }
 
+    // What a roast was when it went on (bugfix-54, hidden values). Private: the public Roast row
+    // carries 0 in Quality, so other players can't read how good the raw food was.
+    [SpacetimeDB.Table(Accessor = "RoastQuality")]
+    public partial struct RoastQuality
+    {
+        [PrimaryKey]
+        public ulong RoastId;
+        public byte Quality;
+    }
+
+    static byte RoastInputQuality(ReducerContext ctx, ulong roastId) =>
+        ctx.Db.RoastQuality.RoastId.Find(roastId)?.Quality ?? Items.RawQuality;
+
+    static void DeleteRoast(ReducerContext ctx, ulong roastId)
+    {
+        ctx.Db.Roast.Id.Delete(roastId);
+        ctx.Db.RoastQuality.RoastId.Delete(roastId);
+    }
+
     // The burning fire nearest a spot within reach, if any.
     static Fire? BurningFireNear(ReducerContext ctx, float x, float z, float reach)
     {
@@ -53,20 +72,21 @@ public static partial class Module
         }
         float a = (float)(ctx.Rng.NextDouble() * MathF.Tau);
         float x = fire.X + MathF.Cos(a) * 0.2f, z = fire.Z + MathF.Sin(a) * 0.2f;
-        ctx.Db.Roast.Insert(new Roast
+        var put = ctx.Db.Roast.Insert(new Roast
         {
             Id = 0,
             FireId = fire.Id,
             Owner = job.Owner,
             PlayerId = job.PlayerId,
             Item = (ushort)def.Consumes[0].Item,
-            Quality = inputQuality,
+            Quality = 0,
             X = x,
             Z = z,
             ChunkX = World.ChunkOf(x),
             ChunkZ = World.ChunkOf(z),
             PutAt = ctx.Timestamp,
         });
+        ctx.Db.RoastQuality.Insert(new RoastQuality { RoastId = put.Id, Quality = inputQuality });
     }
 
     // Takes your roast off the fire: roast mutton if it is done, burnt if it was left too long.
@@ -82,7 +102,8 @@ public static partial class Module
         float seconds = SecondsBetween(roast.PutAt, ctx.Timestamp);
         if (!Roasting.Done(seconds))
             throw new Exception("It isn't cooked yet");
-        ctx.Db.Roast.Id.Delete(roast.Id);
+        roast = roast with { Quality = RoastInputQuality(ctx, roast.Id) };
+        DeleteRoast(ctx, roast.Id);
         var (item, quality) = RoastResult(ctx, roast, seconds);
         AddToInventory(ctx, Me(ctx), item, 1, quality);
     }
@@ -105,9 +126,10 @@ public static partial class Module
     {
         foreach (var roast in ctx.Db.Roast.FireId.Filter(fire.Id).ToList())
         {
-            ctx.Db.Roast.Id.Delete(roast.Id);
-            float seconds = SecondsBetween(roast.PutAt, fire.FuelUntil);
-            var (item, quality) = Roasting.Done(seconds) ? RoastResult(ctx, roast, seconds) : ((Item)roast.Item, roast.Quality);
+            var raw = roast with { Quality = RoastInputQuality(ctx, roast.Id) };
+            DeleteRoast(ctx, roast.Id);
+            float seconds = SecondsBetween(raw.PutAt, fire.FuelUntil);
+            var (item, quality) = Roasting.Done(seconds) ? RoastResult(ctx, raw, seconds) : ((Item)raw.Item, raw.Quality);
             ctx.Db.WorldItem.Insert(new WorldItem
             {
                 Id = 0,

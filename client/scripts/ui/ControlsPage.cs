@@ -37,9 +37,15 @@ public partial class ControlsPage : Control
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
 
         var column = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = MouseFilterEnum.Ignore };
-        column.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         column.AddThemeConstantOverride("separation", 12);
-        AddChild(column);
+        // On the warm look the page is a paper window like Options (ui-68); the cold look
+        // keeps its words straight over the dimmed world.
+        if (WarmLook.On) AddChild(Ui.Window(column, roomy: true));
+        else
+        {
+            column.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+            AddChild(column);
+        }
 
         var title = new Label { Text = "Controls", HorizontalAlignment = HorizontalAlignment.Center };
         Hud.Soft(title, 26, 1f);
@@ -57,7 +63,8 @@ public partial class ControlsPage : Control
         grid.AddThemeConstantOverride("h_separation", 28);
         grid.AddThemeConstantOverride("v_separation", 6);
         scroll.AddChild(grid);
-        column.AddChild(scroll);
+        // On paper, a fade at the bottom shows the list goes on (ui-68).
+        column.AddChild(WarmLook.On ? ScrollFade.Wrap(scroll, WarmLook.Paper) : scroll);
         scrollBox = scroll;
 
         turn = SliderRow(column, "Turn speed", 3.5, 14, 0.5, Settings.Get("camera", "turn_ease", DefaultEase), v =>
