@@ -6,10 +6,11 @@ wait 35
 sql UPDATE player_pos SET x = -4.0, z = 7.0, chunk_x = -1, chunk_z = 0
 wait 25
 burst 4 2
-key shift
+keydown shift
 keydown w
 wait 2
 burst 4 0.7
 keyup w
+keyup shift
 wait 1
 burst 4 1
