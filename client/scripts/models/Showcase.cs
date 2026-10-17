@@ -687,6 +687,18 @@ public partial class Showcase : Node3D
             blades.SetInstanceColor(i, PaintedGround.Grass(new Color(0.47f, 0.58f, 0.2f), rng.Randf()));
         }
         AddChild(new MultiMeshInstance3D { Multimesh = blades, MaterialOverride = PaintedGround.GrassMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        // Undergrowth as in reference 02: shrubs, stones, ferns and dead brush all
+        // through the grass, so the meadow reads dense rather than open.
+        string[] clutter = { "forest_bush_1", "forest_bush_2", "forest_bush_3", "forest_bush_4", "forest_bush_5", "Forest_small_bush_01", "Forest_small_bush_02", "Forest_small_fern_01", "Forest_small_fern_02", "Forest_deadBush_3", "Forest_deadbush5", "sone_29", "sone_31", "sone_2" };
+        for (int i = 0; i < 170; i++)
+        {
+            var at = new Vector3(rng.RandfRange(-13f, 13f), 0, rng.RandfRange(-14f, 6f));
+            if (Mathf.Abs(at.X - 0.5f) < 2.8f && Mathf.Abs(at.Z + 4.5f) < 2.4f) continue;
+            if (at.DistanceTo(new Vector3(-0.3f, 0, 1.6f)) < 1.2f || at.DistanceTo(new Vector3(2.2f, 0, 1.0f)) < 1.2f) continue;
+            string name = clutter[rng.RandiRange(0, clutter.Length - 1)];
+            float size = name.StartsWith("sone") ? 0.25f + rng.Randf() * 0.35f : name.StartsWith("forest_bush") ? 0.6f + rng.Randf() * 0.5f : 0.4f + rng.Randf() * 0.4f;
+            Card(name, at, size, size > 0.5f, 1.0f);
+        }
         string[] extras = { "Forest_small_flower_01", "Forest_small_flower_02", "Forest_small_flower_03", "Forest_small_mushroom_01", "Forest_small_mushroom_03", "Forest_small_fern_01" };
         for (int i = 0; i < 90; i++)
         {
@@ -705,6 +717,16 @@ public partial class Showcase : Node3D
         camera.Attributes = new CameraAttributesPractical { DofBlurFarEnabled = true, DofBlurFarDistance = 17f, DofBlurFarTransition = 10f, DofBlurAmount = 0.1f };
         if (!args.ContainsKey("time-of-day")) return;
         AddChild(new Atmosphere());
+        float tod = float.Parse(args["time-of-day"], System.Globalization.CultureInfo.InvariantCulture);
+        if (tod > 0.85f || tod < 0.2f)
+        {
+            // A campfire by the cabin at night, lit as FireView lights one.
+            var fire = new Vector3(1.0f, 0, -1.2f);
+            AddChild(new MeshInstance3D { Mesh = HearthModel.Ring, Position = fire });
+            var flame = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = new Color(1f, 0.55f, 0.18f), EmissionEnabled = true, Emission = new Color(1f, 0.45f, 0.12f), EmissionEnergyMultiplier = 6f };
+            AddChild(new MeshInstance3D { Mesh = new SphereMesh { Radius = 0.16f, Height = 0.5f, RadialSegments = 8, Rings = 4 }, MaterialOverride = flame, Position = fire + new Vector3(0, 0.25f, 0) });
+            AddChild(new OmniLight3D { Position = fire + new Vector3(0, 0.7f, 0), LightColor = new Color(1f, 0.58f, 0.24f), LightEnergy = 2.6f, OmniRange = 14f, OmniAttenuation = 1.15f, ShadowEnabled = true });
+        }
     }
 
     // Players side by side, each with their own look from their player id (skin, hair,
