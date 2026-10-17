@@ -19,7 +19,7 @@ public partial class WarmLook : Node
         Coral = new(0.95f, 0.56f, 0.47f), Butter = new(0.98f, 0.82f, 0.45f), Sage = new(0.60f, 0.78f, 0.55f);
 
     const string Mark = "warm_window";
-    static readonly string[] ColourKeys = { "font_color", "font_hover_color", "font_pressed_color", "font_disabled_color", "font_placeholder_color", "font_uneditable_color" };
+    static readonly string[] ColourKeys = { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color", "font_disabled_color", "font_placeholder_color", "font_uneditable_color" };
     static readonly string[] BoxKeys = { "panel", "normal", "hover", "pressed", "disabled", "focus", "read_only", "background", "fill", "slider", "grabber_area", "grabber_area_highlight" };
 
     readonly List<Control> windows = new();
