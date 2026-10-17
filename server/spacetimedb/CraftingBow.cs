@@ -13,7 +13,7 @@ public static partial class Module
         InventoryItem? bow = null, arrow = null;
         if (EquippedStack(ctx) is { } held && Items.Def((Item)held.Item).BowPower > 0f) bow = held;
         if (bow is null) throw new Exception(NoWeaponMessage(ctx, "your bow"));
-        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender))
+        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(Me(ctx)))
         {
             if (!Items.IsKnown(row.Item)) continue;
             if (Items.Def((Item)row.Item).ArrowPower > 0f && (arrow is null || row.Quality > arrow.Value.Quality))

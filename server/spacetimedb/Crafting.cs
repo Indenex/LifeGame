@@ -34,7 +34,7 @@ public static partial class Module
     // Clients see only their own job, to show its progress.
     [SpacetimeDB.View(Accessor = "MyCraftJob", Public = true)]
     public static List<CraftJob> MyCraftJob(ViewContext ctx) =>
-        ctx.Db.CraftJob.Owner.Find(ctx.Sender) is { } job ? new List<CraftJob> { job } : new List<CraftJob>();
+        ctx.Db.CraftJob.Owner.Find(Me(ctx)) is { } job ? new List<CraftJob> { job } : new List<CraftJob>();
 
     [SpacetimeDB.Table(Accessor = "CraftTimer", Scheduled = nameof(FinishCraft), ScheduledAt = nameof(ScheduledAt))]
     public partial struct CraftTimer
@@ -120,7 +120,7 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);
         var def = Processes.Find(processId) ?? throw new Exception("Unknown process");
-        if (ctx.Db.CraftJob.Owner.Find(ctx.Sender) is not null)
+        if (ctx.Db.CraftJob.Owner.Find(Me(ctx)) is not null)
             throw new Exception("Your hands are busy");
         if (!float.IsFinite(score))
             throw new Exception("Invalid score");
@@ -214,7 +214,7 @@ public static partial class Module
         var finish = ctx.Timestamp + new TimeDuration((long)(seconds * 1_000_000));
         var started = ctx.Db.CraftJob.Insert(new CraftJob
         {
-            Owner = ctx.Sender,
+            Owner = Me(ctx),
             PlayerId = player.PlayerId,
             ProcessId = def.Id,
             StartedAt = ctx.Timestamp,
@@ -226,7 +226,7 @@ public static partial class Module
             VesselQuality = vesselQuality,
             Tool = toolUsed,
         });
-        ctx.Db.CraftTimer.Insert(new CraftTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), Owner = ctx.Sender });
+        ctx.Db.CraftTimer.Insert(new CraftTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), Owner = Me(ctx) });
         OnCraftStarted(ctx, started);
     }
 
@@ -375,7 +375,7 @@ public static partial class Module
     static uint CountOf(ReducerContext ctx, Item item)
     {
         uint n = 0;
-        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, (ushort)item)))
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), (ushort)item)))
             n += row.Count;
         return n;
     }
@@ -383,7 +383,7 @@ public static partial class Module
     // Takes items, best quality first, and returns the summed quality taken.
     static float Take(ReducerContext ctx, Item item, uint count)
     {
-        var stacks = ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, (ushort)item)).ToList();
+        var stacks = ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), (ushort)item)).ToList();
         stacks.Sort((a, b) => b.Quality.CompareTo(a.Quality));
         float sum = 0f;
         foreach (var stack in stacks)
@@ -402,7 +402,7 @@ public static partial class Module
     static InventoryItem? BestTool(ReducerContext ctx, ItemTags tags)
     {
         InventoryItem? best = null;
-        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender))
+        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(Me(ctx)))
             if (Items.IsKnown(row.Item) && (Items.Def((Item)row.Item).Tags & tags) == tags
                 && !(Durability.Wears((Item)row.Item) && Durability.IsSpent(row.Quality, row.Wear))
                 && (best is null || row.Quality > best.Value.Quality
@@ -415,7 +415,7 @@ public static partial class Module
     static bool HasSpareHammer(ReducerContext ctx, ProcessDef def)
     {
         uint hammers = 0;
-        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender))
+        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(Me(ctx)))
             if (Items.IsKnown(row.Item) && Items.Def((Item)row.Item).Tags.HasFlag(ItemTags.Hammer))
                 hammers += row.Count;
         foreach (var input in def.Consumes)
