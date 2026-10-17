@@ -113,25 +113,53 @@ public static class ChibiFigure
             // a touch wider than the torso so it shows from the front, its front edge
             // behind the shoulder joints. A paler rim band round its lower edge.
             // A tall arch with a flat lower edge, as on the sheet's back view.
-            var dome = new Vector3(0, hipY - 0.06f, -0.08f);
-            k.Bone(HumanRig.Spine).Paint(second).Ellipsoid(dome, new Vector3(0.28f, 0.5f, 0.23f), 18, 14, null, 0.02f);
-            k.Paint(ShellRim).Loft(new Vector3(0, hipY - 0.08f, -0.06f), new Vector3(0, hipY - 0.03f, -0.06f), new MeshKit.Ring[]
+            var dome = new Vector3(0, hipY + 0.02f, -0.12f);
+            var radii = new Vector3(0.29f, 0.44f, 0.27f);
+            // A point on the dome's surface, u down from its top and a round from its back,
+            // and the dome's outward normal there.
+            (Vector3 At, Vector3 Normal) OnDome(float u, float a, float lift = 0f)
             {
-                new(0f, 0.265f, 0.2f), new(1f, 0.27f, 0.205f),
-            }, 18, 0.05f);
-            // Pattern 1, scutes: pale plates set into the shell's back in rows.
-            if (look.Style % 2 == 1)
+                var at = dome + new Vector3(radii.X * Mathf.Sin(u) * Mathf.Sin(a), radii.Y * Mathf.Cos(u), -radii.Z * Mathf.Sin(u) * Mathf.Cos(a));
+                var off = at - dome;
+                var normal = new Vector3(off.X / (radii.X * radii.X), off.Y / (radii.Y * radii.Y), off.Z / (radii.Z * radii.Z)).Normalized();
+                return (at + normal * lift, normal);
+            }
+            // The dome: high and round, its grooves showing in a darker shell colour
+            // between the plates.
+            bool scutes = look.Style % 2 == 1;
+            k.Bone(HumanRig.Spine).Paint(second, scutes ? 0.72f : 0.9f).Ellipsoid(dome, radii, 20, 14, null, 0.3f);
+            // The rim: a ring of marginal scutes round the lower edge, flaring out a little
+            // over the body, open at the front where the belly plate is.
+            for (int i = 0; i < 19; i++)
             {
-                var radii = new Vector3(0.28f, 0.5f, 0.23f);
-                foreach (var (u, cols) in new[] { (0.36f, 1), (0.76f, 2), (1.16f, 3) })
-                    for (int c = 0; c < cols; c++)
-                    {
-                        float a = (c - (cols - 1) * 0.5f) * 0.78f;
-                        var at = dome + new Vector3(radii.X * Mathf.Sin(u) * Mathf.Sin(a), radii.Y * Mathf.Cos(u), -radii.Z * Mathf.Sin(u) * Mathf.Cos(a));
-                        var off = at - dome;
-                        var normal = new Vector3(off.X / (radii.X * radii.X), off.Y / (radii.Y * radii.Y), off.Z / (radii.Z * radii.Z)).Normalized();
-                        k.Paint(second.Lerp(ShellRim, 0.55f)).Ellipsoid(at + normal * 0.003f, new Vector3(0.112f, 0.105f, 0.012f), 6, 3, MeshKit.Aim(normal) * new Basis(Vector3.Back, Mathf.Pi / 6));
-                    }
+                float a = -2.35f + i * 4.7f / 18f;
+                var (at, normal) = OnDome(1.78f, a, 0.012f);
+                var flare = (normal + Vector3.Down * 0.6f).Normalized();
+                k.Paint(ShellRim, 0.94f + 0.06f * (i % 2)).Ellipsoid(at + flare * 0.01f, new Vector3(0.062f, 0.05f, 0.012f), 6, 3, MeshKit.Aim(flare));
+            }
+            // The plates: a row down the spine and a row on each side, hexes laid on the dome.
+            // Scutes: raised pads, a paler bevelled cap and growth rings in each. Plain: an
+            // older shell worn smooth, the plates low and the same colour as the shell.
+            var plates = new (float U, float A)[]
+            {
+                (0.32f, 0f), (0.8f, 0f), (1.28f, 0f),
+                (0.62f, -0.95f), (0.62f, 0.95f), (1.1f, -0.85f), (1.1f, 0.85f), (1.5f, -1.15f), (1.5f, 1.15f),
+            };
+            var pad = scutes ? second.Lerp(ShellRim, 0.35f) : second;
+            foreach (var (u, a) in plates)
+            {
+                var (at, normal) = OnDome(u, a, 0.004f);
+                var aim = MeshKit.Aim(normal) * new Basis(Vector3.Back, Mathf.Pi / 6);
+                float size = u < 0.5f ? 0.1f : 0.118f;
+                if (!scutes)
+                {
+                    k.Paint(pad, 1.02f).Ellipsoid(at, new Vector3(size, size * 0.95f, 0.008f), 6, 3, aim);
+                    continue;
+                }
+                k.Paint(pad).Ellipsoid(at, new Vector3(size, size * 0.95f, 0.028f), 6, 3, aim);
+                k.Paint(pad.Lightened(0.12f)).Ellipsoid(at + normal * 0.012f, new Vector3(size * 0.72f, size * 0.68f, 0.02f), 6, 3, aim);
+                foreach (float ring in new[] { 0.52f, 0.3f })
+                    k.Paint(pad.Darkened(0.22f)).Tube(MeshKit.Circle(at + normal * 0.03f, normal, size * ring, 7, 1f, 0f, Mathf.Pi / 6), 0.0035f, 3, -1f, false);
             }
         }
 
