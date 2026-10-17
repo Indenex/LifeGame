@@ -8,20 +8,26 @@ namespace LifeGame;
 // A prototype of the ground in Justin's art references (docs/art-reference 02 and
 // 03): thick painted grass, flowers, clover, ferns and mushrooms drawn as crossed
 // alpha cards from his licensed Golden Skull foliage pack (client/assets/environment,
-// NOTICE.md); darker olive earth under the grass so the gaps read as shade; bare dirt
-// on the deer trails; twigs and old stumps scattered through. Only with
+// NOTICE.md); the ground in the pack's bright yellow-green grass-top colour; sandy
+// paths on the deer trails; twigs and old stumps scattered through. Only with
 // --ground=painted on the command line, until Justin picks (D-154). The cards sway
 // in the same wind as the grass and fade out by distance like the tufts.
 public static class PaintedGround
 {
-    public static readonly bool On = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ground=painted");
+    // --ground=painted: the pack's cards replace the grass. --ground=mixed: today's
+    // fine grass carpet stays, with the painted clumps, flowers and mushrooms as accents.
+    static readonly string[] Args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
+    public static readonly bool Mixed = Args.Contains("--ground=mixed");
+    public static readonly bool On = Mixed || Args.Contains("--ground=painted");
 
     // Three painted tones for grass (sRGB, before the grass shader's warm tips).
     static readonly Color Lit = new(0.66f, 0.70f, 0.26f), Mid = new(0.47f, 0.55f, 0.19f), Shade = new(0.30f, 0.38f, 0.15f);
-    // The earth under the grass and on paths.
-    static readonly Color UnderGrass = new(0.30f, 0.30f, 0.15f), PathDirt = new(0.47f, 0.35f, 0.22f);
+    // The ground's own colour, from the pack's grass tile top (iso-starter
+    // ISO_Overlay_Grass_01 averages about (0.62, 0.70, 0.29)), and the sandy path
+    // (ISO_Tile_Dirt_01_GrassPath).
+    static readonly Color MeadowTop = new(0.60f, 0.66f, 0.28f), PathSand = new(0.70f, 0.58f, 0.38f);
 
-    static Mesh? blades, mushroom, twig, grassClump;
+    static Mesh? blades, mushroom, twig;
 
     // The atlas cells (tools/env-assets/build_foliage_atlas.py): each sprite's width
     // and height as a fraction of its 256 px cell, standing on the cell's bottom.
@@ -44,9 +50,11 @@ public static class PaintedGround
     // One sprite as two crossed cards, about `size` metres across its larger side.
     public static Mesh Card(int index, float size = 0.4f) => cards[index] ??= BuildCard(index, size);
 
-    // A square metre of thick painted grass: four tufts, each a crossed pair of
+    // A square metre of thick painted grass: five tufts, each a crossed pair of
     // cards of a different grass sprite, at their own heights and turns.
-    public static Mesh GrassClump => grassClump ??= BuildGrassClump();
+    public const int ClumpVariants = 3;
+    static readonly Mesh?[] clumps = new Mesh?[ClumpVariants];
+    public static Mesh GrassClump(int variant) => clumps[variant] ??= BuildGrassClump(variant);
 
     // Cards for scattered plants, and for the grass (which fades out by 48 m, like
     // the tufts it replaces, so chunks without grass never show).
@@ -57,10 +65,11 @@ public static class PaintedGround
     public static Mesh Mushroom => mushroom ??= BuildMushroom();
     public static Mesh Twig => twig ??= BuildTwig();
 
-    // The ground colour: today's tile colour pulled darker and toward olive earth, so
-    // it reads as shade between the blades; worn paths go to bare dirt.
+    // The ground colour: today's tile colour pulled half way to the pack's bright
+    // yellow-green grass top (still browner under trees and on the heath), with the
+    // deer trails worn to sandy paths.
     public static Color Ground(Color tile, float trail) =>
-        tile.Darkened(0.2f).Lerp(UnderGrass, 0.35f).Lerp(PathDirt, Mathf.SmoothStep(0.25f, 0.7f, trail));
+        tile.Lerp(MeadowTop, 0.5f).Lerp(PathSand, Mathf.SmoothStep(0.25f, 0.7f, trail));
 
     // A card's tint on a tile: near white so the painted sprite keeps its colours,
     // nudged toward the tile's hue (darker under trees, browner on the heath).
@@ -151,15 +160,16 @@ public static class PaintedGround
         return st.Commit();
     }
 
-    static Mesh BuildGrassClump()
+    static Mesh BuildGrassClump(int variant)
     {
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
-        for (int k = 0; k < 4; k++)
+        for (int k = 0; k < 5; k++)
         {
-            var cell = Cells[(int)(H(k, 0, 610) * 7f)];
-            var at = new Vector3((H(k, 1, 610) - 0.5f) * 0.7f, -0.03f, (H(k, 2, 610) - 0.5f) * 0.7f);
-            AddCard(st, cell, at, 0.55f + H(k, 3, 610) * 0.3f, H(k, 4, 610) * Mathf.Pi);
+            int seed = variant * 16 + k;
+            var cell = Cells[(int)(H(seed, 0, 610) * 7f)];
+            var at = new Vector3((H(seed, 1, 610) - 0.5f) * 0.8f, -0.03f, (H(seed, 2, 610) - 0.5f) * 0.8f);
+            AddCard(st, cell, at, 0.7f + H(seed, 3, 610) * 0.4f, H(seed, 4, 610) * Mathf.Pi);
         }
         return st.Commit();
     }
@@ -243,7 +253,8 @@ public static class PaintedGround
         void fragment() {
             vec4 texel = texture(atlas, UV);
             if (texel.a < 0.5) discard;
-            vec3 color = texel.rgb * tint;
+            // Darker at the root, as the painted tufts are, so the carpet has depth.
+            vec3 color = texel.rgb * tint * mix(0.55, 0.95, tip);
             vec3 straw = vec3(0.42, 0.36, 0.20) * (0.7 + 0.5 * tip);
             color = mix(color, straw, 0.45 * max(0.0, -season_warmth));
             ALBEDO = color;

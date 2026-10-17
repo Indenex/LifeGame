@@ -477,14 +477,24 @@ public partial class Terrain : Node3D
                 bool grassy = top >= Look.WaterLevel + 0.2f && World.ClayScore(x, z) < 0.7f;
                 // Under the trees the grass thins and stays short; it is short on the
                 // heath and gives way to moss on wet ground.
-                if (grassy && tufts != null && Hash01(x, z, 40) < 0.93f - 0.5f * density - 0.5f * wet - 0.6f * trail)
+                // The art-reference prototype keeps the carpet thick even under the trees.
+                float cover = PaintedGround.On ? 1.05f - 0.25f * density - 0.4f * wet - 0.9f * trail : 0.93f - 0.5f * density - 0.5f * wet - 0.6f * trail;
+                if (grassy && tufts != null && Hash01(x, z, 40) < cover)
                 {
                     // Shear the patch onto the slope so every blade stays rooted.
                     float sx = (TileHeight(x + 1, z) - TileHeight(x - 1, z)) * 0.5f;
                     float sz = (TileHeight(x, z + 1) - TileHeight(x, z - 1)) * 0.5f;
                     var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, (0.75f + Hash01(x, z, 42) * 0.5f) * (1f - 0.35f * density) * (1f - 0.45f * heath) * (1f - 0.5f * trail), 0), new Vector3(0, sz, 1));
                     var g = new Transform3D(slope, new Vector3(x, top, z));
-                    var tuftColor = PaintedGround.On
+                    // Painted grass clumps are turned, nudged and sized per tile, so they never line up in rows.
+                    if (PaintedGround.On)
+                    {
+                        float gx = x + (Hash01(x, z, 44) - 0.5f) * 0.6f, gz = z + (Hash01(x, z, 45) - 0.5f) * 0.6f;
+                        g = new Transform3D(slope * new Basis(Vector3.Up, Hash01(x, z, 46) * Mathf.Tau).Scaled(Vector3.One * (0.8f + Hash01(x, z, 47) * 0.45f)), new Vector3(gx, HeightAt(gx, gz), gz));
+                    }
+                    // Painted cards are tinted near white; fine grass (today's, and under
+                    // the mixed look) takes the ground's own colour at its roots.
+                    var tuftColor = PaintedGround.On && !PaintedGround.Mixed
                         ? PaintedGround.CardTint(TileColor(x, z, top, cleared: false, painted: false))
                         : TileColor(x, z, top, cleared: false);
                     tufts!.Add((g, tuftColor, custom));
@@ -523,7 +533,20 @@ public partial class Terrain : Node3D
         {
             // The art-reference prototype draws grass, ferns and flowers as the pack's
             // painted cards, which carry their own colours.
-            if (tufts != null) AddMulti(root, PaintedGround.GrassClump, tufts, PaintedGround.GrassCardMaterial, castShadow: false);
+            if (tufts != null)
+            {
+                // Mixed: today's fine carpet under every tile, painted clumps on one in four.
+                var clumps = tufts;
+                if (PaintedGround.Mixed)
+                {
+                    AddMulti(root, tuftMesh!, tufts, Look.GrassTufts, castShadow: false);
+                    clumps = tufts.FindAll(t => Hash01(Mathf.RoundToInt(t.Item1.Origin.X), Mathf.RoundToInt(t.Item1.Origin.Z), 49) < 0.25f)
+                        .ConvertAll(t => (t.Item1, PaintedGround.CardTint(t.Item2), t.Item3));
+                }
+                // Three clump variants, picked per tile.
+                for (int v = 0; v < PaintedGround.ClumpVariants; v++)
+                    AddMulti(root, PaintedGround.GrassClump(v), clumps.FindAll(t => Variant(Mathf.RoundToInt(t.Item1.Origin.X), Mathf.RoundToInt(t.Item1.Origin.Z), 48, PaintedGround.ClumpVariants) == v), PaintedGround.GrassCardMaterial, castShadow: false);
+            }
             AddMulti(root, PaintedGround.Card(PaintedGround.FernCards, 0.75f), PaintedGround.Whiten(ferns), PaintedGround.CardMaterial, castShadow: false);
             AddMulti(root, PaintedGround.Card(PaintedGround.FlowerCards, 0.35f), PaintedGround.Whiten(flowers), PaintedGround.CardMaterial, castShadow: false);
         }
