@@ -438,7 +438,8 @@ public static class WorkMotions
             {
                 // Hands come together in front of the chest and clap five times.
                 float up = Mathf.SmoothStep(0f, 1f, Mathf.Min(t / 0.25f, (1.8f - t) / 0.3f));
-                float clap = 0.5f + 0.5f * Mathf.Cos(t * Mathf.Tau * 3.2f);
+                // Apart 1, together 0: the hands meet at t = 0.25 + n / 3.2 s (Audio's EmoteSounds).
+                float clap = 0.5f - 0.5f * Mathf.Cos((t - 0.25f) * Mathf.Tau * 3.2f);
                 Arm(p, true, -1.0f * up, (-0.32f + 0.18f * clap) * up, -1.5f * up);
                 Arm(p, false, -1.0f * up, (0.32f - 0.18f * clap) * up, -1.5f * up);
                 p[Joint.Neck].X = -0.08f * up;
