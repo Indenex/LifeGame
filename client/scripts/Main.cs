@@ -95,6 +95,20 @@ public partial class Main : Node3D
         useKey.Player = () => me.Position;
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
+        // The hotbar's number keys (ui-19) rest while something else has the keys.
+        hud.Hotbar.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning || social.Typing;
+        hud.Hotbar.Note = hud.Note;
+        // The bag in the I panel (ui-18): drags go to the hotbar, the worn slots or the ground.
+        hud.Hotbar.ShowOverPanels = () => equipment.IsOpen;
+        equipment.Bag.Use = hud.Hotbar.UseItem;
+        equipment.Bag.TakeOff = slot => equipment.Link.TakeOff(slot);
+        equipment.Bag.ClearHotbar = i => hud.Hotbar.Link.Set(i, null);
+        equipment.Bag.OverPanel = at => equipment.Covers(at) || hud.Hotbar.RowRect.HasPoint(at);
+        equipment.Bag.PlaceOrDrop = (item, quality) =>
+        {
+            if (HotbarBar.Placeable(item)) { equipment.Close(); hud.Hotbar.RequestPlace(item); }
+            else equipment.Bag.Link.Drop(item, quality);
+        };
         social.HideChip = () => survival.Mourning;
         // What you wear (ui-10, D-074).
         equipment.Note = hud.Note;
@@ -324,6 +338,8 @@ public partial class Main : Node3D
 
         conn.Db.Player.OnInsert += (_, p) => OnPlayer(p);
         conn.Db.Player.OnUpdate += (_, _, p) => OnPlayer(p);
+        conn.Db.PlayerLook.OnInsert += (_, l) => OnPlayerLook(l);
+        conn.Db.PlayerLook.OnUpdate += (_, _, l) => OnPlayerLook(l);
         // Only online players are subscribed, so a delete means they logged off.
         conn.Db.Player.OnDelete += (_, p) =>
         {
@@ -345,6 +361,8 @@ public partial class Main : Node3D
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
         equipment.Attach(new ServerEquipLink(conn));
+        hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
+        equipment.Bag.Link = new ServerBagLink(conn);
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
@@ -428,12 +446,26 @@ public partial class Main : Node3D
     void OnPlayer(Player p)
     {
         names[p.PlayerId] = p.Name;
-        if (p.Identity == myIdentity) myId = p.PlayerId;
+        if (p.Identity == myIdentity)
+        {
+            myId = p.PlayerId;
+            if (conn?.Db.PlayerLook.PlayerId.Find(p.PlayerId) is { } chosen)
+                me.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard));
+            else me.SetLook(p.PlayerId);
+        }
         if (others.TryGetValue(p.PlayerId, out var avatar))
         {
             avatar.SetPlayerName(p.Name);
             avatar.Visible = p.Online;
         }
+    }
+
+    // A player's chosen look (model-3): applied to their avatar over the id default.
+    void OnPlayerLook(PlayerLook l)
+    {
+        var look = HumanFigure.Appearance.From(l.Skin, l.Hair, l.Cut, l.Beard);
+        if (myId != 0 && l.PlayerId == myId || (myId == 0 && IsMine(l.PlayerId))) me.SetLook(look);
+        else if (others.TryGetValue(l.PlayerId, out var avatar)) avatar.SetLook(look);
     }
 
     void OnPlayerPos(PlayerPos p, bool inserted)
@@ -452,6 +484,9 @@ public partial class Main : Node3D
         if (!others.TryGetValue(p.PlayerId, out var avatar))
         {
             avatar = new Avatar(names.GetValueOrDefault(p.PlayerId, "Wanderer")) { Remote = true, Position = at };
+            if (conn?.Db.PlayerLook.PlayerId.Find(p.PlayerId) is { } chosen)
+                avatar.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard));
+            else avatar.SetLook(p.PlayerId);
             others[p.PlayerId] = avatar;
             view.AddChild(avatar);
         }

@@ -131,6 +131,10 @@ public partial class Avatar : Node3D
         if (item is { } it) fist.AddChild(new MeshInstance3D { Mesh = ItemModels.HeldMesh(it) });
     }
 
+    // This player's own look (skin, hair, cut, beard), from their player id (Modeling).
+    public void SetLook(uint playerId) => PlayerModel.SetLook((Skeleton3D)figure, HumanFigure.Appearance.For(playerId));
+    public void SetLook(HumanFigure.Appearance look) => PlayerModel.SetLook((Skeleton3D)figure, look);
+
     public void SetPlayerName(string name) => nameplate.Text = name;
 
     // Claims tints a name red while that player is marked for striking someone down.
