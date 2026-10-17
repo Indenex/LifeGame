@@ -21,8 +21,10 @@ Justin (via the PM, 2026-10-17): "this asset pack ... is closer to the style I w
 
 - 2026-10-17 16:30: --view-bench (headless, all chunks per radius, before culling and before Godot's mesh LOD). Ours vs kit trees: radius 6: 16.66 M vs 14.09 M triangles, 4758 vs 3540 draw calls (+3724 vs +2506 shadow); radius 8: 27.64 M vs 23.45 M, 8043 vs 6007 (+6273 vs +4237); radius 12: 52.84 M vs 44.86 M, 16170 vs 12192. Kit trees are cheaper (one mesh per tree instead of near+far painted parts). Fixed: NatureKit.Tree prewarms itself on the main thread when nothing has yet. Birch and twisted leaves default to green until autumn (PM default while Justin picks).
 
+- 2026-10-17 16:45: boulders from the kit behind graphics/naturekit_rocks (or --naturekit): Terrain's boulder line calls NatureKit.Rock(variant); each kit rock is scaled to our variant's footprint (collision unchanged), sunk 12%, and takes half the world stone hue plus each one's darkening. Bench radius 8 with kit trees+rocks: 23.96 M triangles, 6017 draws (rocks add ~2%). River stones stay ours.
+
 ## Open questions / blockers
 - Look pick for Justin (via the PM): how far to take it.
 
 ## Next step
-Rocks swap behind a setting (graphics/naturekit_rocks): find where Terrain places painted rocks and hook NatureKit.Rock like the trees.
+Wait for the Render lane's in-game shots (ours vs --naturekit) and Justin's pick; meanwhile start village props (baskets, barrels, crates, fences) from /mnt/project-files/assets-incoming/villagekit-godot.zip into client/assets/quaternius/village/.

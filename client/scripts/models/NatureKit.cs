@@ -24,6 +24,20 @@ public static class NatureKit
     // --naturekit on the command line, or graphics/naturekit_trees = 1 in the settings.
     static readonly bool Wanted = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--naturekit") >= 0;
     public static bool Trees => Wanted || Settings.Get("graphics", "naturekit_trees", 0) == 1;
+    // The world's boulders from the kit: --naturekit too, or graphics/naturekit_rocks = 1.
+    public static bool Rocks => Wanted || Settings.Get("graphics", "naturekit_rocks", 0) == 1;
+
+    // Our boulder variants (PropMeshes.Rock: kind v % RockKinds, second form above that) as
+    // the kit's six: the first forms are its four medium rocks, the second its two big
+    // ones and two mediums again (each placed at its own yaw and size).
+    static string RockName(int v) => (v / PropMeshes.RockKinds, v % PropMeshes.RockKinds) switch
+    {
+        (0, var k) => $"Rock_Medium_{k + 1}",
+        (_, 0) => "Rock_Big_1",
+        (_, 1) => "Rock_Big_2",
+        (_, var k) => $"Rock_Medium_{k - 1}",
+    };
+    static readonly Dictionary<int, (Mesh Mesh, Material Material, float Scale, float Sink)> RockMeshes = new();
 
     // Our tree variants drawn as the kit's: broadleaf v as CommonTree_(v+1), pine v as Pine_(v+1).
     static string TreeName(bool pine, int v) => pine ? $"Pine_{v + 1}" : $"CommonTree_{v + 1}";
@@ -33,8 +47,20 @@ public static class NatureKit
     static bool prewarmed;
     public static void Prewarm()
     {
-        if (!Trees || prewarmed) return;
+        if (prewarmed || !(Trees || Rocks)) return;
         prewarmed = true;
+        if (Rocks)
+            for (int v = 0; v < PropMeshes.RockVariants; v++)
+                if (Mesh(RockName(v)) is { } rock && rock.SurfaceGetMaterial(0) is { } look)
+                {
+                    // As broad as our boulder of the same variant (its collision is that
+                    // size), and sunk a little so it sits in the ground on a slope.
+                    var ours = PropMeshes.Rock(v).GetAabb();
+                    var kit = rock.GetAabb();
+                    float scale = (ours.Size.X + ours.Size.Z) / (kit.Size.X + kit.Size.Z);
+                    lock (RockMeshes) RockMeshes[v] = (rock, look, scale, kit.Size.Y * scale * 0.12f);
+                }
+        if (!Trees) return;
         for (int v = 0; v < PaintedTrees.Variants; v++)
             foreach (bool pine in new[] { false, true })
                 if (Mesh(TreeName(pine, v)) is { } mesh)
@@ -52,6 +78,22 @@ public static class NatureKit
         // Chunks built on the main thread (the view bench) before any worker started.
         if (!prewarmed && OS.GetThreadCallerId() == OS.GetMainThreadId()) Prewarm();
         lock (TreeMeshes) return TreeMeshes.TryGetValue((pine, variant), out var t) ? t : null;
+    }
+
+    // The kit boulder for one of our rock variants: its mesh, the material Terrain batches it
+    // under, and the scale and sink it stands at (Placed), or null.
+    public static (Mesh Mesh, Material Material, float Scale, float Sink)? Rock(int variant)
+    {
+        if (!prewarmed && OS.GetThreadCallerId() == OS.GetMainThreadId()) Prewarm();
+        lock (RockMeshes) return RockMeshes.TryGetValue(variant, out var r) ? r : null;
+    }
+
+    // One placement scaled by a kit model's extra scale and sunk by `sink` metres (per unit
+    // of the placement's own scale).
+    public static (Transform3D, Color, Color) Placed((Transform3D, Color, Color) item, float scale, float sink)
+    {
+        var basis = item.Item1.Basis;
+        return (new Transform3D(basis * Basis.FromScale(Vector3.One * scale), item.Item1.Origin - basis.Y * sink), item.Item2, item.Item3);
     }
 
     // Terrain's tree placements scaled by a kit tree's extra scale.
@@ -225,6 +267,9 @@ public static class NatureKit
             // Leaf cards: the crown is lit as one soft mass rather than card by card.
             m.SetShaderParameter("crown_normals", kind == Kind.Leaves ? 1f : 0f);
             m.SetShaderParameter("rim", kind is Kind.Rock ? 1f : 0f);
+            // Rocks take half the hue of the world's stone tint and each one's own darkening.
+            m.SetShaderParameter("tint_blend", kind is Kind.Rock ? 0.5f : 0f);
+            m.SetShaderParameter("tint_ref", Look.WorldRock.Luminance);
             m.SetShaderParameter("shade_tint", kind switch
             {
                 Kind.Rock => new Color(0.66f, 0.64f, 0.76f),
@@ -276,6 +321,8 @@ public static class NatureKit
         uniform float autumn = 0.0;
         uniform float crown_normals = 0.0;
         uniform float rim = 0.0;
+        uniform float tint_blend = 0.0;
+        uniform float tint_ref = 0.6;
         uniform vec3 shade_tint : source_color = vec3(0.66, 0.64, 0.8);
         const float BAND_SOFT = 0.1;
         const float BAND_BREAK = 0.0;
@@ -337,6 +384,10 @@ public static class NatureKit
                 if (has_normal) NORMAL_MAP = texture(normal_tex, UV).rgb;
             } else if (mode == 4) {
                 color *= vertex_r;
+            } else if (tint_blend > 0.0) {
+                // The instance colour Terrain gives a boulder: its hue (half) and its darkening.
+                float lum = max(dot(COLOR.rgb, vec3(0.3, 0.59, 0.11)), 0.05);
+                color *= mix(vec3(1.0), COLOR.rgb / lum, tint_blend) * min(lum / tint_ref, 1.0);
             }
             if (autumn > 0.0 && season_autumn > 0.0) {
                 // Each tree its own mix of gold, orange and red, brown before they fall;

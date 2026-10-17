@@ -478,6 +478,8 @@ public partial class Terrain : Node3D
                     if (pebble)
                         landmarks.Put(PropMeshes.RiverStone(Regional(x, z, 95, PropMeshes.RiverStoneVariants)), Painted.Rock,
                             (at.ScaledLocal(Vector3.One * size * 3.3f), stone.Item2, stone.Item3));
+                    else if (NatureKit.Rocks && NatureKit.Rock(RockVariant(x, z)) is var (kitRock, kitLook, kitScale, kitSink))
+                        landmarks.Put(kitRock, kitLook, NatureKit.Placed(stone, kitScale, kitSink));
                     else
                         landmarks.Put(PropMeshes.Rock(RockVariant(x, z)), Painted.Rock, stone);
                     continue;
