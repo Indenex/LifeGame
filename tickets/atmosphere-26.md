@@ -3,7 +3,7 @@ Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_review
 Branch: claude/atmosphere-26-wading
-PR: (see Progress log)
+PR: #429
 
 ## Goal
 The PM's pick (2026-10-17), after bugfix-32 (#414) let players wade into ponds and float in deep water. The water answers: soft painted ripple rings around a wading or floating player, a small splash on entering, and wet, darker legs up to the waterline that dry off after leaving. Stylised to match docs/art-reference. Audio is asked for the sounds. Done: Render shots of wading, floating and just out of the water, and a PR green.
@@ -21,4 +21,4 @@ The PM's pick (2026-10-17), after bugfix-32 (#414) let players wade into ponds a
 - Other players don't get ripples or wet legs yet; that needs per-player state. A later follow-up if wanted.
 
 ## Next step
-Open the PR and send the Render request: --time-of-day=0.45 at a pond, the player wading knee-deep, floating, and just stepped out.
+Wait for #429 CI and send the PM the green sha. Render request sent (wading, floating, splash, just out). Audio request sent via the PM.
