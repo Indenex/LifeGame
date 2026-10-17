@@ -43,19 +43,30 @@ def link(name, me):
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
 
-# --- Head: knapped wedge.
-HEAD_C = np.array([0.0, -0.47, 0.045])
+# --- Head: knapped wedge, the convex hull of a few chosen points, so each facet is one
+# big flat knapping scar. A narrow butt, a fat middle, and a flared curved edge at +Z.
+HEAD_C = np.array([0.0, -0.475, 0.0])
+pts = []
+for k in range(7):                                  # the edge: a curved bit
+    a = (k / 6 - 0.5) * 1.9
+    pts.append((0.0, 0.088 * math.sin(a * 0.85), 0.165 + 0.022 * (math.cos(a) - 1)))
+for sx in (-1, 1):
+    for k in range(4):                              # cheeks just behind the edge
+        a = (k / 3 - 0.5) * 1.7
+        pts.append((sx * 0.016, 0.07 * math.sin(a), 0.12 + 0.015 * math.cos(a)))
+    for k in range(4):                              # the fat middle, where the haft holds it
+        a = (k / 3 - 0.5) * 2.0
+        pts.append((sx * 0.036, 0.05 * math.sin(a), 0.03 + 0.012 * math.cos(a)))
+    for k in range(3):                              # a narrow rounded butt
+        a = (k / 2 - 0.5) * 1.6
+        pts.append((sx * 0.022, 0.034 * math.sin(a), -0.06 + 0.01 * math.cos(a)))
+pts.append((0.0, 0.0, -0.075))
 bm = bmesh.new()
-bmesh.ops.create_icosphere(bm, subdivisions=2, radius=1.0)
-for v in bm.verts:
-    x, y, z = v.co.x, v.co.z, -v.co.y          # Godot axes of the unit sphere
-    t = (z + 1) / 2                             # 0 at the back, 1 at the edge
-    thick = 0.042 * (1 - 0.82 * t ** 1.6)       # thin towards the edge
-    h = 0.07 * (0.75 + 0.35 * t)                # flares a little towards the edge
-    p = np.array([x * thick, y * h, z * 0.115]) + HEAD_C
-    # Knapping: push each vertex in or out a little, so facets are big and uneven.
-    p[0] += np.sign(x) * (rng.random() - 0.5) * 0.008 * (1 - t)
-    v.co = B(*p)
+for q in pts:
+    j = (rng.random(3) - 0.5) * np.array([0.006, 0.008, 0.006])
+    bm.verts.new(B(*(np.array(q) + j + HEAD_C)))
+bmesh.ops.convex_hull(bm, input=bm.verts)
+bmesh.ops.triangulate(bm, faces=bm.faces)
 bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
 me = bpy.data.meshes.new("Head")
 bm.to_mesh(me)
@@ -91,15 +102,15 @@ def tube(name, path, radii, seg=12):
 
 
 n = 28
-ys = np.linspace(0.13, -0.6, n)
-path = np.stack([np.zeros(n), ys, 0.006 * np.sin((ys + 0.6) / 0.73 * math.pi)], -1)
+ys = np.linspace(0.13, -0.56, n)
+path = np.stack([np.zeros(n), ys, 0.006 * np.sin((ys + 0.56) / 0.69 * math.pi)], -1)
 radii = []
 for y in ys:
-    r = 0.026 + 0.002 * (y + 0.6) / 0.73                    # a little thicker at the grip
+    r = 0.026 + 0.002 * (y + 0.56) / 0.69                    # a little thicker at the grip
     knob = max(0.0, 1 - abs(y - 0.11) / 0.03)
     r += 0.008 * knob
     r *= 0.6 + 0.4 * min(1, (0.13 - y) / 0.012) ** 0.5      # rounded end at the grip
-    r *= 0.75 + 0.25 * min(1, (y + 0.6) / 0.02) ** 0.5      # rounded end below the head
+    r *= 0.75 + 0.25 * min(1, (y + 0.56) / 0.02) ** 0.5      # rounded end below the head
     radii.append(r)
 haft = tube("Haft", path, radii, seg=10)
 sub = haft.modifiers.new("sub", "SUBSURF")
@@ -115,7 +126,7 @@ m2.polygons.foreach_set("use_smooth", np.ones(len(m2.polygons), bool))
 def cord_points(kind):
     pts = []
     if kind in ("above", "below"):
-        y0, y1, turns = (-0.405, -0.44, 3) if kind == "above" else (-0.505, -0.545, 3)
+        y0, y1, turns = (-0.405, -0.44, 3) if kind == "above" else (-0.51, -0.54, 3)
         for i in range(turns * 14 + 1):
             t = i / (turns * 14)
             a = t * turns * 2 * math.pi
