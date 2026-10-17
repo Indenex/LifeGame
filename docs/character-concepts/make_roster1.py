@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Roster 1 handoff pack for Modeling: turnaround sheets for Justin's picks (Pebble, Kit, Capling, Bramble).
+"""Roster 1 handoff pack for Modeling: turnaround sheets for Justin's picks (Pebble and Bramble; Kit and Capling deferred).
 
 Uses the round-4 shared base (Justin locked round 4's level of cute). Views: front, three-quarter,
 side and back. Writes SVGs into roster-1/; render.sh turns them into PNGs.
@@ -19,12 +19,6 @@ PICKS = [
         ("skin", "#a8c27a"), ("belly plate", "#e8d9a0"), ("shell", "#8a6a48"), ("shell rim", "#c9a46a"),
         ("flower", "#f6f0e2"), ("flower heart", "#f2cf5a"), ("feet", "#8fa866")],
      [("back: shell", "Spine (rigid, no new bone)"), ("front: belly plate", "Spine"), ("head-top: flower", "Head"), ("colour: green skin", "all")]),
-    ("kit", "Kit", "Fox", r2.kit2, [
-        ("fur", "#e8894a"), ("cream", "#f6e6c8"), ("ear tips, boots", "#4a3530"), ("scarf", "#6f9fb4")],
-     [("ears: triangle", "Head"), ("face: muzzle", "Head"), ("tail: brush", "Hips (stiff; one optional bone later)"), ("front: scarf", "Neck / Spine"), ("colour: fur + cream belly", "all")]),
-    ("capling", "Capling", "Mushroom", r2.capling2, [
-        ("stem skin", "#f1e2c4"), ("cap", "#d9604a"), ("spots", "#f8ecd6"), ("gills", "#e7cfa8"), ("boots", "#8b5e3c")],
-     [("head-top: spotted cap + gill ring", "Head"), ("colour: cream stem", "all")]),
     ("bramble", "Bramble", "Chibi human", r2.bramble2, [
         ("skin", "#f2c9a0"), ("hair", "#9a5a34"), ("tunic", "#6f8f4e"), ("trousers", "#6a5a4c"), ("boots", "#7b4e33"), ("strap", "#8b5e3c")],
      [("head-top: hair", "Head"), ("outfit: tunic", "Spine + Hips (skinned)"), ("front: satchel strap", "Spine"), ("colour: skin, hair", "all")]),
@@ -76,14 +70,14 @@ def sheet(key, name, kind, fn, colours, slots):
 
 def lineup():
     S, slot = 240, 230
-    W, H, gy = 160 + slot * 5, 520, 430
+    W, H, gy = 300 + slot * 3, 520, 430
     b = ground(W, gy) + fence(70, gy, S) + text(70, gy + 40, "1 m fence", 13)
     for i, (key, name, kind, fn, _, _) in enumerate(PICKS):
         x = 70 + slot * (i + 1)
         g, _ = draw(fn, 1, False, x, gy, S)
         b += g + text(x, gy + 40, name, 18) + text(x, gy + 60, kind, 12, "#5a4636")
     b += table(W - 130, gy, S) + text(W - 130, gy + 40, "0.75 m table", 13)
-    b += text(24, 40, "Roster 1 (Justin's picks): Pebble, Kit, Capling, Bramble on the round-4 shared base", 24, anchor="start")
+    b += text(24, 40, "Roster 1 (Justin's picks): Pebble and Bramble on the round-4 shared base", 24, anchor="start")
     write("roster-1-lineup", W, H, b)
 
 
