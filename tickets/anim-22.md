@@ -3,7 +3,7 @@ Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
 Status: in_review
 Branch: claude/anim-22 (from main)
-PR: (see below)
+PR: #721
 
 ## Goal
 When a chibi sneaks (Ctrl), it goes up on tiptoe instead of the adult's deep crouch. Knees soft, heels raised, chest leaning forward with the head up, and the hands held up in front like paws. Tall figures keep the crouch, and the landing dip after a jump is unchanged. This is the PM's option (a), sent to Justin as my recommendation.
