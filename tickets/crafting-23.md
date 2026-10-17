@@ -42,3 +42,7 @@ Client subscription queries no longer go in `Subscriptions.cs`. When main is nex
 
 ## Note 2026-10-17: showcase views moved (#679)
 New showcase views go in `client/scripts/models/Showcase.Crafting.cs` as `[ShowcaseView("name")]` methods, not in `Showcase.cs`'s list. If this branch adds device views to `Showcase.cs`, move them there when main is next merged (with the renumber to 21–23 and the `Subscriptions.Crafting.cs` move above).
+
+## Update 2026-10-17: final numbers
+- Main has HenCoop 18, StoneHearth 19, Sundial 20. The devices are kinds 21 (SettlingTub), 22 (CrushingBlock), 23 (TemperingTrough): `Kind =` in `shared/structures/StructuresCrafting.cs` and the enum positions in `Building.cs`. Subscriptions are in `Subscriptions.Crafting.cs`. Builds, `tools/upgrade-check.sh origin/main` and the full CraftCheck (incl. the settling-tub case) pass locally.
+- Next step: CI on the PR (#285), send the green sha to the PM; #532's startup check will confirm the numbering.
