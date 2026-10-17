@@ -403,7 +403,7 @@ public partial class Terrain : Node3D
                     // boulders share a shape, as stone of one kind would.
                     bool pebble = shore && rocky < 0.5f;
                     float size = pebble ? 0.2f + Hash01(x, z, 22) * 0.2f : 0.3f + Hash01(x, z, 22) * 0.55f;
-                    var stone = (at.ScaledLocal(Vector3.One * size), Look.Rock.Darkened(Hash01(x, z, 20) * 0.15f), custom with { B = 1f });
+                    var stone = (at.ScaledLocal(Vector3.One * size), Look.WorldRock.Darkened(Hash01(x, z, 20) * 0.15f), custom with { B = 1f });
                     if (pebble)
                         landmarks.Put(PropMeshes.RiverStone(Regional(x, z, 95, PropMeshes.RiverStoneVariants)), Look.RockSurface,
                             (at.ScaledLocal(Vector3.One * size * 3.3f), stone.Item2, stone.Item3));
@@ -456,6 +456,10 @@ public partial class Terrain : Node3D
                     flowers.Add((Plant(x + 0.5f - Hash01(x, z, 58), top, z + 0.5f - Hash01(x, z, 59), yaw, 1f),
                         Undergrowth.FlowerColors[kind].Lightened((Hash01(x, z, 66) - 0.5f) * 0.1f), custom with { A = SeasonFlower }));
                 }
+                // And the odd lone white flower between the patches (env-17).
+                else if (density < 0.2f && heath < 0.5f && !shore && Hash01(x, z, 67) < 0.04f)
+                    flowers.Add((Plant(x + 0.5f - Hash01(x, z, 68), top, z + 0.5f - Hash01(x, z, 69), yaw, 0.8f + Hash01(x, z, 70) * 0.3f),
+                        Look.FlowerWhite.Darkened(Hash01(x, z, 71) * 0.06f), custom with { A = SeasonFlower }));
 
                 // A carpet of grass over each grassy tile, rooted in the tile's own color
                 // so blades and ground read as one surface.
