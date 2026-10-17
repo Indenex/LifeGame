@@ -280,7 +280,9 @@ public partial class WarmLook : Node
             var now = c.GetThemeColor(key);
             string meta = "warm_c_" + key;
             if (c.HasMeta(meta) && c.GetMeta(meta).AsColor() == now) continue;
-            var warm = Recolour(now);
+            // Cream hover words turn a soft coral ink, so flat rows (roster names, menu items) still
+            // light up under the mouse on paper instead of staying plain brown (ui-72).
+            var warm = key == "font_hover_color" && IsCream(now) ? new Color(Coral.Darkened(0.3f), now.A) : Recolour(now);
             c.AddThemeColorOverride(key, warm);
             c.SetMeta(meta, warm);
         }
@@ -302,7 +304,7 @@ public partial class WarmLook : Node
             if (!c.HasThemeStyleboxOverride(key) || c.GetThemeStylebox(key) is not StyleBoxFlat flat) continue;
             if (flat.HasMeta("warm")) continue;
             // Bars keep their thin corners.
-            var warm = Restyle(flat, round: key is not ("background" or "fill" or "slider" or "grabber_area" or "grabber_area_highlight"));
+            var warm = PaperChip(c, key, flat) ?? Restyle(flat, round: key is not ("background" or "fill" or "slider" or "grabber_area" or "grabber_area_highlight"));
             warm.SetMeta("warm", true);
             c.AddThemeStyleboxOverride(key, warm);
         }
@@ -318,10 +320,43 @@ public partial class WarmLook : Node
         // Pictures and swatches keep their own colours; a faded modulate keeps its fade.
     }
 
+    static bool IsCream(Color c) => c.R > 0.8f && c.G > 0.75f && c.B > 0.6f;
+
+    // The dark look's buttons and text boxes were a faint cream wash (10 to 32%) on the dark
+    // frame; re-inked as is they became faint brown smudges (the claim and town panels, ui-72).
+    // On paper they become the theme's own paper buttons and writing slips instead: the faint
+    // wash is a plain button, a stronger one its hover (butter) or press. Their margins stay.
+    static StyleBoxFlat? PaperChip(Control c, string key, StyleBoxFlat old)
+    {
+        if (!IsCream(old.BgColor) || old.BgColor.A > 0.45f || c is not (Button or LineEdit)) return null;
+        var s = (StyleBoxFlat)old.Duplicate();
+        float a = old.BgColor.A;
+        if (c is LineEdit)
+        {
+            s.BgColor = Paper.Lightened(0.4f);
+            s.BorderColor = new Color(key == "focus" ? Coral : Ink, key == "focus" ? 0.8f : 0.28f);
+        }
+        else if (key == "hover" || a >= 0.15f && a < 0.27f && key != "pressed")
+        {
+            s.BgColor = Butter.Lerp(Paper, 0.55f);
+            s.BorderColor = new Color(Ink, 0.35f);
+        }
+        else
+        {
+            s.BgColor = key == "pressed" || a >= 0.27f ? Paper.Darkened(0.13f) : Paper.Darkened(0.07f);
+            s.BorderColor = new Color(Ink, key == "pressed" ? 0.35f : 0.22f);
+        }
+        s.SetBorderWidthAll(2);
+        s.CornerRadiusTopLeft = s.CornerRadiusTopRight = s.CornerRadiusBottomLeft = s.CornerRadiusBottomRight = Mathf.Max(old.CornerRadiusTopLeft, 12);
+        return s;
+    }
+
     static StyleBoxFlat Restyle(StyleBoxFlat old, bool round = true)
     {
         var s = (StyleBoxFlat)old.Duplicate();
-        s.BgColor = Recolour(old.BgColor, ground: true);
+        // A light ground (the town board's parchment notes) is paper already: a shade darker than
+        // the window, not the dark ink a light wash turns into (ui-72).
+        s.BgColor = IsCream(old.BgColor) && old.BgColor.A > 0.45f ? new Color(Paper.Darkened(0.06f), old.BgColor.A) : Recolour(old.BgColor, ground: true);
         s.BorderColor = Recolour(old.BorderColor);
         if (old.ShadowSize > 0) s.ShadowColor = new Color(0.25f, 0.12f, 0.08f, Mathf.Min(old.ShadowColor.A, 0.18f));
         if (!round) return s;
@@ -339,7 +374,7 @@ public partial class WarmLook : Node
     public static Color Recolour(Color c, bool ground = false)
     {
         if (c.A <= 0.001f) return c;
-        if (c.R > 0.8f && c.G > 0.75f && c.B > 0.6f) return new Color(Ink, Mathf.Clamp(c.A * 1.1f, 0f, 1f));
+        if (IsCream(c)) return new Color(Ink, Mathf.Clamp(c.A * 1.1f, 0f, 1f));
         float lum = c.Luminance;
         if (lum < 0.3f)
         {
