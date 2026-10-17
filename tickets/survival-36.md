@@ -1,9 +1,9 @@
 # survival-36: Wild roots, a winter-safe wild food dug with a tool
 Lane: Survival
 Owner: Survival thread (session_01BMpUvVCwwzu1SEuBf16iFd)
-Status: done (models pending)
+Status: in_review
 Branch: claude/survival-roots
-PR: #856 (merged, main 53ed775)
+PR: #856 (merged, main 53ed775); models PR from claude/survival-roots-models
 
 ## Goal
 Leafy patches of wild roots (a rosette with one or two white-flowered stalks, like wild carrot) in open meadow, no standing tree within 3 m. With a digging tool equipped (digging stick or spade), G "Dig up roots" gives 2 wild roots (Item.WildRoots = 165, 0.09 food and 0.01 water each) in any season, so winter is not foodless; without one the server says "You need a digging stick to dig up roots". A dug patch shows a mound of turned earth and comes back after 20 minutes. Digging wears the tool a little and plays the dig motion. Lane default (option 2 earlier); numbers low on the D-075 curve. It is one more ForageDef (D-206): `ForageDef` gains `Tool`/`NoTool`, and `ForageBush.Kind` 2 is roots.
@@ -16,7 +16,9 @@ Leafy patches of wild roots (a rosette with one or two white-flowered stalks, li
 
 - 2026-10-17 16:50: Modeling's wild carrot (model-35, `WildRoots.Patch/Dug/Material`, `ItemModels.WildRootItem`) is on #853. Wired on claude/survival-roots-models: RootPatch draws the two meshes, Setup sets WildRootItem, the stand-in root left SurvivalItemLook. It compiles only once #853 is on main.
 
+- 2026-10-17 17:50: #853 merged (main 505344e); merged main into claude/survival-roots-models, no conflicts. PR opened for the wild carrot.
+
 ## Open questions / blockers
 
 ## Next step
-Once #853 merges, merge main into claude/survival-roots-models, open the PR, wait for CI and send the green sha to the PM.
+Wait for CI on the models PR and send the green sha to the PM.
