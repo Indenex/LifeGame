@@ -20,6 +20,9 @@ public partial class BuildMenu : CanvasLayer
     public Func<Item, uint> Carried = item => item is Item.Stick or Item.Fiber ? 12u : 0u;
     // Starts placing a kind (House building's ghost).
     public Action<int> Place = _ => { };
+    // True when a kind can't be laid out where the player stands because it needs a claim
+    // (Main sets it from House building's NeedsClaimHere).
+    public Func<int, bool> NeedsClaim = _ => false;
 
     const int Thumb = 112;
     public bool IsOpen => panel.Visible;
@@ -130,7 +133,8 @@ public partial class BuildMenu : CanvasLayer
     {
         var costs = Costs(kind);
         bool afford = costs.All(c => Carried(c.item) >= c.count);
-        var tile = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(Thumb + 24, Thumb + 76) };
+        bool claimless = NeedsClaim(kind);
+        var tile = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(Thumb + 24, Thumb + 76 + (claimless ? 18 : 0)) };
         var style = new StyleBoxFlat { BgColor = new Color(0.09f, 0.10f, 0.07f, 0.6f), BorderColor = new Color(Look.Cream, 0.22f) };
         style.SetBorderWidthAll(1);
         style.SetCornerRadiusAll(10);
@@ -140,8 +144,9 @@ public partial class BuildMenu : CanvasLayer
         tile.AddThemeStyleboxOverride("hover", hover);
         tile.AddThemeStyleboxOverride("pressed", hover);
         tile.Pressed += () => { Close(); Place(kind); };
-        tile.Modulate = new Color(1, 1, 1, afford ? 1f : 0.45f);
-        tile.TooltipText = afford ? "" : "You don't carry enough yet";
+        tile.Modulate = new Color(1, 1, 1, afford && !claimless ? 1f : 0.45f);
+        tile.TooltipText = claimless ? "Needs a claim: stand inside your claim to build this"
+            : afford ? "" : "You don't carry enough yet";
 
         var column = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         column.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -184,6 +189,14 @@ public partial class BuildMenu : CanvasLayer
             row.AddChild(n);
         }
         column.AddChild(row);
+        if (claimless)
+        {
+            var note = Hud.Text("Needs a claim", 12);
+            note.HorizontalAlignment = HorizontalAlignment.Center;
+            note.Modulate = new Color(1f, 0.75f, 0.45f);
+            note.MouseFilter = Control.MouseFilterEnum.Ignore;
+            column.AddChild(note);
+        }
         return tile;
     }
 
