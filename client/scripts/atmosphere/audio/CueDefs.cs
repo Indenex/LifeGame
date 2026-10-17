@@ -55,4 +55,149 @@ public static class CueDefs
         new CueLayer(Src.Noise, 0.22f, 0.07f, 0.25f, 800f, 3500f, 0.01f),
         new CueLayer(Src.Noise, 0.18f, 0.1f, 0.08f, 2000f, 6000f, 0.02f),
     });
+
+    // --- Cues converted from the Cue enum (audio-9 onward): the enum value stays (callers and
+    // saved ids don't change) and SoundMix.Play(Cue) plays the entry below instead of old code.
+
+    // Place: something set on the ground: a dull knock and a scuff.
+    public static readonly CueDef Place = new("cue.place", 0.4f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.05f, 0.13f, 95f, 95f, 0.004f),
+        new CueLayer(Src.Noise, 0f, 0.04f, 0.12f, 20f, 1200f, 0.004f),
+    });
+
+    // Hit: a blow landing: a dull thud dropping a little in pitch and a slap of cloth and flesh.
+    public static readonly CueDef Hit = new("cue.hit", 0.4f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.07f, 0.15f, 130f, 108f, 0.004f),
+        new CueLayer(Src.Noise, 0f, 0.03f, 0.24f, 600f, 1800f, 0.004f),
+    });
+
+    // Crit: a sneak attack's bonus: the same thud, a sharp crack and a short bright ring.
+    public static readonly CueDef Crit = new("cue.crit", 0.7f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.09f, 0.16f, 130f, 108f, 0.004f),
+        new CueLayer(Src.Noise, 0f, 0.012f, 0.115f, 2000f, 6000f, 0.004f),
+        new CueLayer(Src.Tone, 0.02f, 0.14f, 0.04f, 1480f, 1480f, 0.004f),
+    }, Send: 0.1f);
+
+    // Jump: the push-off: a quick scuff of the ground and cloth and a small lift of breath.
+    public static readonly CueDef Jump = new("cue.jump", 0.3f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.05f, 0.3f, 900f, 2400f, 0.004f),
+        new CueLayer(Src.Noise, 0f, 0.1f, 0.06f, 20f, 2200f, 0.1f),
+    });
+
+    // A wooden bar struck: the fundamental, its bright 3.9x partial, and two quiet echoes after it
+    // (the journal's chime, once in Cues). Tones start at phase 0 when their layer starts.
+    static void Bar(List<CueLayer> into, float freq, float at, float gain)
+    {
+        (float Delay, float Echo)[] echoes = { (0f, 1f), (0.23f, 0.22f), (0.47f, 0.1f) };
+        foreach (var (delay, echo) in echoes)
+        {
+            into.Add(new CueLayer(Src.Tone, at + delay, 0.3125f, gain * echo, freq, freq, 0.004f));
+            into.Add(new CueLayer(Src.Tone, at + delay, 0.0714f, gain * echo * 0.25f, freq * 3.9f, freq * 3.9f, 0.004f));
+        }
+    }
+
+    // Learn: one faint wooden note, G5: something new in the journal.
+    public static readonly CueDef Learn = new("cue.learn", 1.6f, Bars(0.017f, (783.99f, 0f, 0.55f)), Send: 0.6f);
+
+    // Skill up: D5 then A5 on a wooden bar, an open fifth: a skill earned a new title.
+    public static readonly CueDef SkillUp = new("cue.skillup", 2.2f, Bars(0.027f, (587.33f, 0f, 1f), (880f, 0.16f, 0.8f)), Send: 0.6f);
+
+    static CueLayer[] Bars(float scale, params (float Freq, float At, float Gain)[] notes)
+    {
+        var layers = new List<CueLayer>();
+        foreach (var (freq, at, gain) in notes) Bar(layers, freq, at, gain * scale);
+        return layers.ToArray();
+    }
+
+    // Pickup: leaves and cloth brushing, then a soft knock in the bag.
+    public static readonly CueDef Pickup = new("cue.pickup", 0.4f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.05f, 0.39f, 1800f, 4200f, 0.004f),
+        new CueLayer(Src.Tone, 0.07f, 0.03f, 0.19f, 140f, 140f, 0.004f),
+    });
+
+    // Eat (the cue, not the act): three bites, each a short crunchy burst.
+    public static readonly CueDef EatBites = new("cue.eat", 0.9f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.035f, 0.47f, 1000f, 3000f, 0.004f),
+        new CueLayer(Src.Noise, 0.28f, 0.03f, 0.38f, 1000f, 3000f, 0.004f),
+        new CueLayer(Src.Noise, 0.55f, 0.03f, 0.31f, 1000f, 3000f, 0.004f),
+    });
+
+    // Drink (the cue, for the pot): two gulps, each a drop in pitch, over a little slosh.
+    public static readonly CueDef DrinkGulps = new("cue.drink", 0.8f, new[]
+    {
+        new CueLayer(Src.Tone, 0.05f, 0.07f, 0.11f, 260f, 110f, 0.004f),
+        new CueLayer(Src.Tone, 0.38f, 0.07f, 0.11f, 260f, 110f, 0.004f),
+        new CueLayer(Src.Noise, 0f, 0.15f, 0.2f, 20f, 900f, 0.004f),
+    });
+
+    // Fire lit: a soft whoosh as the flame takes, opening up as it grows.
+    public static readonly CueDef FireLit = new("cue.firelit", 1f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.45f, 0.8f, 20f, 700f, 0.4f),
+        new CueLayer(Src.Noise, 0.25f, 0.3f, 0.39f, 300f, 2800f, 0.3f),
+    });
+
+    // Bow draw: wood and sinew under strain, an irregular slow creak.
+    public static readonly CueDef BowDraw = new("cue.bowdraw", 0.8f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.4f, 0.23f, 450f, 850f, 0.25f),
+        new CueLayer(Src.Noise, 0.1f, 0.35f, 0.14f, 650f, 1100f, 0.25f),
+    });
+
+    // Bow shot: the string's twang (a few damped low tones) and the whoosh of the arrow leaving.
+    public static readonly CueDef BowShot = new("cue.bowshot", 0.6f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.2f, 0.08f, 165f, 165f, 0.002f),
+        new CueLayer(Src.Tone, 0f, 0.11f, 0.04f, 330f, 330f, 0.002f),
+        new CueLayer(Src.Tone, 0f, 0.07f, 0.02f, 495f, 495f, 0.002f),
+        new CueLayer(Src.Noise, 0.01f, 0.1f, 0.22f, 900f, 2800f, 0.004f),
+    }, Send: 0.1f);
+
+    // Arrow into an animal: a dull, wet thunk.
+    public static readonly CueDef ArrowFlesh = new("cue.arrowflesh", 0.4f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.07f, 0.14f, 120f, 70f, 0.004f),
+        new CueLayer(Src.Noise, 0f, 0.04f, 0.25f, 20f, 800f, 0.004f),
+    });
+
+    // Arrow into a tree: a sharp thock and the shaft humming for a moment.
+    public static readonly CueDef ArrowWood = new("cue.arrowwood", 0.5f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.012f, 0.4f, 900f, 2400f, 0.004f),
+        new CueLayer(Src.Tone, 0f, 0.08f, 0.12f, 380f, 380f, 0.004f),
+        new CueLayer(Src.Tone, 0f, 0.22f, 0.03f, 940f, 940f, 0.004f),
+    }, Send: 0.2f);
+
+    // Arrow into the ground: a dull thud and a little grit.
+    public static readonly CueDef ArrowEarth = new("cue.arrowearth", 0.4f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.06f, 0.14f, 85f, 85f, 0.004f),
+        new CueLayer(Src.Noise, 0f, 0.05f, 0.18f, 20f, 1000f, 0.004f),
+    });
+
+    public static CueDef? ForCue(Cue cue) => cue switch
+    {
+        Cue.Place => Place,
+        Cue.Hit => Hit,
+        Cue.Crit => Crit,
+        Cue.Jump => Jump,
+        Cue.Pickup => Pickup,
+        Cue.Eat => EatBites,
+        Cue.Drink => DrinkGulps,
+        Cue.SkillUp => SkillUp,
+        Cue.Learn => Learn,
+        Cue.FireLit => FireLit,
+        Cue.BowDraw => BowDraw,
+        Cue.BowShot => BowShot,
+        Cue.ArrowFlesh => ArrowFlesh,
+        Cue.ArrowWood => ArrowWood,
+        Cue.ArrowEarth => ArrowEarth,
+        _ => null,
+    };
 }

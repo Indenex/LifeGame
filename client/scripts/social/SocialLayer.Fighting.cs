@@ -11,8 +11,6 @@ namespace LifeGame;
 // Being hurt shows as a soft red edge on the screen that fades as health returns.
 public partial class SocialLayer
 {
-    const float FlinchSeconds = 0.25f;
-
     readonly ColorRect hurtEdge = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
     ShaderMaterial hurtMaterial = null!;
     float hurtShown;
@@ -43,7 +41,7 @@ void fragment() {
 
     void AttachFighting()
     {
-        conn!.Db.StrikeEvent.OnInsert += (_, e) => OnStrike(e);
+        // The struck player's flinch is a body pose now (Animation, anim-5 AvatarWork).
         Strike.Register("claims.player", OfferStrike);
     }
 
@@ -74,15 +72,6 @@ void fragment() {
 
     bool FightingAllowedAt(float x, float z) =>
         !Social.InSpawnClearing(x, z) && (ClaimAt(x, z) is not { } c || c.AllowPvp);
-
-    // The struck player flinches on everyone's screen.
-    void OnStrike(StrikeEvent e)
-    {
-        if (avatarOf(e.VictimId) is not { } body) return;
-        var tween = body.CreateTween();
-        tween.TweenProperty(body, "scale", new Vector3(1.08f, 0.9f, 1.08f), FlinchSeconds * 0.35f).SetTrans(Tween.TransitionType.Sine);
-        tween.TweenProperty(body, "scale", Vector3.One, FlinchSeconds * 0.65f).SetTrans(Tween.TransitionType.Sine);
-    }
 
     float MyHealth()
     {
