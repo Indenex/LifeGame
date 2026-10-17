@@ -11,8 +11,8 @@ namespace LifeGame;
 // smoke, 30 m or more, that leans with the wind and spreads at the top, so you can
 // find a friend's camp from a long way off. Below that it keeps the light thread of
 // smoke from AtmosphereHomes. Between 70% and 80% full the column swells and thins
-// smoothly instead of popping. A home sends its column up from the chimney when the
-// fire inside is stoked, and a raised hearth counts its longer burn (D-132).
+// smoothly instead of popping. Only fires in the open signal, never one inside a home
+// (Justin); an outdoor raised hearth counts its longer burn (D-132).
 //
 // Up close the column is soft, lit puffs: warm and pale at the foot where the
 // firelight catches them, grey and wider higher up, lit by the sun and the moon.
@@ -222,6 +222,11 @@ public partial class Atmosphere
         }
     }
 
+    // The most fuel this fire can hold before any hearth bonus: the cap of whoever lit
+    // it, so anyone can signal by filling their own fire (Justin). Until Crafting
+    // publishes that cap on the fire row, the Master cap stands in.
+    static float FireMost((float X, float Z, long FuelUntil) fire) => Fires.MasterMaxSeconds;
+
     // The stoked fires near the player, nearest first, a few at most.
     void FindSignals(Vector3 focus)
     {
@@ -233,31 +238,25 @@ public partial class Atmosphere
             if (left <= 0f) continue;
             float dist = new Vector2(f.X - focus.X, f.Z - focus.Z).Length();
             if (dist > SignalReach) continue;
-            // A fire on a raised hearth holds half as much again (HearthFuelScale), so
-            // it counts as stoked against that larger most.
-            float most = Fires.MasterMaxSeconds;
-            Structure? home = null;
+            // Only fires out in the open signal (Justin): none from inside a home.
+            // A fire on an outdoor raised hearth holds half as much again
+            // (HearthFuelScale), so it counts as stoked against that larger most.
+            float most = FireMost(f);
+            bool indoors = false;
             if (homesConn != null)
                 foreach (var s in homesConn.Db.Structure.Iter())
                 {
                     if (!s.Complete) continue;
                     if (Structures.IsIndoor((int)s.Kind) && new Vector2(s.X - f.X, s.Z - f.Z).Length() <= Structures.HearthRadius)
-                        most = Fires.MasterMaxSeconds * Structures.HearthFuelScale;
-                    else if (home == null && Structures.HasDoorway((int)s.Kind) && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, f.X, f.Z))
-                        home = s;
+                        most *= Structures.HearthFuelScale;
+                    else if (Structures.HasDoorway((int)s.Kind) && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, f.X, f.Z))
+                        indoors = true;
                 }
+            if (indoors) continue;
             float signal = Math.Max(Mathf.SmoothStep(0.70f, 0.80f, left / most), signalForce);
             if (signal < 0.01f) continue;
             float ground = terrain?.TileHeight(World.CellOf(f.X), World.CellOf(f.Z)) ?? World.BaseHeight(World.CellOf(f.X), World.CellOf(f.Z));
-            if (home is { } hs)
-            {
-                // Indoors the column leaves by the smoke outlet, as the light smoke does;
-                // a home with no outlet sends none up.
-                var shape = Structures.Shape((int)hs.Kind);
-                if (shape.SmokeY <= 0f) continue;
-                signalPicks.Add((id, new Vector3(hs.X, ground + shape.SmokeY, hs.Z), signal, dist, true));
-            }
-            else signalPicks.Add((id, new Vector3(f.X, ground + 0.9f, f.Z), signal, dist, false));
+            signalPicks.Add((id, new Vector3(f.X, ground + 0.9f, f.Z), signal, dist, false));
         }
         // For screenshots with no live fire about: one column where the preview campfire goes.
         if (signalForce > 0f && signalPicks.Count == 0 && signalClock > 3f)
