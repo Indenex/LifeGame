@@ -43,8 +43,6 @@ namespace LifeGame.Shared
         public bool Shearable;
         // Whether its flock grows lambs in spring.
         public bool Breeds = true;
-        // Bleats like a sheep (Atmosphere's flock sound); deer have their own calls (Audio).
-        public bool Bleats;
         // Which voice set Audio plays for it ("sheep", "deer", "hen", "rabbit"): the key to switch on, not the species
         // number or the model plan. A new species with an existing voice just names it.
         public string Voice = "";
@@ -86,7 +84,7 @@ namespace LifeGame.Shared
                 Id = Sheep, Key = "animal.sheep", Name = "Sheep",
                 Walk = 1.0f, Trot = 1.7f, Run = 4.4f, Notice = 14f, CalmSpeed = World.SneakSpeed + 0.6f,
                 HomeRange = 12f, FleeAhead = 6f, WanderMin = 3f, WanderMax = 9f, WoodPref = 0f, Curious = true,
-                Shearable = true, Bleats = true, Voice = "sheep",
+                Shearable = true, Voice = "sheep",
                 Meat = Item.RawMutton, MeatGrown = 3, MeatYoung = 1, Hide = Item.SheepHide,
                 Model = "sheep",
                 // One flock at the edge of the clearing where players wake up, the rest further out.

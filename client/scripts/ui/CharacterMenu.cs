@@ -287,7 +287,10 @@ public partial class CharacterMenu : CanvasLayer
         var (nameText, nameSize) = FitName(c.Name, card.Inner - 20);
         var name = Text(nameText, nameSize, 800);
         name.HorizontalAlignment = HorizontalAlignment.Center;
-        name.CustomMinimumSize = new Vector2(card.Inner, 0);
+        name.VerticalAlignment = VerticalAlignment.Center;
+        // Every card keeps room for two lines of name (ui-60), so a long name never pushes the
+        // badges past the card's edge, and the cards stay one height.
+        name.CustomMinimumSize = new Vector2(card.Inner, 52);
         column.AddChild(name);
         var badges = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = Control.MouseFilterEnum.Ignore };
         badges.AddThemeConstantOverride("separation", 6);

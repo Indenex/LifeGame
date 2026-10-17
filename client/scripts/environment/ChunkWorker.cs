@@ -108,7 +108,7 @@ public partial class Terrain
         _ = Painted.GhostOf(Painted.Bark);
         _ = Painted.GhostOf(Painted.Leaves);
         _ = PropMeshes.Trunk;
-        _ = PropMeshes.Cattails;
+        for (int v = 0; v < PropMeshes.CattailVariants; v++) PropMeshes.CattailsOf(v);
         for (int v = 0; v < PropMeshes.RockVariants; v++) PropMeshes.Rock(v);
         for (int v = 0; v < PropMeshes.FallenLogVariants; v++) PropMeshes.FallenLog(v);
         for (int v = 0; v < PropMeshes.FallenGiantLogVariants; v++) PropMeshes.FallenGiantLog(v);
@@ -117,7 +117,7 @@ public partial class Terrain
         for (int v = 0; v < PropMeshes.GorseVariants; v++) PropMeshes.Gorse(v);
         for (int v = 0; v < PropMeshes.OutcropVariants; v++) PropMeshes.Outcrop(v);
         for (int v = 0; v < PropMeshes.RiverStoneVariants; v++) PropMeshes.RiverStone(v);
-        _ = Undergrowth.Fern;
+        for (int v = 0; v < Undergrowth.FernVariants; v++) Undergrowth.FernOf(v);
         _ = Undergrowth.Reed;
         _ = Undergrowth.Flowers;
         _ = Undergrowth.Bush;

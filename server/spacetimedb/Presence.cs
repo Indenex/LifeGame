@@ -29,7 +29,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void Heartbeat(ReducerContext ctx)
     {
-        var player = RequirePlayer(ctx);
+        var player = RequirePlayerUnmetered(ctx);
         MarkSeen(ctx, player.PlayerId);
         if (!player.Online)
         {

@@ -294,6 +294,21 @@ Check(conn.Db.WorldClock.Iter().Any() && conn.Db.SeasonClock.Iter().Any(), "the 
     Check(Obstacles.PushOut(ground, 0.4f, to.X, to.Z, 0f) == (to.X, to.Z), $"unstuck left us clear of trunks and boulders ({to.X:F1}, {to.Z:F1})");
 }
 
+// A client that hammers a reducer is slowed down (bugfix-50, audit item 9): the bucket holds a burst
+// and refills at a steady rate, refused calls cost nothing, and play carries on afterwards.
+{
+    int slowed = 0;
+    void OnError(ReducerEventContext _, Exception e) { if (e.Message.Contains("Slow down")) slowed++; }
+    conn.OnUnhandledReducerError += OnError;
+    for (int i = 0; i < 300; i++) conn.Reducers.SetSneaking(i % 2 == 0);
+    Pump(2500);
+    conn.OnUnhandledReducerError -= OnError;
+    Check(slowed >= 100, $"hammering a reducer 300 times was slowed down ({slowed} refused)");
+    Pump(3000);
+    conn.Reducers.SetSneaking(false);
+    WaitFor(() => conn.Db.PlayerSneaking.PlayerId.Find(myId) == null, 10, "and play carries on once the bucket has refilled");
+}
+
 Console.WriteLine($"All spawn checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 conn.Disconnect();
 return 0;

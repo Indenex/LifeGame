@@ -53,6 +53,7 @@ public static partial class Module
         float aim = MathF.Atan2(dx, dz) - pos.Heading;
         aim = MathF.Abs(MathF.IEEERemainder(aim, MathF.Tau));
         if (d > 1f && aim > BowConeRadians) throw new Exception("Face the animal to shoot");
+        if (ArrowBlocked(ctx, pos.X, pos.Z, animal.X, animal.Z)) throw new Exception("Something is in the way");
 
         // Archery (shared Progression): skill speeds the draw, steadies the aim and
         // multiplies the damage; gear quality matters much less (D-197).
@@ -91,6 +92,28 @@ public static partial class Module
         int damage = Math.Max(1, (int)MathF.Round(BowDamage(shot, d, ctx.Rng.NextDouble()) * Progression.Effect(EffectKind.ArcheryDamage, rank)));
         int bonus = SneakCrit(ctx, player.PlayerId, animal, damage);
         HurtAnimal(ctx, animal, mind, damage + bonus, pos.X, pos.Z, 0f, now, bonus > 0, ranged: true);
+    }
+
+    // An arrow flies about chest high: boulders and fences lower than that don't stop it, a tree trunk or a wall does
+    // (D-182: the line of fire is checked on the server, with the same obstacle rule players walk by).
+    const float ArrowHeight = 1.2f;
+
+    static bool ArrowBlocked(ReducerContext ctx, float fromX, float fromZ, float toX, float toZ)
+    {
+        float dx = toX - fromX, dz = toZ - fromZ;
+        float length = MathF.Sqrt(dx * dx + dz * dz);
+        int steps = Math.Max(1, (int)MathF.Ceiling(length));
+        var ground = new ServerGround(ctx);
+        float px = fromX, pz = fromZ;
+        for (int i = 1; i <= steps; i++)
+        {
+            float x = fromX + dx * i / steps, z = fromZ + dz * i / steps;
+            bool wall = false;
+            StructureStepHook(ctx, px, pz, x, z, ref wall);
+            if (wall || Obstacles.StepBlocked(ground, 0.05f, px, pz, x, z, ArrowHeight)) return true;
+            (px, pz) = (x, z);
+        }
+        return false;
     }
 
     // 0.95 close up, falling 0.012 per meter beyond 5 m to a floor of 0.3, then the

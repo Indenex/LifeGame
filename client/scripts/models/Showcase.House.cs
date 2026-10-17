@@ -25,6 +25,25 @@ public partial class Showcase
         camera.LookAtFromPosition(new Vector3(0.3f, 1.9f, 3.0f), new Vector3(0.3f, 0.15f, 0), Vector3.Up);
     }
 
+    // The wooden chest (building-22): its frame on the left, the finished chest on the right,
+    // the player beside for scale.
+    [ShowcaseView("chest")]
+    void ChestView()
+    {
+        var pieces = StructureModel.Pieces((int)SpacetimeDB.Types.StructureKind.Chest);
+        for (int c = 0; c < 2; c++)
+            foreach (var piece in pieces)
+                if (piece.Stage >= 0 && piece.Stage <= c)
+                    AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material, Position = new Vector3(-0.75f + c * 1.5f, 0, 0), Rotation = new Vector3(0, 0.5f, 0) });
+        var figure = PlayerModel.Build();
+        figure.Position = new Vector3(2.1f, 0, -0.4f);
+        figure.Rotation = new Vector3(0, -0.6f, 0);
+        AddChild(figure);
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0.3f, 1.6f, 3.2f), new Vector3(0.3f, 0.3f, 0), Vector3.Up);
+    }
+
     // The hen coop (model-7) at each build stage, frame, walls and roof, left to right,
     // turned a little so the pop-hole, ramp and side show.
     [ShowcaseView("coop")]

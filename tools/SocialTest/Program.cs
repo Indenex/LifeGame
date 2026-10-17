@@ -564,6 +564,9 @@ else
                     Pump(() => gatherer.Count(kind) > before || gatherer.LastError != null, 5, "pick up");
                     gatherer.LastError = null;
                 }
+        // A's long walk to its site goes first: the claims have a 30 s lifetime in this run, and B's must not
+        // age while A is still walking (the bots walk at 4 m/s).
+        Walk(a, sites.x - 1.5f, sites.z);
         Raise(b, sites.x2, sites.z2);
         Raise(a, sites.x, sites.z);
         var aClaim = a.MyClaim();
@@ -573,11 +576,12 @@ else
         {
             // B stays at their marker and tends it, so both claims are fresh for the next 30 s.
             b.Conn.Reducers.TendClaim(bClaim.Id);
+            a.Conn.Reducers.TendClaim(aClaim.Id);
 
             // Two one-claim towns merge by a majority of each: A's "Alder" and B's "Birch".
             a.Conn.Reducers.StartTown("Alder");
             b.Conn.Reducers.StartTown("Birch");
-            Check(Wait(() => a.Conn.Db.Town.Iter().Any(t => t.Name == "Alder") && a.Conn.Db.Town.Iter().Any(t => t.Name == "Birch"), 5), "A and B each start a town");
+            Check(Wait(() => a.Conn.Db.Town.Iter().Any(t => t.Name == "Alder") && a.Conn.Db.Town.Iter().Any(t => t.Name == "Birch"), 15), $"A and B each start a town (A: {a.LastError ?? "-"}, B: {b.LastError ?? "-"})");
             var alderId = a.Conn.Db.Town.Iter().First(t => t.Name == "Alder").Id;
             var birchId = a.Conn.Db.Town.Iter().First(t => t.Name == "Birch").Id;
             a.Conn.Reducers.ProposeTownMerge(birchId);

@@ -47,6 +47,9 @@ namespace LifeGame.Shared
         Spindle,
         DryingRack,
         Repair,
+        ClayTub,
+        CrushBlock,
+        TemperTrough,
     }
 
     public static class StationInfo
@@ -61,17 +64,19 @@ namespace LifeGame.Shared
             StationKind.Spindle => "spindle station",
             StationKind.DryingRack => "leather drying rack",
             StationKind.Repair => "repair table",
+            StationKind.ClayTub => "settling tub",
+            StationKind.CrushBlock => "crushing block",
+            StationKind.TemperTrough => "tempering trough",
             _ => "",
         };
 
         // The skill-practice id a station's building reports (build.* trains Builder).
         public static string BuildProcess(StationKind kind) => kind switch
         {
-            StationKind.Table => "build.table",
+            StationKind.Table or StationKind.Repair or StationKind.ClayTub or StationKind.CrushBlock or StationKind.TemperTrough => "build.table",
             StationKind.PottersBench => "build.bench",
             StationKind.Spindle => "build.spindle",
             StationKind.DryingRack => "build.rack",
-            StationKind.Repair => "build.table",
             _ => "build.frame",
         };
     }
