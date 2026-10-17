@@ -7,6 +7,7 @@ namespace LifeGame;
 // everyone nearby. Reads the public player_rest table (a row exists only while a player rests;
 // Animation, anim-12). Only changes made by a reducer sound, so a player already resting when you
 // arrive stays silent.
+[AudioSounds]
 static class RestSounds
 {
     const float Hearing = 14f;   // metres

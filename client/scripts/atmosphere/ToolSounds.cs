@@ -9,6 +9,7 @@ namespace LifeGame;
 // thrown off), for everyone, yours and other players'. Yours plays at full volume; others'
 // come from where the tool is, quieter. Also a felled tree (audio-17): the creak and the rush
 // of leaves as it tips, then the impact, on Environment's TreeFall events.
+[AudioSounds]
 static class ToolSounds
 {
     const float TreeHearing = 70f;
