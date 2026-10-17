@@ -5,7 +5,7 @@ namespace LifeGame;
 // art-rnd-1 showcase piece: today's painted pine (PaintedTrees, built at runtime from
 // rings of drooping boughs) beside a Blender-authored pine (tools/art/trees/, rebuilt
 // with tools/art/trees/build.sh): five stacked, puffy tiers with rolled hems and rounded,
-// drooping scallops on a short warm-brown trunk, with needle clusters, lit tier tops,
+// drooping scallops (about 5k triangles) on a short warm-brown trunk, with needle clusters, lit tier tops,
 // violet-leaning undersides and the bark's plates painted into one 1024 px texture over
 // baked AO. It stands at today's scale (about 4.4 m).
 //
