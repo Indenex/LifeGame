@@ -184,6 +184,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 15:55: #844 and #845 merged: bugfix-65/66 after now main eebde123 (local merge dropped), before stays 4bd3f9dd.
 
+- 2026-10-17 16:00: naturekit-1 (Modeling session_01Y3HWfLh47B52ViBgWpzWrz, claude/modeling-i8ox5v 20a3514c): offline at (-30,-30), noon and 0.72 with and without --naturekit, plus zoom 6 pair; after claims-27. Reply to Modeling and the PM.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 
