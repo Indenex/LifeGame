@@ -672,21 +672,26 @@ public partial class Showcase : Node3D
         // tufts of about a square metre each, in banded tones.
         PaintedGround.Prewarm();
         RenderingServer.GlobalShaderParameterSet("player_position", Vector3.Zero);
-        var spots = new List<Transform3D>();
-        for (float x = -14f; x < 14f; x += 0.7f)
-            for (float z = -16f; z < 6f; z += 0.7f)
+        // One tuft per metre cell, turned at random, the variant picked per cell, as
+        // the game lays them; only the cabin floor stays bare.
+        var cells = new List<Transform3D>[3] { new(), new(), new() };
+        for (int x = -14; x < 14; x++)
+            for (int z = -16; z < 6; z++)
             {
-                var at = new Vector3(x + rng.RandfRange(-0.35f, 0.35f), 0, z + rng.RandfRange(-0.35f, 0.35f));
-                if (Mathf.Abs(at.X - 0.5f) < 2.6f && Mathf.Abs(at.Z + 4.5f) < 2.2f) continue;
-                spots.Add(new Transform3D(new Basis(Vector3.Up, rng.Randf() * Mathf.Tau).Scaled(Vector3.One * (0.85f + rng.Randf() * 0.35f)), at));
+                var at = new Vector3(x + 0.5f, 0, z + 0.5f);
+                if (Mathf.Abs(at.X - 0.5f) < 2.2f && Mathf.Abs(at.Z + 4.5f) < 1.8f) continue;
+                cells[rng.RandiRange(0, 2)].Add(new Transform3D(new Basis(Vector3.Up, rng.Randf() * Mathf.Tau), at));
             }
-        var blades = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = PaintedGround.BroadTuft, InstanceCount = spots.Count };
-        for (int i = 0; i < spots.Count; i++)
+        for (int v = 0; v < 3; v++)
         {
-            blades.SetInstanceTransform(i, spots[i]);
-            blades.SetInstanceColor(i, PaintedGround.Grass(new Color(0.47f, 0.58f, 0.2f), rng.Randf()));
+            var blades = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = PaintedGround.BroadTufts(v), InstanceCount = cells[v].Count };
+            for (int i = 0; i < cells[v].Count; i++)
+            {
+                blades.SetInstanceTransform(i, cells[v][i]);
+                blades.SetInstanceColor(i, PaintedGround.Grass(new Color(0.47f, 0.58f, 0.2f), rng.Randf()));
+            }
+            AddChild(new MultiMeshInstance3D { Multimesh = blades, MaterialOverride = PaintedGround.GrassMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         }
-        AddChild(new MultiMeshInstance3D { Multimesh = blades, MaterialOverride = PaintedGround.GrassMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         // Undergrowth as in reference 02: shrubs, stones, ferns and dead brush all
         // through the grass, so the meadow reads dense rather than open.
         string[] clutter = { "forest_bush_1", "forest_bush_2", "forest_bush_3", "forest_bush_4", "forest_bush_5", "Forest_small_bush_01", "Forest_small_bush_02", "Forest_small_fern_01", "Forest_small_fern_02", "Forest_deadBush_3", "Forest_deadbush5", "sone_29", "sone_31", "sone_2" };
