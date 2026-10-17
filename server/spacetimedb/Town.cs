@@ -326,7 +326,7 @@ public static partial class Module
     }
 
     static IEnumerable<Identity> HoldersWith(ReducerContext ctx, ulong townId, TownPower power) =>
-        ctx.Db.TownOffice.ByTown.Filter(townId).ToList()
+        ctx.Db.TownOffice.ByTown.Filter(townId).ToList().OrderBy(o => o.Office)
             .Where(o => o.HolderId != 0 && Towns.Get(o.Office) is { } d && (d.Powers & power) != 0).Select(o => o.Holder);
 
     [SpacetimeDB.Reducer]
@@ -516,7 +516,7 @@ public static partial class Module
             {
                 int best = tally.Max(t => t.n);
                 var tied = signers.Where(sg => tally.Any(t => t.id == sg.PlayerId && t.n == best)).ToList();
-                // A tie goes to whoever the Judge voted for, else to the longest-standing signer.
+                // A tie goes to whoever the Judge (or, with no Judge voting, the Elder) voted for, else to the longest-standing signer.
                 var judgeVote = HoldersWith(ctx, seat.TownId, TownPower.BreakTies)
                     .Select(j => ctx.Db.TownVote.ByTown.Filter(seat.TownId).FirstOrDefault(v => v.Office == seat.Office && v.Voter == j))
                     .FirstOrDefault(v => v.Id != 0);
