@@ -43,6 +43,7 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM claim",
                 "SELECT * FROM my_claim_stash",
                 "SELECT * FROM craft_work",
+                "SELECT * FROM my_skills",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -352,6 +353,7 @@ Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({st
     uint cordageBefore = CountOf(Item.Cordage);
     lastError = null;
     var oldAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+    int toolmakingBefore = conn.Db.MySkills.Iter().Where(r => r.Spec == "toolmaking").Sum(r => (int)r.Points);
     conn.Reducers.RepairTool(oldAxe.Item, oldAxe.Quality, oldAxe.Wear);
     Pump(() => lastError != null || conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.StoneAxe && r.Wear != oldAxe.Wear), 5, "the axe to be mended");
     if (lastError != null) Fail($"mending the axe: {lastError}");
@@ -362,6 +364,8 @@ Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({st
     if (Durability.Origin(mendedAxe.Wear) != oldAxe.Quality) Fail($"the mended axe forgot its original quality ({Durability.Origin(mendedAxe.Wear)} vs {oldAxe.Quality})");
     if (CountOf(Item.Cordage) != cordageBefore - 1) Fail($"mending the axe took {cordageBefore - CountOf(Item.Cordage)} cordage, not 1");
     Console.WriteLine($"Mended the axe: quality {oldAxe.Quality} -> {mendedAxe.Quality}, 1 cordage");
+    Pump(() => conn.Db.MySkills.Iter().Where(r => r.Spec == "toolmaking").Sum(r => (int)r.Points) > toolmakingBefore, 5, "mending to train Toolmaking");
+    Console.WriteLine("Mending trained Toolmaking");
 
     uint cordageNow = CountOf(Item.Cordage);
     lastError = null;

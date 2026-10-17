@@ -56,6 +56,8 @@ namespace LifeGame.Shared
         // reports it as failed, so a hit teaches twice as much (Skills.Gain).
         public const string Shoot = "animal.shoot";
         public const string Butcher = "animal.butcher";
+        // Mending a worn tool at a repair table (Crafting's Durability.cs, D-155); trains Toolmaking.
+        public const string Repair = "repair.tool";
         // Taking dried leather off its rack (Animals' Leather.cs); not a recipe.
         public const string DryHide = "hide.dry";
         // Running, reported by Survival's stamina every 20 s of actual running (D-123).
@@ -65,7 +67,7 @@ namespace LifeGame.Shared
             new("foraging", "Foraging", true, "Finding and gathering what the land offers, and felling wood.", "gather", "chop"),
             new("earthwork", "Earthwork", true, "Digging and finding clay.", "earth"),
             new("firecraft", "Firecraft", true, "Making fire, keeping it alive and cooking over it.", "fire", "cook"),
-            new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, weaving baskets and mats, carving and lashing simple tools.", "knap", "cord", "weave", "lash", "carve", "haft"),
+            new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, weaving baskets and mats, carving, lashing and mending simple tools.", "knap", "cord", "weave", "lash", "carve", "haft", Repair),
             new("potter", "Potter", false, "Shaping clay and firing it hard.", "clay"),
             new("builder", "Builder", false, "Raising frames, walls and roofs.", "build"),
             new("endurance", "Endurance", true, "Running farther and catching your breath faster.", "move"),
@@ -110,6 +112,7 @@ namespace LifeGame.Shared
             (Sneak, "Sneaking up on an animal"),
             (Shoot, "Shooting a bow"),
             (Butcher, "Butchering a carcass"),
+            (Repair, "Mending a tool"),
             (DryHide, "Drying leather"),
             (Run, "Running"),
             // D-127 first-evening step: Claims reports the marker (#174).
