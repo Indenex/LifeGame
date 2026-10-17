@@ -13,6 +13,8 @@ PM 03:51: once Modeling switches PlayerModel to ChibiFigure (model-6, Bramble an
 
 - 2026-10-17 07:30: merged to main; marked done on anim-12.
 
+- 2026-10-17 10:30: #466 merged earlier; the chibi clips from Render C haven't arrived yet. Pebble's waddle follow-up is on anim-20.
+
 ## Open questions / blockers
 - Waiting on Modeling to wire ChibiFigure into PlayerModel.
 
