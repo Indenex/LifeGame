@@ -113,7 +113,7 @@ public static class Look
 
     // Trees between the camera and the player fade softly, so you can always see
     // yourself in the woods. A faded tree is drawn by its ghost: the same surface,
-    // transparent, drawn by a second instance that only shows trees in the way.
+    // thinned by a dither, drawn by a second instance that only shows trees in the way.
     // Anything drawn with a see-through material needs its ghost drawn too, or a
     // tree in the way would just vanish.
     public static ShaderMaterial TreeBark => treeBark ??= SeeThrough(BarkSurface);
@@ -364,7 +364,7 @@ public static class Look
     // so a faded near wall can't hide a far wall that shares its mesh (a brick course, a daub ring).
     static Shader StructureGhostShader => structureGhostShader ??= MakeShader(PaintedCode
         .Replace("render_mode cull_disabled;", "render_mode cull_disabled, depth_prepass_alpha;")
-        .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST"));
+        .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST\n#define STRUCTURE_GHOST"));
 
     internal const string PaintedCode = """
             shader_type spatial;
@@ -422,9 +422,9 @@ public static class Look
                 float t = clamp((b * s + f) / e, 0.0, 1.0);
                 s = clamp((b * t - c) / a, 0.0, 1.0);
                 float d = distance(p1 + d1 * s, p2 + d2 * t);
-                // A canopy reaches about 1.9 times the tree's width from its axis; fade
-                // fully inside that and ease out a little beyond.
-                return 1.0 - smoothstep(1.9 * wide, 2.7 * wide, d);
+                // Only a tree truly across the line fades (env-25): fully within 1.5
+                // times its width of the axis, easing out by 2.1.
+                return 1.0 - smoothstep(1.5 * wide, 2.1 * wide, d);
             }
 
             varying vec3 tint;
@@ -607,6 +607,7 @@ public static class Look
                 float window = 1.0 - smoothstep(0.09, 0.3, apart);
                 // Fully clear right around the player, so even several layers of
                 // canopy never hide them.
+            #ifdef STRUCTURE_GHOST
                 if (cut_mode > 1.5) {
                     // cut_floor 1 clears the whole roof (player inside); 0 clears only the
                     // circle round the player (player behind the building).
@@ -619,6 +620,15 @@ public static class Look
                     ALPHA = 1.0 - fade * (0.35 + 0.65 * window);
                 }
                 if (ALPHA < 0.04) discard;
+            #else
+                // A tree in the way thins to about 55% (env-25): dithered, not blended, so
+                // overlapping crowns don't stack into a smeared see-through mess, and only
+                // the small window round the player opens further.
+                float keep = 1.0 - fade * (0.45 + 0.35 * window);
+                const float bayer[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
+                ivec2 cell = ivec2(FRAGCOORD.xy) % 4;
+                if (keep <= (bayer[cell.y * 4 + cell.x] + 0.5) / 16.0) discard;
+            #endif
             #endif
             }
 
