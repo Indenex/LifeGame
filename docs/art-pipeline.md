@@ -83,7 +83,7 @@ For seeded families (trees, rocks, bushes) keep the C# builders, and lift them w
 
 ## Pilot: Pebble's shell
 
-**Result.** The rebuilt shell reads as a real tortoise shell from every side. It is one high, smooth dome. Five hexagonal vertebral scutes run down the spine, with four costal scutes a side. A ring of 24 marginal scutes, the nuchal one centred at the neck, scallops the edge. On the front, the plastron has six pairs of plates: gular, humeral, pectoral, abdominal, femoral and anal. Every plate is painted in three tones, with a dark seam, a pale bevel on its upper edge, growth rings following its outline, and brush strokes along them. The three shell colours and the worn style 0 still work. Before and after turntables are in `renders/art-rnd-1-*.png`.
+**Result.** The rebuilt shell reads as a real tortoise shell from every side. It is one high, smooth dome. Five hexagonal vertebral scutes run down the spine, with four costal scutes a side. A ring of 24 marginal scutes, the nuchal one centred at the neck, scallops the edge. On the front, the plastron has six pairs of plates: gular, humeral, pectoral, abdominal, femoral and anal. Every plate is painted in three tones, with a dark seam, a pale bevel on its upper edge, growth rings following its outline, and brush strokes along them. The three shell colours and the worn style 0 still work. This was v3, the anatomical shell. After D-313 the shell became the cute v4 (see Showcase below).
 
 **How it was made** (`tools/art/pebble_shell/`; `build.sh` runs all of it in about 75 s on 4 CPU cores):
 
@@ -99,3 +99,33 @@ For seeded families (trees, rocks, bushes) keep the C# builders, and lift them w
 - Cost: one 1024 px texture (about 0.5 MB as PNG) and 3,400 triangles, against roughly 2,000 triangles of ellipsoids before. That is fine for a player character.
 
 **Handing it on.** Modeling owns `client/scripts/models/` and `client/assets/models/`. This branch is a proposal: Modeling can take `ChibiShell.cs` and `tools/art/pebble_shell/` as they are, or fold the method into #594.
+
+## Showcase (2026-10-17)
+
+Justin asked what else the Blender pipeline could do. Each piece below is rendered in-engine (Godot, the game's light) from the same camera as today's model, with `Showcase --view=art --piece=<name>` (`client/scripts/models/art/Art<Name>.cs`). Each rebuilds with one command, `tools/art/<piece>/build.sh`, into `client/assets/art/<piece>/` (the shell: `client/assets/models/pebble_shell/`). All follow D-313 (cutesy, relaxing, a hint of realism) and D-319 (no pitting).
+
+| Piece | Sheet | Triangles | Textures | Notes |
+|---|---|---|---|---|
+| Pebble's shell | `renders/art-rnd-1-shell-cute-turntable.png`, `-shell-cute-close.png`, `-shell-colours.png` | 3.4k | 1 × 1024 px + normal map | Landed by Modeling in #623. Colours: caramel, honey, sage-olive. |
+| Birch | `renders/art-rnd-1-birch.png` | 6.8 to 7.0k | 1 × 1024 px each | Three seeded variants. 4.4 m frame. Sway weight in vertex alpha. |
+| Pine | `renders/art-rnd-1-pine.png` | 4.4 to 6.4k | 1 × 1024 px each | Three seeded variants (4, 5 and 6 tiers). Rounded tip. |
+| Bramble's head | `renders/art-rnd-1-bramble.png` | 7.0k (5k of it hair) | head + face atlas | Behind `ChibiFigure.AuthoredHeads` (off). |
+| Pebble's head | `renders/art-rnd-1-pebble-head.png` | 6.3k | head + face atlas | Soft beak that reads from the front. |
+| Faces | `renders/art-rnd-1-faces.png` | about 1.5k face patch | 2 × 2 atlas | Open, closed, happy and sleepy. `ChibiFace.SetExpression`, a per-instance uniform. |
+| Sheep | `renders/art-rnd-1-sheep.png` | 7.3k | wool + skin | SheepFigure's part and bone layout, so Animals' poses drive it. |
+| Stone axe | `renders/art-rnd-1-axe.png` | 2.2k | 1 × 1024 px | In ItemModels' held frame. |
+
+**What it would take to roll each out:**
+- *Trees:* a far LOD (decimated to about a quarter, same texture), a wind term reading vertex alpha in the tree shader, and PaintedTrees' MultiMesh batches using the glbs (Modeling). The world palette (fresh against olive greens) waits on Justin (D-154).
+- *Heads:* switch on `AuthoredHeads`, author the other haircuts, and have Animation drive blinks and expressions.
+- *Sheep:* Animals swaps the mesh, adds a fleece-colour tint and checks the shorn look.
+- *Axe:* replace the held StoneAxe mesh.
+
+**Known rough edges:**
+- Bramble's side locks bulge a little at the cheeks.
+- A small dark bake mark at Pebble's right temple.
+- The sheep's wool is bright in full sun, and it is cream only so far.
+- The axe stone reads pale in sun.
+- Two of the birch crowns nearly touch in the wide sheet.
+- A 6-tier pine has a small top tier.
+- The sheep is about 3.5 times today's triangle count.

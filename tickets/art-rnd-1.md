@@ -38,9 +38,11 @@ Justin found Pebble's turtle shell (#594, renders/model-11-pebble-shell-*.png on
 
 - 2026-10-17: merged hair pass + Pebble beak; softened the beak line and nostrils (31d91f3e); re-rendered pebble-head and faces (f2592d55). Known: a small dark bake mark at Pebble's right temple.
 
+- 2026-10-17: merged tree variants (2dd8bc7d); one sheet per piece; showcase index in docs/art-pipeline.md; list sent to the PM.
+
 ## Open questions / blockers
 - Justin (morning): tree palette (a) fresh greens, recommended, (b) partway to olive, (c) mixed; D-154, not defaulted.
 - Justin: is this the direction (painted texture on authored meshes) to roll out to other hero pieces?
 
 ## Next step
-When the tree-variants and hair/beak helpers report: merge, check images, make the final per-piece sheets under renders/art-rnd-1-*.png, add a Showcase index to docs/art-pipeline.md, and send the PM the list of raw links.
+Wait for Justin's morning answers via the PM (tree palette, rollout). Meanwhile (D-145): fix the small known rough edges listed in docs/art-pipeline.md "Showcase" (Pebble temple mark, sheep wool brightness, birch spacing).
