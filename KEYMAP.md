@@ -13,9 +13,9 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | W A S D / arrows | Walk | Crafting | same |
 | Hold right mouse + drag | Turn the view, eased (D-050); drag up or down to tilt it a little (up for more sky, down to look from higher; stays above the ground). The only way to turn since ui-17: no Q/E turn keys | UX/UI | ui-17, integration-4 |
 | Right click a player | Opens the player menu (ui-35, Justin): Trade, Whisper, Invite to town, Inspect, Invite to group (coming soon). A right click that moves under 6 px within 250 ms is a click; more is a drag | UX/UI | ui-35 |
-| Hold Shift | Run (uses stamina). Bound now; out of the F1 list until the stamina lane makes it work | whichever lane builds stamina; reads the `run` action | new, D-088 |
+| Hold Shift | Run (uses stamina). In the F1 list | whichever lane builds stamina; reads the `run` action | new, D-088 |
 | Hold Ctrl | Sneak (slow walk; sheep stay calm). Was Shift until D-088 | Animals (small hook in Main.cs) | D-026, moved to Ctrl by D-091 |
-| Space | Jump (Bug fixes builds it, bugfix-25; reads the `jump` action). Out of F1 until that lands | Bug fixes | ui-17 |
+| Space | Jump (bugfix-25; reads the `jump` action). In the F1 list | Bug fixes | ui-17 |
 | F | Dig | Crafting | same |
 | E | **Use** what you're facing, or **pick up** what lies at your feet when there is nothing to use (ui-17, Justin). Uses: pick berries, feed a fire, drink at water or from your pot, add materials to a blueprint, hang, open or shut a door, open a basket, read a note, tend a claim marker, say yes when a player asks to trade (Esc says no; ui-9). Nothing on players themselves: asking to trade is the right-click player menu (ui-35) | all | Was G (Use) and Space (Pick up) until ui-17 |
 | Shift+E | Bar or unbar a hut door (whoever hung it, or claim members); read inside Building's door offer, no separate binding | Building | new, building-3; confirmed by UX/UI 2026-10-16 (F1 shows "Shift E"; follows the Use key) |
@@ -33,6 +33,8 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Left click / Z | Strike (attack an animal, D-039) | Animals | new |
 | Hold Ctrl while starting a craft | Work it by hand: a Master plays the minigame anyway (D-047). Shares Ctrl with sneak; it only counts in the crafting panel (D-091) | Journal and skills | new |
 | Hold F1 | Show every world key | UX/UI | new |
+| F8 | Report a bug (also in the Esc menu). Fixed, not rebindable; out of the F1 list | Bug fixes | new |
+| V | Tend clay (interim: Ceramics reads V until tending moves to the Use key). Fixed; in the F1 list | Ceramics | new |
 | Esc | Menu (resume, keys, volume, music, quit) when no panel, chat or placement is open. A panel that closes on Esc must call `GetViewport().SetInputAsHandled()` | UX/UI | new |
 
 ## Inside a panel or mode
