@@ -98,10 +98,11 @@ public partial class Atmosphere
         sun.LightEnergy *= 1f + 0.6f * night;
         // Shade is purple-grey by day, blue-violet at golden hour, a soft moonlit
         // blue-violet at night.
-        // Cosy shade is a lighter lavender-blue by day and a softer moonlit blue.
+        // Cosy shade is a lighter lavender-blue by day, a warm amber at golden hour and a
+        // softer moonlit blue at night.
         env.AmbientLightColor = env.AmbientLightColor
             .Lerp(new Color(0.48f, 0.44f, 0.60f).Lerp(new Color(0.60f, 0.58f, 0.76f), soft), 0.2f * grade * daylight + 0.1f * soft * daylight)
-            .Lerp(new Color(0.40f, 0.42f, 0.66f).Lerp(new Color(0.62f, 0.57f, 0.68f), soft), 0.3f * lowSun)
+            .Lerp(new Color(0.40f, 0.42f, 0.66f).Lerp(new Color(0.72f, 0.62f, 0.56f), soft), 0.3f * lowSun + 0.15f * soft * lowSun)
             .Lerp(new Color(0.30f, 0.32f, 0.58f).Lerp(new Color(0.36f, 0.40f, 0.64f), soft), 0.45f * night);
         env.AmbientLightSkyContribution = 0.75f - 0.1f * grade - 0.2f * lowSun - 0.1f * night;
         // Deeper shade: less fill light and stronger contact shadows, so darks hold their
@@ -110,6 +111,11 @@ public partial class Atmosphere
         // Cosy gives back most of that fill, so shade reads soft and coloured.
         env.AmbientLightEnergy *= (1f - 0.25f * grade * daylight + 0.2f * soft * daylight) * (1f + 0.7f * night + 0.2f * soft * night);
         env.TonemapExposure *= (1f + 0.15f * night) * (1f + 0.05f * soft);
+        // Golden hour stays bright and readable (atmosphere-40): with the fog thinned
+        // near the player (atmosphere-39) the low sun left the shade dark and lilac, so
+        // the cosy layer fills it with a warm amber light and lifts the exposure a little.
+        env.AmbientLightEnergy *= 1f + 0.4f * soft * lowSun;
+        env.TonemapExposure *= 1f + 0.12f * soft * lowSun;
         env.SsaoIntensity = 1.8f + 1.2f * grade - 1.0f * soft;
         env.SsaoRadius = 1.6f + 0.6f * grade;
         // Clear air near the camera by day: thinner distance fog and haze, keeping the

@@ -1,9 +1,9 @@
 # atmosphere-39: Clear, warm golden hour (no pink veil)
 Lane: Atmosphere
 Owner: World atmosphere lane (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_review
+Status: done
 Branch: claude/atmosphere-39-dusk-clear
-PR: (opening)
+PR: #738
 
 ## Goal
 Render A's ground shots at time 0.72 (renders/ground31b-botw-4b355f5-5/6/7.png on claude/render-1-013qe8) were a murky red-brown under a heavy pink haze. The grass read dark, the sheep and player were hard to pick out, and pale stones glowed pink: gloomy dusk, not golden hour. Aim (PM): warm, clear and readable at 0.65 to 0.75.
@@ -18,9 +18,10 @@ Fix:
 
 ## Progress log
 - 2026-10-17 11:25: built; the client compiles with 0 errors.
+- 2026-10-17 11:24: CI green on d0fc486c; merged as #738. Follow-up atmosphere-40: the thinner fog exposed dark lilac golden-hour shade.
 
 ## Open questions / blockers
 - Needs Render A or B before/after (main vs this branch) at 0.65, 0.72 and 0.75 in the ground31b view.
 
 ## Next step
-Open the PR and request the before/after; send the PM the green sha.
+None (done); continued in atmosphere-40.
