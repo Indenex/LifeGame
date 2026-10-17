@@ -98,6 +98,18 @@ public partial class Showcase
         camera.LookAtFromPosition(new Vector3(-0.5f, 3.6f, 9.5f), new Vector3(0f, 0.8f, -1f), Vector3.Up);
     }
 
+    // Pond-edge cattails (model-31, D-166): all five clumps on the grass shader as Terrain
+    // draws them, a person for scale.
+    [ShowcaseView("cattails")]
+    void CattailClumps()
+    {
+        for (int v = 0; v < PropMeshes.CattailVariants; v++)
+        {
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, UseCustomData = true, Mesh = PropMeshes.CattailsOf(v), InstanceCount = 1 };
+            multi.SetInstanceTransform(0, new Transform3D(Basis.Identity, new Vector3(-2.4f + v * 1.2f, 0, 0)));
+            multi.SetInstanceColor(0, Look.LeafLight);
+    }
+
     // Woodland ferns (model-32, D-166): all five Undergrowth fern variants on the grass
     // shader, a person for scale.
     [ShowcaseView("ferns")]
@@ -115,6 +127,10 @@ public partial class Showcase
         AddChild(person);
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
+<<<<<<< HEAD
         camera.LookAtFromPosition(new Vector3(-0.8f, 2.4f, 6.5f), new Vector3(-0.8f, 0.4f, 0f), Vector3.Up);
+=======
+        camera.LookAtFromPosition(new Vector3(-0.4f, 1.6f, 6.5f), new Vector3(-0.4f, 0.8f, 0f), Vector3.Up);
+>>>>>>> origin/main
     }
 }
