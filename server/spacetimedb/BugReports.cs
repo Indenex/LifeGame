@@ -34,8 +34,8 @@ public static partial class Module
     [SpacetimeDB.View(Accessor = "MyBugReports", Public = true)]
     public static List<BugReport> MyBugReports(ViewContext ctx)
     {
-        if (ctx.Db.WorldAdmin.Identity.Find(ctx.Sender) is not null) return ctx.Db.BugReport.Open.Filter(true).ToList();
-        return ctx.Db.BugReport.Reporter.Filter(ctx.Sender).ToList();
+        if (ctx.Db.WorldAdmin.Identity.Find(Me(ctx)) is not null) return ctx.Db.BugReport.Open.Filter(true).ToList();
+        return ctx.Db.BugReport.Reporter.Filter(Me(ctx)).ToList();
     }
 
     [SpacetimeDB.Reducer]
@@ -46,11 +46,11 @@ public static partial class Module
         if (summary.Length > BugSummaryMax) summary = summary[..BugSummaryMax];
         if (text.Length > BugTextMax) text = text[..BugTextMax];
         // Keep the newest few: older ones drop off so nobody can fill the table.
-        var mine = ctx.Db.BugReport.Reporter.Filter(ctx.Sender).OrderBy(r => r.Id).ToList();
+        var mine = ctx.Db.BugReport.Reporter.Filter(Me(ctx)).OrderBy(r => r.Id).ToList();
         for (int i = 0; i <= mine.Count - BugReportsPerPlayer; i++) ctx.Db.BugReport.Id.Delete(mine[i].Id);
         ctx.Db.BugReport.Insert(new BugReport
         {
-            Reporter = ctx.Sender,
+            Reporter = Me(ctx),
             Open = true,
             PlayerId = player.PlayerId,
             PlayerName = player.Name,
