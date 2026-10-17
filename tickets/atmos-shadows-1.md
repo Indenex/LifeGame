@@ -2,7 +2,7 @@
 Lane: Atmosphere (lighting), done by the Unity spike worker for the PM; Atmosphere owns the files
 Owner: session_017Weex8fujB3VFsrpg84jEP (Unity spike worker)
 Status: in_progress
-Branch: local `atmos-shadows-1` off main 27fffbd3; push target waiting on the PM (this session may only push claude/unity-spike)
+Branch: claude/atmos-shadows-1 (Justin approved via the PM). This session can't push it; a fresh lane session applies patches/atmos-shadows-1/ from claude/unity-spike
 PR: none yet
 
 ## Goal
@@ -45,8 +45,15 @@ before and after; Render shows noon and dusk, walking, before and after.
   cascades tight (6b624d5c). Default is now Medium; High is the opt-in crisp mode. Crops of
   noon (main / Medium / High): tree shadow edges visibly crisper on Medium and High.
 
+- 2026-10-17 08:15: rebased on main 3c94bf63 (OptionsPage: kept both sides' buttons). D-313
+  cosy tuning: sun disc 1.1 deg + ShadowBlur 1.5 for soft rounded edges; bias 0.05 / 1.5
+  (Atmosphere's safe middle for the wrapped light past the terminator). Medium default (D-323).
+  Atmosphere: Steady() covers the moon; sun line before Grade(), CapFog() last; boltLight
+  untouched; shade colour stays with Atmosphere's ambient (#608). Atmosphere wants the PR number
+  to review.
+
 ## Open questions / blockers
-- Push target: PM to confirm claude/atmos-shadows-1 (or another route) before push and PR.
+- None for the code. Publishing needs a session allowed to push claude/atmos-shadows-1.
 
 ## Next step
 Push once the PM confirms the branch, wait for CI, send Render the before/after request (noon and dusk, walking), send the PM the green sha.
