@@ -149,9 +149,9 @@ def bramble():
     for side in (-1, 1):
         for az, low in ((84, -0.03), (104, -0.05), (124, -0.07)):
             root = on_head(side * az, 0.12, 0.0)
-            tip = on_head(side * (az + 4), low, -0.006)
-            ctrl = on_head(side * az, 0.02, -0.002)
-            balls += chain(root, tip, ctrl, 0.05, 0.015, 11)
+            tip = on_head(side * (az + 4), low, -0.012)
+            ctrl = on_head(side * az, 0.02, -0.012)
+            balls += chain(root, tip, ctrl, 0.05, 0.014, 11)
     # The back: soft locks to the nape, lying on the head, the ends tucking under.
     for az in (146, 168, 192, 214):
         root = on_head(az, 0.1, 0.0)
@@ -180,9 +180,9 @@ def pebble():
         ball((0, -0.215, -0.1), (0.05, 0.04, 0.032)),
     ]
     for side in (-1, 1):
-        balls.append(ball((side * 0.1, -0.16, 0.06), (0.06, 0.035, 0.028)))
+        balls.append(ball((side * 0.085, -0.165, 0.06), (0.045, 0.03, 0.026)))
     skin = meta("PebbleSkin", balls, resolution=0.008)
-    smooth_mesh(skin, 12, ratio=0.12)
+    smooth_mesh(skin, 4, ratio=0.12)
     bpy.context.view_layer.objects.active = skin
     bpy.ops.object.shade_smooth()
     set_part(skin, SKIN)
