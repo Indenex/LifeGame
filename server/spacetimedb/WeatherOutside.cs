@@ -49,7 +49,7 @@ public static partial class Module
 
         foreach (var piece in ctx.Db.ClayPiece.Iter().ToList())
             if (Aged(SeenClay, piece.Id, piece.X, piece.Z))
-                ctx.Db.ClayPiece.Id.Delete(piece.Id);
+                DeleteClayPiece(ctx, piece.Id);
 
         // Hides on a drying-rack station go with the station; only the old free-standing racks are swept here.
         foreach (var rack in ctx.Db.HideRack.Iter().ToList())
