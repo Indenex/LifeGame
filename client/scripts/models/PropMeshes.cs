@@ -9,7 +9,7 @@ namespace LifeGame;
 // replaces (trunk: base at y = 0, 2.8 m tall; rock: about 1 m across).
 public static class PropMeshes
 {
-    static Mesh? trunk, stump, cattails;
+    static Mesh? trunk, stump;
 
     static MeshKit Kit() => new(true) { Skinned = false };
 
@@ -667,29 +667,42 @@ public static class PropMeshes
     }
 
     // Cattails at the pond edge, for the grass shader: long blades and a few stalks
-    // topped with brown seed heads. UV.y runs from root to tip so they sway.
-    public static Mesh Cattails => cattails ??= BuildCattails();
+    // topped with brown seed heads. UV.y runs from root to tip so they sway. Variants
+    // (model-31, D-166) differ in how thick the clump is, its height, how many stalks
+    // carry heads (one to five), which way the blades lean and how many have bent over.
+    // Cattails is variant 0, as before.
+    public const int CattailVariants = 5;
+    public static Mesh Cattails => CattailsOf(0);
+    public static Mesh CattailsOf(int variant) => Variant("cattails", variant, CattailVariants, BuildCattails);
 
-    static ArrayMesh BuildCattails()
+    static ArrayMesh BuildCattails(int v)
     {
         const float tall = 1.5f;
         var k = Kit();
         k.SwayHeight = tall;
-        for (int i = 0; i < 12; i++)
+        int blades = v == 0 ? 12 : 8 + (int)(V(v, 1) * 9f), stalks = v == 0 ? 3 : 1 + (int)(V(v, 2) * 4.99f);
+        float height = v == 0 ? 1f : 0.8f + V(v, 3) * 0.35f, wind = V(v, 4) * Mathf.Tau, lean = v == 0 ? 0f : 0.08f + V(v, 5) * 0.12f;
+        var leanDir = new Vector3(Mathf.Cos(wind), 0, Mathf.Sin(wind));
+        for (int i = 0; i < blades; i++)
         {
-            float a = i * 2.4f + H(i, 32);
+            int h = i + v * 40;
+            float a = i * 2.4f + H(h, 32);
             var dir = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
-            var root = dir * 0.06f * H(i, 33);
-            float len = 0.9f + H(i, 34) * 0.5f;
-            var tip = root + dir * (0.12f + H(i, 35) * 0.25f) + Vector3.Up * len;
-            k.Paint(Colors.White, 0.85f + H(i, 36) * 0.2f).Blade(root, tip, dir.Cross(Vector3.Up), 0.035f, 0.05f);
+            var root = dir * 0.06f * (v == 0 ? 1f : 1.6f) * H(h, 33);
+            float len = (0.9f + H(h, 34) * 0.5f) * height;
+            var tip = root + dir * (0.12f + H(h, 35) * 0.25f) + leanDir * lean * len + Vector3.Up * len;
+            // A few old blades have folded over partway up and hang down.
+            if (v > 0 && H(h, 38) < 0.18f)
+                tip = root + Vector3.Up * len * 0.55f + (dir + leanDir * 0.5f).Normalized() * len * 0.45f;
+            k.Paint(Colors.White, 0.85f + H(h, 36) * 0.2f).Blade(root, tip, dir.Cross(Vector3.Up), 0.035f, 0.05f);
         }
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < stalks; i++)
         {
-            float a = i * 2.1f + 0.5f;
-            var root = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * 0.05f;
-            float h = 1.15f + H(i, 37) * 0.3f;
-            var top = root + new Vector3(0.02f * i, h, -0.015f * i);
+            int h = i + v * 40;
+            float a = i * 2.1f + 0.5f + (v == 0 ? 0f : V(v, 6) * 3f);
+            var root = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * (0.05f + (v == 0 ? 0f : H(h, 39) * 0.05f));
+            float stalk = (1.15f + H(h, 37) * 0.3f) * height;
+            var top = root + (v == 0 ? new Vector3(0.02f * i, 0, -0.015f * i) : leanDir * lean * stalk * 0.7f) + Vector3.Up * stalk;
             k.Paint(Colors.White, 0.8f).Tube(new[] { root, top + Vector3.Up * 0.12f }, 0.008f, 4, 0.004f, false);
             k.Paint(new Color(0.45f, 0.3f, 0.2f)).Tube(new[] { top - Vector3.Up * 0.12f, top }, 0.024f, 6);
         }
