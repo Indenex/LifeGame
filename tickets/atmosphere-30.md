@@ -1,7 +1,7 @@
 # atmosphere-30: Tool impacts (chips, clods, a felled tree's dust)
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_review
+Status: done
 Branch: claude/atmosphere-30-impacts (merged); follow-up claude/atmosphere-30b-impact-hook (#505, merged); next claude/atmosphere-30c-tree-landed
 PR: #486 (merged); follow-up opens when #496 lands
 
@@ -28,8 +28,10 @@ The chop and dig effects fire on Animation's impact frame: anim-7's `Avatar.Impa
 
 - 2026-10-17 06:05: env-22 (#537) merged. The felled-tree dust and leaves now fire on TreeFall.Landed(crownImpact, direction): a dust ring at the crown, a thinner one mid-trunk, and leaves bursting up from the crown and fluttering down. The ChoppedTree trigger is dropped, so nothing fires 1.6 s early or twice. The client builds with 0 errors.
 
+- 2026-10-17 05:19: #551 merged (green sha a18f2510, CI run 39005209501). atmosphere-30 is done: impacts on Avatar.Impact (#505) and felled-tree dust and leaves on TreeFall.Landed (#551).
+
 ## Open questions / blockers
 - anim-7 (branch claude/anim-7) must reach main before I can subscribe: `Avatar.Impact += (a, m, p, thrown, item) => OnAvatarImpact(a, m, p, thrown, item);` (anim-7 is PR #496) in ConnectImpacts. The handler is ready.
 
 ## Next step
-Wait for #551 CI, send the PM the green sha.
+Done. Tune from Render C's --impacts clip if it shows anything.

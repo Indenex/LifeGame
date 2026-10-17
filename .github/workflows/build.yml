@@ -191,7 +191,6 @@ jobs:
   upgrade:
     name: Upgrade check
     needs: module
-    if: github.event_name != 'merge_group'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -228,10 +227,16 @@ jobs:
       - name: Upgrade check (this module over the base branch's world, no wipe)
         if: steps.wipe.outputs.wipe != 'true'
         run: |
-          # The merge commit's first parent is the base this PR was merged onto. The
-          # base branch's tip can move while CI runs, so don't fetch it by name.
-          git fetch --depth=2 origin "$GITHUB_SHA"
-          tools/upgrade-check.sh HEAD^1
+          # What the new module is published over: a PR run, the merge commit's first parent (the base the PR
+          # was merged onto; the base branch's tip can move while CI runs, so don't fetch it by name); a merge
+          # queue run, the queue's base (the batch is checked as a whole); a push to main, where the batch
+          # landed from (the push's "before"), not just the tip commit's parent.
+          case "${{ github.event_name }}" in
+            merge_group) base="${{ github.event.merge_group.base_sha }}"; git fetch --depth=1 origin "$base" ;;
+            push) base="${{ github.event.before }}"; git fetch --depth=1 origin "$base" ;;
+            *) git fetch --depth=2 origin "$GITHUB_SHA"; base=HEAD^1 ;;
+          esac
+          tools/upgrade-check.sh "$base"
 
   # The required check. Passes when every server job passed or had nothing to do.
   server:
