@@ -128,6 +128,17 @@ public partial class OptionsPage : Control
         motion.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(motion);
 
+        // Water reflections (Atmosphere, atmosphere-31): off, normal or high.
+        Button reflections = null!;
+        reflections = ControlsPage.TextButton(ReflectText(), () =>
+        {
+            Atmosphere.WaterReflections = (Atmosphere.WaterReflections + 1) % 3;
+            Settings.Set("graphics", "water_reflections", Atmosphere.WaterReflections);
+            reflections.Text = ReflectText();
+        });
+        reflections.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(reflections);
+
         // How you look (ui-21): the same picker as at first join.
         var lookButton = ControlsPage.TextButton("Your look", () => LookPicker.OpenFromMenu?.Invoke());
         lookButton.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
@@ -145,6 +156,7 @@ public partial class OptionsPage : Control
 
     static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
 
+    static string ReflectText() => $"Water reflections: {new[] { "Off", "Normal", "High" }[Atmosphere.WaterReflections]}";
     static string OnOff(string name, bool on) => $"{name}: {(on ? "On" : "Off")}";
 
     static string RaysText() => $"Light rays: {new[] { "Off", "Normal", "High" }[Atmosphere.GodRays]}";
