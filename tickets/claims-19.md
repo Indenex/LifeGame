@@ -22,7 +22,15 @@ Neighbouring claim owners form a town. A claim owner starts a roster (a town, wi
 
 Vote rules built: a majority of the signers wins at once; otherwise the term's end (7 days, `Social.TownTermMicros`) goes to the most votes (a tie to the longest-standing signer); no votes means the holder stays; a vacant seat gets 24 h. The hourly `TownTerms` reducer (RequireServer) settles terms.
 
-## Progress log
+## Approved (Justin via the PM, 2026-10-17)
+Ten offices, open voting, 60 m chains with a soft cap of 64, merge by a majority of each town. Panel look C: map first (a small top-down map of the town's claims; click a circle for owner and role; click a neighbouring unsigned claim to invite them); roster, votes and invitations beside it; painted UI style; Opus helper; send Render stills when it runs.
+
+## Built since
+- `shared/Towns.cs`: the ten offices as data (name, one-line job, `TownPower` flags, stand-in). v1 powers: Mayor (remove, rename, merge, announce, clear ruins), Deputy (stands in for a vacant Mayor), Judge (breaks a tied election), Herald (announce), Warden (clear ruins); Marshal, Treasurer, Gatekeeper, Scribe, Elder are titles for now.
+- Server reducers: `StartTown`, `InviteToTown(playerId)`, `SignTown(townId)`, `DeclineTown(townId)`, `LeaveTown`, `RemoveFromTown(playerId)`, `VoteTownOffice(office, candidatePlayerId)`, `RenameTown(name)`, `AnnounceToTown(text)`, `ClearTownRuin(structureId)`, `ProposeTownMerge(otherTownId)`, `VoteTownMerge(mergeId, yes)`. Tables: `Town`, `TownSigner`, `TownOffice`, `TownVote`, `TownMerge`, `TownMergeVote` (public), `TownInvite` (private, via view `MyTownInvites`), `TownVoice`, `TownTermTimer`.
+- SocialTest covers merge, rename, announce (and its rate limit), a second office (Deputy), Mayor election and removal. (An unrelated trade-open timing flake showed up once in my local runs; it passed on the re-run.)
+
+
 - 2026-10-17: server and tests done; the server module builds, bindings generate, SocialTest passes on a fresh database; the client also builds locally (`dotnet build client/LifeGame.csproj`, 0 errors; no Godot needed, the Godot SDK comes from NuGet).
 - Toolchain recipe is in tickets/claims-13.md; add the client build line above.
 
@@ -31,4 +39,4 @@ Vote rules built: a majority of the signers wins at once; otherwise the term's e
 - The panel (a "Town" section in the claim panel: start, invite a neighbour, pending invitations with sign or decline, the roster with leave and, for the founder, remove) is a player-visual job for an Opus helper; not built yet. Until then the reducers work but have no UI.
 
 ## Next step
-Wait for CI on #469 and send the PM the green sha. Then, on the PM's answer: the remaining offices as data, the merge vote, and the panel (Opus helper).
+The Opus helper builds the map-first Town panel (branch claude/claims-19-town-panel, stacked on this one); wait for CI on #469 and send the PM the green sha.

@@ -543,9 +543,31 @@ else
             // B stays at their marker and tends it, so both claims are fresh for the next 30 s.
             b.Conn.Reducers.TendClaim(bClaim.Id);
 
-            a.Conn.Reducers.StartTown("Willow Run");
-            Check(Wait(() => a.Conn.Db.Town.Iter().Any(t => t.Name == "Willow Run") && a.Conn.Db.TownSigner.Iter().Any(t => t.PlayerId == a.PlayerId), 5), "A starts a town and signs it");
-            var townId = a.Conn.Db.Town.Iter().FirstOrDefault(t => t.Name == "Willow Run").Id;
+            // Two one-claim towns merge by a majority of each: A's "Alder" and B's "Birch".
+            a.Conn.Reducers.StartTown("Alder");
+            b.Conn.Reducers.StartTown("Birch");
+            Check(Wait(() => a.Conn.Db.Town.Iter().Any(t => t.Name == "Alder") && a.Conn.Db.Town.Iter().Any(t => t.Name == "Birch"), 5), "A and B each start a town");
+            var alderId = a.Conn.Db.Town.Iter().First(t => t.Name == "Alder").Id;
+            var birchId = a.Conn.Db.Town.Iter().First(t => t.Name == "Birch").Id;
+            a.Conn.Reducers.ProposeTownMerge(birchId);
+            Check(Wait(() => a.Conn.Db.TownMerge.Iter().Any(m => m.FromTownId == alderId && m.ToTownId == birchId), 5), "A, the Mayor, proposes joining Birch");
+            var mergeId = a.Conn.Db.TownMerge.Iter().First(m => m.FromTownId == alderId).Id;
+            a.Conn.Reducers.VoteTownMerge(mergeId, true);
+            Wait(() => a.Conn.Db.TownMergeVote.Iter().Any(v => v.MergeId == mergeId), 5);
+            Check(a.Conn.Db.Town.Iter().Count(t => t.Name == "Alder" || t.Name == "Birch") == 2, "one town's yes is not enough");
+            b.Conn.Reducers.VoteTownMerge(mergeId, true);
+            // The older town keeps its name (which started first is a race between the two calls).
+            Check(Wait(() => a.Conn.Db.Town.Iter().Count(t => t.Name == "Alder" || t.Name == "Birch") == 1 && a.Conn.Db.TownSigner.Iter().Count(t => t.TownId == alderId || t.TownId == birchId) == 2, 5)
+                && a.Conn.Db.TownSigner.Iter().Select(t => t.TownId).Distinct().Count() == 1, "a majority of both towns merges them into one");
+            var townId = a.Conn.Db.TownSigner.Iter().First(t => t.PlayerId == a.PlayerId).TownId;
+            Check(a.Conn.Db.TownOffice.Iter().FirstOrDefault(o => o.TownId == townId && o.Office == Social.OfficeMayor)?.HolderId == 0, "the merged town starts with an empty Mayor's seat");
+            // B steps out again, A elects themselves Mayor (one vote of one is a majority) and renames the town.
+            b.Conn.Reducers.LeaveTown();
+            Check(Wait(() => a.Conn.Db.TownSigner.Iter().Count(t => t.TownId == townId) == 1, 5), "B leaves the merged town");
+            a.Conn.Reducers.VoteTownOffice(Social.OfficeMayor, a.PlayerId);
+            Check(Wait(() => a.Conn.Db.TownOffice.Iter().Any(o => o.TownId == townId && o.Office == Social.OfficeMayor && o.HolderId == a.PlayerId), 5), "a lone signer's vote makes them Mayor");
+            a.Conn.Reducers.RenameTown("Willow Run");
+            Check(Wait(() => a.Conn.Db.Town.Iter().Any(t => t.Name == "Willow Run"), 5), "the Mayor renames the town");
             ExpectError(b, () => b.Conn.Reducers.SignTown(townId), "invited", "B cannot sign without an invitation");
             a.Conn.Reducers.InviteToTown(b.PlayerId);
             Check(Wait(() => b.Conn.Db.MyTownInvites.Iter().Any(i => i.TownName == "Willow Run"), 5) && !a.Conn.Db.MyTownInvites.Iter().Any(), "B sees the invitation, and A does not");
@@ -565,9 +587,21 @@ else
             ExpectError(a, () => a.Conn.Reducers.TendClaim(bClaim.Id), "owner and members", "a signer cannot tend another claim's marker");
             ExpectError(a, () => a.Conn.Reducers.RemoveFromTown(b.PlayerId + 1000), "not on this roster", "the founder cannot remove someone who is not on the roster");
 
+            ExpectError(b, () => b.Conn.Reducers.RenameTown("Nope"), "Mayor", "only the Mayor renames the town");
+            a.LastError = null;
+            a.Conn.Reducers.AnnounceToTown("Market day on the green");
+            Wait(() => a.LastError != null, 1);
+            Check(a.LastError == null, $"the Mayor can speak for the town ({a.LastError ?? "ok"})");
+            ExpectError(a, () => a.Conn.Reducers.AnnounceToTown("And again"), "moment", "the town's word is rate limited");
+            ExpectError(b, () => b.Conn.Reducers.AnnounceToTown("Hello"), "Herald", "only the Herald or Mayor speaks for the town");
+            // A second office, as data: both signers vote A in as Deputy.
+            a.Conn.Reducers.VoteTownOffice(1, a.PlayerId);
+            b.Conn.Reducers.VoteTownOffice(1, a.PlayerId);
+            Check(Wait(() => a.Conn.Db.TownOffice.Iter().Any(o => o.TownId == townId && o.Office == 1 && o.HolderId == a.PlayerId), 5), "the signers elect a Deputy");
+            ExpectError(a, () => a.Conn.Reducers.VoteTownOffice(77, a.PlayerId), "no such office", "an unknown office cannot be voted on");
             // The Mayor: A, the founder, starts as Mayor. Only the Mayor removes; the signers vote.
             var mayorNow = a.Conn.Db.TownOffice.Iter().FirstOrDefault(o => o.TownId == townId && o.Office == Social.OfficeMayor);
-            Check(mayorNow.HolderId == a.PlayerId, "the founder starts as Mayor");
+            Check(mayorNow.HolderId == a.PlayerId, "A is Mayor of the signed town");
             ExpectError(b, () => b.Conn.Reducers.RemoveFromTown(a.PlayerId), "Mayor", "a signer who is not Mayor cannot remove anyone");
             b.Conn.Reducers.VoteTownOffice(Social.OfficeMayor, b.PlayerId);
             Check(Wait(() => b.Conn.Db.TownVote.Iter().Any(v => v.TownId == townId && v.VoterId == b.PlayerId), 5), "B votes for B");
@@ -635,7 +669,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
+                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))
