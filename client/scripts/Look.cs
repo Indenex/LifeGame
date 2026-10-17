@@ -754,7 +754,7 @@ public static class Look
         """;
 
     // Puts the weather uniforms right after the shader's render mode line.
-    static Shader MakeShader(string code)
+    internal static Shader MakeShader(string code)
     {
         EnsureWeatherGlobals();
         int split = code.IndexOf('\n', code.IndexOf("render_mode")) + 1;

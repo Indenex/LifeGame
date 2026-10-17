@@ -160,9 +160,11 @@ public static class MaterialLook
     // without fighting the painted shading.
     public static ShaderMaterial CardPine(Texture2D card)
     {
-        var material = new ShaderMaterial { Shader = new Shader { Code = CardPineCode } };
+        // Through Look's MakeShader, so it gets the weather (cloud shadows) like the ground.
+        var material = new ShaderMaterial { Shader = Look.MakeShader(CardPineCode) };
         material.SetShaderParameter("card", card);
         material.SetShaderParameter("brush", Brush);
+        material.SetShaderParameter("clouds", Look.Clouds);
         return material;
     }
 
@@ -262,13 +264,20 @@ public static class MaterialLook
         // violet. Ambient is left to the scene.
         void light() {
             float wrapped = clamp(dot(NORMAL, LIGHT) * 0.6 + 0.4, 0.0, 1.0);
-            float l = wrapped * ATTENUATION + (dab - 0.5) * 0.22;
+            // Passing cloud shadows move the band edges, as on the ground.
+            float sky = LIGHT_IS_DIRECTIONAL ? cloud_shadow(world_pos) : 1.0;
+            float l = wrapped * ATTENUATION * sky + (dab - 0.5) * 0.22;
             float soft = 0.025;
             float mid = smoothstep(0.3 - soft, 0.3 + soft, l);
             float lit = smoothstep(0.62 - soft, 0.62 + soft, l);
-            float band = 0.32 + 0.2 * mid + 0.22 * lit;
+            // A low floor, so a pine in shadow is dark like the ground under it; the
+            // scene's blue-violet ambient carries the shade.
+            float band = 0.1 + 0.36 * mid + 0.3 * lit;
             vec3 tone = mix(shade_tint, vec3(1.0), mid);
-            DIFFUSE_LIGHT += LIGHT_COLOR * tone * band / PI;
+            // A fire or doorway light fades out with its distance falloff instead of
+            // lighting every needle in range evenly.
+            float reach = LIGHT_IS_DIRECTIONAL ? 1.0 : smoothstep(0.0, 0.25, ATTENUATION);
+            DIFFUSE_LIGHT += LIGHT_COLOR * tone * band * reach / PI;
         }
         """;
 
