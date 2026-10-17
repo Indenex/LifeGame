@@ -18,6 +18,7 @@ static class AudioHooks
         EmoteSounds.Connect(conn);
         DeerGrazing.Connect(conn);
         LampSounds.Connect(conn);
+        RabbitSounds.Connect(conn);
     }
 
     public static void Tick(double dt)
@@ -28,5 +29,6 @@ static class AudioHooks
         EmoteSounds.Tick(dt);
         DeerGrazing.Tick(dt);
         LampSounds.Tick(dt);
+        RabbitSounds.Tick(dt);
     }
 }
