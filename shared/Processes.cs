@@ -175,6 +175,12 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
+                Id = "cook.chicken", Name = "Roast chicken", Doing = "Setting a chicken over the fire", Tier = 1,
+                Consumes = new[] { new Ingredient(Item.RawChicken) },
+                Seconds = 1, Outcome = Outcome.Roast, Makes = Item.CookedChicken,
+            },
+            new ProcessDef
+            {
                 Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.Stick) }, NeedsTool = ItemTags.Cutting,
                 Seconds = Base(1, 1f), Makes = Item.DiggingStick,
@@ -217,6 +223,19 @@ namespace LifeGame.Shared
                 Id = "weave.mat", Name = "Weave a sleeping mat", Doing = "Weaving a sleeping mat", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Fiber, 8) },
                 Seconds = Base(2, 2f), Makes = Item.SleepingMat,
+            },
+            // Animals' bow and arrows (animals-15). Powers are on the items (shared/Items.cs).
+            new ProcessDef
+            {
+                Id = "lash.bow", Name = "String a bow", Doing = "Bending and stringing a bow", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick, 3), new Ingredient(Item.Cordage, 2) }, NeedsTool = ItemTags.Cutting,
+                Seconds = Base(2, 1.5f), Makes = Item.Bow,
+            },
+            new ProcessDef
+            {
+                Id = "carve.arrows", Name = "Make arrows", Doing = "Shaving and fletching arrows", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick, 2), new Ingredient(Item.Fiber, 2) }, NeedsTool = ItemTags.Cutting,
+                Seconds = Base(2, 1f), Makes = Item.Arrow, MakesCount = 3,
             },
             new ProcessDef
             {

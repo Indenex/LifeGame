@@ -15,5 +15,9 @@ namespace LifeGame.Shared
         // Quick actions, played once (anim-4, server PlayerAct): scoop water to the mouth
         // at a bank, food to the mouth, pluck from a bush, grab something off the ground.
         Drink, Eat, Pluck, PickUp,
+        // More quick actions (anim-5): a strike (its style from the weapon: spear thrust,
+        // blade slash, fist), drawing and loosing a bow, digging, shearing, butchering,
+        // feeding a fire, and flinching from a blow.
+        Strike, Shoot, Dig, Shear, Butcher, Feed, Flinch,
     }
 }

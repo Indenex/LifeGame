@@ -34,6 +34,18 @@ namespace LifeGame.Shared
 
         public static float FenceTop(bool gate) => gate ? GateHeight : FenceHeight;
 
+        // How high the server believes a walker is, `seconds` after the jump row was written. The
+        // row reaches the server a little after takeoff and positions arrive a little late, so it
+        // allows the best height within a short window either side (never stricter than the client).
+        public const float ServerGraceSeconds = 0.25f;
+        public static float AirHeightWithGrace(float seconds)
+        {
+            float best = 0f;
+            for (float t = seconds - ServerGraceSeconds; t <= seconds + ServerGraceSeconds + 1e-4f; t += ServerGraceSeconds / 2f)
+                best = MathF.Max(best, Height(t));
+            return best;
+        }
+
         // Whether a walker airborne at this height clears something this tall.
         public static bool Clears(float obstacleHeight, float airHeight) => airHeight >= obstacleHeight;
 

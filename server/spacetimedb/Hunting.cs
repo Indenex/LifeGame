@@ -70,6 +70,7 @@ public static partial class Module
         int damage = spear is { } s ? 50 + s.Quality / 4 : 30 + blade!.Value.Quality / 8;
         int bonus = SneakCrit(ctx, player.PlayerId, animal, damage);
         OnProcessPerformed(ctx, player.PlayerId, HuntProcess, (spear ?? blade)!.Value.Quality, false);
+        NoteAct(ctx, player.PlayerId, WorkMotion.Strike, (Item)(spear ?? blade)!.Value.Item);
         WearTool(ctx, (spear ?? blade)!.Value);
         HurtAnimal(ctx, animal, mind, damage + bonus, pos.X, pos.Z, StartleLeap, now, bonus > 0);
     }
@@ -194,6 +195,7 @@ public static partial class Module
         QualityCapFor(ctx, player.PlayerId, ButcherProcess, ref cap);
         byte quality = Math.Min(tool.Quality, cap);
         OnProcessPerformed(ctx, player.PlayerId, ButcherProcess, quality, false);
+        NoteAct(ctx, player.PlayerId, WorkMotion.Butcher, (Item)tool.Item);
         WearTool(ctx, tool);
 
         // What a carcass gives comes from its species' Def: a grown animal gives its cuts, its
@@ -201,7 +203,7 @@ public static partial class Module
         var def = AnimalDefs.Get((byte)carcass.Species);
         bool grown = carcass.Growth >= 80;
         for (int i = 0; i < (grown ? def.MeatGrown : def.MeatYoung); i++) DropNear(ctx, carcass, def.Meat, quality);
-        if (grown) DropNear(ctx, carcass, def.Hide, quality);
+        if (grown && def.Hide is { } hide) DropNear(ctx, carcass, hide, quality);
         if (grown && def.Extra is { } extra) DropNear(ctx, carcass, extra, quality);
         ctx.Db.AnimalCarcass.Id.Delete(carcassId);
     }

@@ -85,8 +85,11 @@ public partial class Avatar : Node3D
     public void Hold(Item? right, Item? left)
     {
         (workRight, workLeft) = (right, left);
-        if (actItem == null) Grip("ToolR", right, ref heldRight);
-        Grip("ToolL", left, ref heldLeft);
+        if (actItem == null)
+        {
+            Grip("ToolR", right, ref heldRight);
+            Grip("ToolL", left, ref heldLeft);
+        }
     }
     Item? heldRight, heldLeft, workRight, workLeft;
 
@@ -95,7 +98,13 @@ public partial class Avatar : Node3D
     // food on its way to the mouth, berries and finds once they are in the hand.
     public void Act(WorkMotion motion, Item? item)
     {
-        animator.Act(motion);
+        animator.Act(motion, WorkMotions.StyleOf(item));
+        // An empty-handed action (a flinch) gives back whatever the last one borrowed.
+        if (item == null && actItem != null)
+        {
+            Grip("ToolR", workRight, ref heldRight);
+            Grip("ToolL", workLeft, ref heldLeft);
+        }
         actItem = item;
         actMotion = motion;
     }
@@ -105,10 +114,12 @@ public partial class Avatar : Node3D
     void ShowActItem()
     {
         float left = animator.ActLeft, length = WorkMotions.ActSeconds(actMotion);
+        bool inLeft = WorkMotions.ActItemInLeft(actMotion);
         if (left <= 0f || actItem == null)
         {
             actItem = null;
             Grip("ToolR", workRight, ref heldRight);
+            Grip("ToolL", workLeft, ref heldLeft);
             return;
         }
         float t = length - left;
@@ -117,9 +128,12 @@ public partial class Avatar : Node3D
             WorkMotion.Eat => t < 0.9f,
             WorkMotion.Pluck => t > 0.4f,
             WorkMotion.PickUp => t > length * 0.5f,
-            _ => false,
+            WorkMotion.Feed => t < 0.45f,
+            // Weapons, the bow and blades are in the hand throughout.
+            _ => true,
         };
-        Grip("ToolR", show ? actItem : workRight, ref heldRight);
+        if (inLeft) Grip("ToolL", show ? actItem : workLeft, ref heldLeft);
+        else Grip("ToolR", show ? actItem : workRight, ref heldRight);
     }
 
     void Grip(string hand, Item? item, ref Item? held)

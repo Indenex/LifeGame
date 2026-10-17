@@ -20,6 +20,9 @@ public static class Look
     public static readonly Color LeafLight = new(0.42f, 0.50f, 0.20f);
     public static readonly Color LeafWarm = new(0.66f, 0.50f, 0.18f);
     public static readonly Color Rock = new(0.46f, 0.47f, 0.46f);
+    // Boulders, river stones and outcrops in the world (env-16): paler and warmer than
+    // Rock, after the art references. Tools, stations and items keep Rock.
+    public static readonly Color WorldRock = new(0.64f, 0.61f, 0.55f);
     // Wildflowers in the grass (Environment's undergrowth).
     public static readonly Color FlowerWhite = new(0.95f, 0.93f, 0.84f);
     public static readonly Color FlowerButtercup = new(0.93f, 0.78f, 0.25f);
@@ -74,6 +77,9 @@ public static class Look
         // the fog colour (Atmosphere) over its outer quarter.
         Add("far_land_radius", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("fog_tint", RenderingServer.GlobalShaderParameterType.Color, new Color(0.62f, 0.68f, 0.70f));
+        // Legs wet from wading (Atmosphere): up to this world height, this wet (0 to 1).
+        Add("wet_line", RenderingServer.GlobalShaderParameterType.Float, -1000f);
+        Add("wet_amount", RenderingServer.GlobalShaderParameterType.Float, 0f);
     }
 
     // Seconds since the game started (from 1), shared with the shaders as
@@ -295,6 +301,9 @@ public static class Look
         // colour of the fog it melts into at its rim.
         global uniform float far_land_radius;
         global uniform vec3 fog_tint;
+        // How far up the player is wet from wading, and how wet (0 dry to 1 just out).
+        global uniform float wet_line;
+        global uniform float wet_amount;
         // The season (Atmosphere, D-099): warmth -1 deep winter to 1 high summer,
         // autumn 0 green to 1 leaves fully turned, snow lying on the ground and
         // snow falling now, all 0 to 1.
@@ -534,6 +543,15 @@ public static class Look
 
                 // The rim of the distant land melts into the fog, so its edge never
                 // shows against the sky, even on a clear day.
+                // Just out of the water, the player is darker and glossier up to where the water
+                // reached, with a soft edge, drying off over time.
+                if (wet_amount > 0.0) {
+                    float near_player = 1.0 - smoothstep(0.45, 0.65, length(world_pos.xz - player_position.xz));
+                    float soaked = wet_amount * near_player * (1.0 - smoothstep(wet_line - 0.04, wet_line + 0.04, world_pos.y));
+                    ALBEDO *= mix(1.0, 0.62, soaked);
+                    wet = max(wet, soaked);
+                }
+
                 if (far_land_radius > 0.0) {
                     float rim = smoothstep(0.75 * far_land_radius, far_land_radius, length(world_pos.xz - player_position.xz));
                     ALBEDO *= 1.0 - rim;
