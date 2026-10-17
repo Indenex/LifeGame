@@ -29,7 +29,16 @@ public partial class Terrain
         public bool[] Cleared = Array.Empty<bool>();
         public (float At, bool Cleared)?[] Change = Array.Empty<(float, bool)?>();
         public bool Tufts;
+        // Set for a one-cell build (TreeFall): only this cell's plants, drawn standing.
+        public (int X, int Z)? Only;
         public readonly Dictionary<long, float> Heights = new();
+
+        public void Keep(int x, int z)
+        {
+            Only = (x, z);
+            Tufts = false;
+            if (CellIndex(x, z) is var k and >= 0) { Cleared[k] = false; Change[k] = null; }
+        }
 
         public short DepthAt(int x, int z)
         {
@@ -150,7 +159,7 @@ public partial class Terrain
         try
         {
             var data = new ChunkData { Tufts = snapshot.Tufts };
-            BuildGround(data, snapshot.Cx, snapshot.Cz);
+            if (snapshot.Only == null) BuildGround(data, snapshot.Cx, snapshot.Cz);
             AddVegetation(data, snapshot.Cx, snapshot.Cz);
             return data;
         }
