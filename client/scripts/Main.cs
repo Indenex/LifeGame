@@ -214,6 +214,7 @@ public partial class Main : Node3D
         {
             Blocked = playerMenu.Blocked,
             Play = e => conn?.Reducers.Emote((byte)e.Motion),
+            SomeoneNear = () => others.Values.Any(o => o.Position.DistanceTo(me.Position) < 10f),
         });
         var cameraDrag = new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing };
         cameraDrag.Clicked += playerMenu.Clicked;
