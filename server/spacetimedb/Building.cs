@@ -157,8 +157,11 @@ public static partial class Module
     static void CheckClaimOnly(ReducerContext ctx, int kind, float x, float z)
     {
         if (Structures.IsWild(kind)) return;
-        if (ClaimAt(ctx, x, z) is not { } claim || !HasClaimRights(ctx, claim, ctx.Sender))
-            throw new Exception($"A {Structures.Shape(kind).Name.ToLowerInvariant()} has to stand inside your claim");
+        string what = Structures.Shape(kind).Name.ToLowerInvariant();
+        if (ClaimAt(ctx, x, z) is not { } claim)
+            throw new Exception($"A {what} has to stand inside your claim. Raise a claim marker first (build menu), away from the waking clearing");
+        if (!HasClaimRights(ctx, claim, ctx.Sender))
+            throw new Exception($"This land is claimed by {claim.OwnerName}. Ask them to add you, or build a {what} on your own claim");
     }
 
     // Adds one carried item the current stage still needs. Anyone in reach can help.

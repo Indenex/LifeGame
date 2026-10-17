@@ -1,9 +1,9 @@
 # anim-6: Wading and floating, and poses that fit the chibi body
 Lane: Animation
 Owner: Animation session (Opus), session_019roNRWQBPw4ozNLDhzseig
-Status: in_progress
+Status: done
 Branch: claude/anim-6
-PR: (opening)
+PR: #485 (merged)
 
 ## Goal
 PM 01:51 (D-145): keep busy on the new chibi base (Modeling, claude/model-6-chibi: Bramble and Pebble, 1.35 m, 2.8 heads, same 16-bone rig) and the new water movement (#414, shared/Wading.cs).

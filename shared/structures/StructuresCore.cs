@@ -17,6 +17,7 @@ namespace LifeGame.Shared
                 Shape = new StructureShape
                 {
                     Name = "Lean-to",
+                    Model = "LeanTo",
                     Wild = true,
                     Scale = 1.25f,
                     HalfWidth = 1.5f, HalfDepth = 1.25f,
@@ -39,6 +40,8 @@ namespace LifeGame.Shared
                 Shape = new StructureShape
                 {
                     Name = "Clay hut",
+                    Model = "ClayHut",
+                    Hut = true,
                     Wild = true,
                     Scale = 1.25f,
                     Round = true, Radius = 1.9f,
@@ -65,6 +68,7 @@ namespace LifeGame.Shared
                     // Ceramics' updraft kiln: pots are loaded and fired in it (server/spacetimedb/Kiln.cs).
                     Kiln = true,
                     Name = "Updraft kiln",
+                    Model = "Kiln",
                     Category = "Crafting",
                     Round = true, Radius = 0.85f,
                     Clearance = 1.2f,
@@ -84,6 +88,7 @@ namespace LifeGame.Shared
                 Shape = new StructureShape
                 {
                     Name = "Storage basket",
+                    Model = "Basket",
                     Wild = true,
                     Category = "Storage",
                     Round = true, Radius = 0.35f,
@@ -106,6 +111,7 @@ namespace LifeGame.Shared
                 Shape = new StructureShape
                 {
                     Name = "Storage jar",
+                    Model = "Jar",
                     Wild = true,
                     Category = "Storage",
                     Jar = true,

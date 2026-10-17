@@ -18,6 +18,7 @@ namespace LifeGame.Shared
                 Shape = new StructureShape
                 {
                     Name = "Claim marker",
+                    Model = "ClaimMarker",
                     Wild = true,
                     Category = "Claims",
                     Round = true, Radius = 0.5f,

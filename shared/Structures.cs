@@ -46,6 +46,10 @@ namespace LifeGame.Shared
         public bool Indoor;
         // Ceramics' updraft kiln and storage jar: found by shape, never by enum number (docs/CONTENT.md).
         public bool Kiln, Jar;
+        // A round walled hut: walls on a circle of HutWallRadius with a doorway on +Z (the clay hut).
+        public bool Hut;
+        // Which hand-built client model draws this kind (StructureModel); empty falls back on the flags above.
+        public string Model = "";
         // A crafting station of this kind once finished (D-098); None for anything else.
         public StationKind Station;
         // A rectangular room with four walls (HouseWallX/Z) and its doorway on +Z: the
@@ -194,11 +198,11 @@ namespace LifeGame.Shared
         public static string StageProcess(int kind, int stage) => kind switch
         {
             // Lean-to: frame, lashing and ribs are all framing; thatch is roofing.
-            0 => stage >= 3 ? RoofProcess : FrameProcess,
+            _ when Shape(kind).Model == "LeanTo" => stage >= 3 ? RoofProcess : FrameProcess,
             _ when Shape(kind).Kiln => ClayRules.KilnProcess,
             // Claim marker (claims-9): one stage, reported as claim.mark for the journal.
-            2 => Social.MarkProcess,
-            4 => WeaveProcess,
+            _ when Shape(kind).Model == "ClaimMarker" => Social.MarkProcess,
+            _ when Shape(kind).Model == "Basket" => WeaveProcess,
             // Brick and tiled houses: footings and rafters are framing, walls are daub work, the roof is roofing.
             _ when Shape(kind).BrickWalls => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
             // Log cabin: sill, log walls and rafters are all framing; thatch is roofing.
@@ -275,7 +279,7 @@ namespace LifeGame.Shared
         {
             var (ax, az) = ToLocal(sx, sz, yaw, fromX, fromZ);
             var (bx, bz) = ToLocal(sx, sz, yaw, toX, toZ);
-            if (kind == 1)
+            if (Shape(kind).Hut)
             {
                 float wall = HutWallRadiusFor(kind), r2 = wall * wall;
                 if (ax * ax + az * az < r2 == bx * bx + bz * bz < r2) return false;
@@ -300,7 +304,7 @@ namespace LifeGame.Shared
         public static bool StepCrossesLeanTo(int kind, float sx, float sz, float yaw, float fromX, float fromZ, float toX, float toZ)
         {
             var shape = Shape(kind);
-            if (shape.Round || shape.Fence || shape.Room || kind != 0) return false;
+            if (shape.Round || shape.Fence || shape.Room || shape.Model != "LeanTo") return false;
             float wx = shape.HalfWidth, wz = shape.HalfDepth;
             var (ax, az) = ToLocal(sx, sz, yaw, fromX, fromZ);
             var (bx, bz) = ToLocal(sx, sz, yaw, toX, toZ);
