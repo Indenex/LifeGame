@@ -2,7 +2,7 @@
 the baked AO, in the Golden Skull way: each plate in three tones (a lit centre, a mid
 and a shade band at its edge), a dark line in every seam, a pale bevel on the upper
 edges and a darker one on the lower, growth rings following each plate's outline,
-loose strokes along them, and the AO laid over the top.
+and the AO laid over the top. No grain or stroke noise (D-319).
 
     python3 tools/art/pebble_shell/paint.py <bake dir> <out dir>
 
@@ -83,8 +83,7 @@ def paint_plates(pal, dist, maxd, direc, region, worn, uvx, uvy, rings=(0.42,), 
             line = 1 - smooth(0.0, 0.003, np.abs(dist - maxd * at - wob * 0.02))
             col = col * (1 - 0.09 * line)[:, None]
     # Strokes along the rings: colour varies across them, little along them.
-    stroke = value_noise(dist * 900 + uvx * 3, uvy * 3 + region * 7.3, 5) - 0.5
-    col = col * (1 + stroke * (0.03 if worn else 0.045))[:, None]
+    # No stroke grain (D-319: no pitting); smooth colour blocks only.
     # Each plate a touch different.
     # Each plate a touch lighter or darker, a little warmer or cooler.
     rng = np.random.default_rng(11)
