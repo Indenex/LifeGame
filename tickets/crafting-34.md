@@ -1,7 +1,7 @@
 # crafting-34: A stopped job returns its inputs as they were
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-refund
 PR: (see below)
 
@@ -12,4 +12,4 @@ crafting-31 (#614) made walking off, a panel or a change of hand end a job and g
 - 2026-10-17: change made; builds; upgrade check and CraftCheck pass locally.
 
 ## Next step
-Wait for CI, send the green sha to the PM.
+None: merged (#676). Later sections below are history.

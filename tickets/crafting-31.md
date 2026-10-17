@@ -1,7 +1,7 @@
 # crafting-31: Walking off ends the job
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-cancel (harness branch claude/...; see PR)
 PR: (see below)
 
@@ -20,4 +20,4 @@ Dig, gather and shear are instant reducers with cooldowns (nothing runs in the b
 - Inputs of a cancelled job are returned at the job's quality (close to, not exactly, the original average).
 
 ## Next step
-Wait for CI on the PR, send the green sha to the PM.
+None: merged (#614, #701, #742). Later sections below are history.

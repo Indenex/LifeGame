@@ -1,7 +1,7 @@
 # crafting-23: Batch crafting at dedicated devices (D-195)
 Lane: Crafting (Ceramics: clay processes; Modeling: device models; UX: the panel)
 Owner: Crafting thread (Sonnet, D-159)
-Status: in_review
+Status: done
 Branch: crafting-devices
 PR: (to open)
 
@@ -31,7 +31,7 @@ Justin (D-195, revised by D-209): cleaning clay, crushing stone, tempering and s
 - Batch size, time and skill gain go through Progression.Effect once Journal's shared/Progression.cs is on main (one placeholder function until then).
 
 ## Next step
-Merge order set by the PM (2026-10-17): #285 goes LAST in its round, after ClayTrough 17 (#417), HenCoop 18 (#479) and StoneHearth 19 (#518). Then: git merge origin/main, renumber the three device kinds to 20, 21, 22 (StructuresCrafting.cs `Kind =` and their positions in StructureKind in server/spacetimedb/Building.cs: append after the others), rebuild, run tools/CraftCheck and tools/upgrade-check.sh origin/main, push, send the PM the green sha. (SpacetimeDB enums cannot carry explicit values, so an id is the enum position.) Do not merge as 17-19.
+None: merged (#285 (kinds 21-23)). Later sections below are history.
 
 ## Update 2026-10-17: refreshed on main
 - Merged origin/main (ClayTrough is kind 17 on main). The three devices are provisionally kinds 18, 19, 20 so the enum order matches. PM: HenCoop 18, StoneHearth 19 and the sundial 20 land first, so the final numbers are 21, 22, 23. At that merge: re-merge main, move `Kind =` in `shared/structures/StructuresCrafting.cs` and the positions in `StructureKind` (`Building.cs`) to follow the last kind on main, keep `Category = "Crafting"`, rerun CraftCheck and `tools/upgrade-check.sh origin/main`.
