@@ -16,7 +16,7 @@ public static partial class Module
         string what = StationInfo.Name(station);
         if (ClaimAt(ctx, x, z) is not { } claim)
             throw new Exception($"A {what} has to stand inside your claim. Raise a claim marker first (build menu), away from the waking clearing");
-        if (!HasClaimRights(ctx, claim, ctx.Sender))
+        if (!HasClaimRights(ctx, claim, Me(ctx)))
             throw new Exception($"This land is claimed by {claim.OwnerName}. Ask them to add you, or build a {what} on your own claim");
     }
 
@@ -38,7 +38,7 @@ public static partial class Module
             float d = Dist(s.X, s.Z, x, z);
             if (d - StationRadius(s) > Structures.WorkReach || d >= bestD) continue;
             // A wild station (the crafting table) can stand on open ground; in a claim only its members may use it.
-            if (ClaimAt(ctx, s.X, s.Z) is { } claim && !HasClaimRights(ctx, claim, ctx.Sender)) continue;
+            if (ClaimAt(ctx, s.X, s.Z) is { } claim && !HasClaimRights(ctx, claim, Me(ctx))) continue;
             if (ClaimAt(ctx, s.X, s.Z) is null && !Structures.IsWild((int)s.Kind)) continue;
             best = s;
             bestD = d;
@@ -53,7 +53,7 @@ public static partial class Module
         foreach (var s in StructuresNear(ctx, station.X, station.Z))
             if (s.Complete && Structures.IsStore((int)s.Kind)
                 && Dist(s.X, s.Z, station.X, station.Z) <= StationInfo.StorageReach
-                && (ClaimAt(ctx, s.X, s.Z) is not { } claim || HasClaimRights(ctx, claim, ctx.Sender)))
+                && (ClaimAt(ctx, s.X, s.Z) is not { } claim || HasClaimRights(ctx, claim, Me(ctx))))
                 stores.Add(s);
         return stores;
     }

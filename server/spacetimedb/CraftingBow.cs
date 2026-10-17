@@ -10,7 +10,7 @@ public static partial class Module
     static partial void BowShotHook(ReducerContext ctx, uint playerId, ref BowShot shot)
     {
         InventoryItem? bow = null, arrow = null;
-        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender))
+        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(Me(ctx)))
         {
             if (!Items.IsKnown(row.Item)) continue;
             var def = Items.Def((Item)row.Item);

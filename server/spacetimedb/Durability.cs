@@ -22,7 +22,7 @@ public static partial class Module
     public static void SetToolWearStep(ReducerContext ctx, ushort step)
     {
         var config = ctx.Db.ClaimConfig.Id.Find(0) ?? throw new Exception("Not set up");
-        if (config.Admin != ctx.Sender) throw new Exception("Only the server admin can change this");
+        if (config.Admin != Me(ctx)) throw new Exception("Only the server admin can change this");
         var row = new WearConfig { Id = 0, Step = Math.Max((ushort)1, step) };
         if (ctx.Db.WearConfig.Id.Find(0) is null) ctx.Db.WearConfig.Insert(row);
         else ctx.Db.WearConfig.Id.Update(row);
@@ -49,7 +49,7 @@ public static partial class Module
     // say so, so they know to mend it; otherwise the usual message.
     static string NoToolMessage(ReducerContext ctx, ItemTags tags, string otherwise)
     {
-        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender))
+        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(Me(ctx)))
             if (Items.IsKnown(row.Item) && Durability.Wears((Item)row.Item)
                 && (Items.Def((Item)row.Item).Tags & tags) != ItemTags.None
                 && Durability.IsSpent(row.Quality, row.Wear))
@@ -69,7 +69,7 @@ public static partial class Module
             ?? throw new Exception($"You need to be at a {StationInfo.Name(StationKind.Repair)} in your claim");
         if (!Items.IsKnown(item) || !Durability.Wears((Item)item))
             throw new Exception("That doesn't wear out");
-        var stack = FindStack(ctx, ctx.Sender, (Item)item, quality, wear) ?? throw new Exception("You are not carrying that");
+        var stack = FindStack(ctx, Me(ctx), (Item)item, quality, wear) ?? throw new Exception("You are not carrying that");
         if (Durability.Used(wear) == 0)
             throw new Exception("That's as good as it can be");
 
@@ -86,9 +86,9 @@ public static partial class Module
         if (helper is { } tool) WearTool(ctx, tool);
 
         // Taking the cordage may have changed the stack's row; look it up again.
-        var again = FindStack(ctx, ctx.Sender, (Item)item, quality, wear) ?? stack;
+        var again = FindStack(ctx, Me(ctx), (Item)item, quality, wear) ?? stack;
         RemoveFromStack(ctx, again, 1);
-        AddToInventory(ctx, ctx.Sender, (Item)item, 1, Durability.RepairedQuality(quality, wear), Durability.Repaired(quality, wear));
+        AddToInventory(ctx, Me(ctx), (Item)item, 1, Durability.RepairedQuality(quality, wear), Durability.Repaired(quality, wear));
         PerformedProcess(ctx, player.PlayerId, Skills.Repair, pos.X, pos.Z);
     }
 }

@@ -126,7 +126,7 @@ public static partial class Module
     // Clients read their own inventory through this view; the table itself is private.
     [SpacetimeDB.View(Accessor = "MyInventory", Public = true)]
     public static List<InventoryItem> MyInventory(ViewContext ctx) =>
-        ctx.Db.InventoryItem.Owner.Filter(ctx.Sender).ToList();
+        ctx.Db.InventoryItem.Owner.Filter(Me(ctx)).ToList();
 
     [SpacetimeDB.Table(Accessor = "RespawnTimer", Scheduled = nameof(RespawnItems), ScheduledAt = nameof(ScheduledAt))]
     public partial struct RespawnTimer

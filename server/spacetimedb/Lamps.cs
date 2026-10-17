@@ -56,7 +56,7 @@ public static partial class Module
         ctx.Db.Lamp.Insert(new Lamp
         {
             Id = 0,
-            Owner = ctx.Sender,
+            Owner = Me(ctx),
             PlayerId = player.PlayerId,
             Quality = quality,
             X = x,
@@ -137,7 +137,7 @@ public static partial class Module
         if (left > 0) throw new Exception("It is burning. Bring tallow to keep it going");
         RequireClaimAccess(ctx, lamp.X, lamp.Z);
         ctx.Db.Lamp.Id.Delete(lamp.Id);
-        AddToInventory(ctx, ctx.Sender, Item.ClayLamp, 1, lamp.Quality);
+        AddToInventory(ctx, Me(ctx), Item.ClayLamp, 1, lamp.Quality);
     }
 
     // A burning fire or a lit lamp close enough to light a lamp from.

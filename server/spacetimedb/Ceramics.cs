@@ -161,9 +161,9 @@ public static partial class Module
 
         ctx.Db.ClayPiece.Id.Delete(piece.Id);
         if (form == ClayForm.Brick)
-            AddToInventory(ctx, ctx.Sender, Item.Brick, 1, Items.RawQuality);
+            AddToInventory(ctx, Me(ctx), Item.Brick, 1, Items.RawQuality);
         else
-            AddToInventory(ctx, ctx.Sender, ClayRules.UnfiredItem(form), 1, piece.Quality, piece.Mark);
+            AddToInventory(ctx, Me(ctx), ClayRules.UnfiredItem(form), 1, piece.Quality, piece.Mark);
     }
 
     // Sets every unfired pot you carry into a fire within reach, as many as fit.
@@ -177,7 +177,7 @@ public static partial class Module
         RequireClaimAccess(ctx, fire.X, fire.Z);
         RequireFuelForFiring(ctx, fire);
 
-        var pots = ctx.Db.InventoryItem.Owner.Filter(ctx.Sender)
+        var pots = ctx.Db.InventoryItem.Owner.Filter(Me(ctx))
             .Where(i => Items.IsKnown(i.Item) && ClayRules.FormOfUnfired((Item)i.Item) is not null)
             .ToList();
         if (pots.Count == 0)
@@ -232,7 +232,7 @@ public static partial class Module
         if (!NearWater(ctx, pos.X, pos.Z))
             throw new Exception("Stand at the water's edge to fill a pot");
 
-        var empty = ctx.Db.InventoryItem.Owner.Filter(ctx.Sender)
+        var empty = ctx.Db.InventoryItem.Owner.Filter(Me(ctx))
             .Where(i => Items.IsKnown(i.Item) && ClayRules.FilledItem((Item)i.Item) is not null)
             .ToList();
         if (empty.Count == 0)
@@ -240,7 +240,7 @@ public static partial class Module
         foreach (var stack in empty)
         {
             RemoveFromStack(ctx, stack, stack.Count);
-            AddToInventory(ctx, ctx.Sender, ClayRules.FilledItem((Item)stack.Item)!.Value, stack.Count, stack.Quality, stack.Wear);
+            AddToInventory(ctx, Me(ctx), ClayRules.FilledItem((Item)stack.Item)!.Value, stack.Count, stack.Quality, stack.Wear);
             if ((Item)stack.Item != Item.Waterskin)
                 OnProcessPerformed(ctx, player.PlayerId, ClayRules.FillProcess, stack.Quality, false);
         }

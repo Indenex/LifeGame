@@ -37,7 +37,7 @@ public static partial class Module
     }
 
     static InventoryItem MyRow(ReducerContext ctx, ulong rowId) =>
-        ctx.Db.InventoryItem.Id.Find(rowId) is { } row && row.Owner == ctx.Sender
+        ctx.Db.InventoryItem.Id.Find(rowId) is { } row && row.Owner == Me(ctx)
             ? row
             : throw new Exception("You are not carrying that");
 
@@ -52,7 +52,7 @@ public static partial class Module
         // Rows from before the bag kept an order all sit at place 0: spread them out first.
         if (Spread(ctx)) row = MyRow(ctx, rowId);
         if (row.Slot == place) return;
-        foreach (var other in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender).Where(r => !r.OnBelt && r.Slot == place && r.Id != row.Id).ToList())
+        foreach (var other in ctx.Db.InventoryItem.Owner.Filter(Me(ctx)).Where(r => !r.OnBelt && r.Slot == place && r.Id != row.Id).ToList())
             ctx.Db.InventoryItem.Id.Update(other with { Slot = row.Slot });
         ctx.Db.InventoryItem.Id.Update(row with { Slot = place });
     }
@@ -60,7 +60,7 @@ public static partial class Module
     // Gives bag rows that share a place their own places, keeping their order. True if any moved.
     static bool Spread(ReducerContext ctx)
     {
-        var rows = ctx.Db.InventoryItem.Owner.Filter(ctx.Sender).Where(r => !r.OnBelt).OrderBy(r => r.Slot).ThenBy(r => r.Id).ToList();
+        var rows = ctx.Db.InventoryItem.Owner.Filter(Me(ctx)).Where(r => !r.OnBelt).OrderBy(r => r.Slot).ThenBy(r => r.Id).ToList();
         if (rows.Select(r => r.Slot).Distinct().Count() == rows.Count) return false;
         var used = new System.Collections.Generic.HashSet<ushort>();
         foreach (var r in rows)
@@ -78,7 +78,7 @@ public static partial class Module
     public static void SortBag(ReducerContext ctx)
     {
         RequirePlayer(ctx);
-        var rows = ctx.Db.InventoryItem.Owner.Filter(ctx.Sender).Where(r => !r.OnBelt)
+        var rows = ctx.Db.InventoryItem.Owner.Filter(Me(ctx)).Where(r => !r.OnBelt)
             .OrderBy(r => Bag.Group((Item)r.Item)).ThenBy(r => r.Item).ThenByDescending(r => r.Quality).ThenBy(r => r.Wear)
             .ToList();
         for (int i = 0; i < rows.Count; i++)
@@ -93,7 +93,7 @@ public static partial class Module
         RequirePlayer(ctx);
         var row = MyRow(ctx, rowId);
         if (!Bag.BeltOk((Item)row.Item)) throw new Exception("Only tools go there");
-        var belt = ctx.Db.InventoryItem.Owner.Filter(ctx.Sender).Where(r => r.OnBelt && r.Id != row.Id).ToList();
+        var belt = ctx.Db.InventoryItem.Owner.Filter(Me(ctx)).Where(r => r.OnBelt && r.Id != row.Id).ToList();
         if (place == 255)
         {
             var taken = belt.Select(r => r.Slot).ToHashSet();

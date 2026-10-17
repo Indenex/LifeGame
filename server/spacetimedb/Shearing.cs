@@ -31,7 +31,7 @@ public static partial class Module
         byte cap = 100;
         QualityCapFor(ctx, player.PlayerId, ShearProcess, ref cap);
         byte quality = Math.Min(tool.Quality, cap);
-        AddToInventory(ctx, ctx.Sender, Item.Wool, animal.Fleece >= 100 ? 2u : 1u, quality);
+        AddToInventory(ctx, Me(ctx), Item.Wool, animal.Fleece >= 100 ? 2u : 1u, quality);
         OnProcessPerformed(ctx, player.PlayerId, ShearProcess, quality, false);
         NoteAct(ctx, player.PlayerId, WorkMotion.Shear, (Item)tool.Item);
         WearTool(ctx, tool);
