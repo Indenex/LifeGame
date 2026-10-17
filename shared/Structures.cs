@@ -80,8 +80,9 @@ namespace LifeGame.Shared
     {
         // Every kind, keyed by its fixed id. The defs live in one file per lane (shared/structures/);
         // an id is never renumbered or reused, and a duplicate, or a shape whose stages and costs don't
-        // line up, fails the first time this class loads. Id ranges: 0-99 the original kinds, House
-        // building 100+, Crafting stations 200+, Animals 300+, Claims 400+ (PM, integration-9).
+        // line up, fails the first time this class loads. A kind's id is its StructureKind enum ordinal
+        // (the SpacetimeDB module rejects explicit enum values), so new kinds are appended to the enum
+        // and the def says the next number; there are no per-lane id ranges.
         static readonly Dictionary<int, StructureDef> defs = BuildDefs();
         // Every registered kind, in id order.
         public static readonly int[] Kinds = defs.Keys.OrderBy(k => k).ToArray();

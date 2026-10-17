@@ -1,5 +1,5 @@
 // Building kinds: Crafting stations (Crafting and Ceramics). New kinds: 200 and up.
-// One StructureDef per kind: its fixed id (never renumbered or reused) and its StructureShape
+// One StructureDef per kind: its id, the StructureKind enum ordinal (append-only, never renumbered or reused) and its StructureShape
 // (footprint, rules, stage names and what each stage takes). Shared by the server module and the
 // client; keep this file free of engine and SpacetimeDB types. To add a kind, add a def here and
 // list it in StructureKind (server/spacetimedb/Building.cs) with the same number (docs/CONTENT.md).

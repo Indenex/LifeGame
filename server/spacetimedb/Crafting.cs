@@ -63,6 +63,12 @@ public static partial class Module
         public Timestamp LitAt;
         // The fire is burning while the clock is before this.
         public Timestamp FuelUntil;
+        // The most seconds of fuel this fire can hold ahead of now, from the lighter's (and any
+        // better feeder's) Firecraft and a hearth's scale, the same cap FeedFire enforces.
+        // Clients read it for the smoke signal at 75% of the cap (Atmosphere). 0 on fires
+        // from before this column.
+        [Default(0f)]
+        public float FuelCapSeconds;
     }
 
     [SpacetimeDB.Table(Accessor = "FireTimer", Scheduled = nameof(BurnOutFires), ScheduledAt = nameof(ScheduledAt))]
@@ -253,7 +259,8 @@ public static partial class Module
         if (from + fuel > cap)
             throw new Exception("The fire is burning as high as it will");
         Take(ctx, (Item)item, 1);
-        ctx.Db.Fire.Id.Update(fire with { FuelUntil = new Timestamp(from + fuel) });
+        float capSeconds = Fires.MaxSecondsFor(SkillRank(ctx, pos.PlayerId, "fire.hand_drill")) * scale;
+        ctx.Db.Fire.Id.Update(fire with { FuelUntil = new Timestamp(from + fuel), FuelCapSeconds = MathF.Max(fire.FuelCapSeconds, capSeconds) });
         NoteAct(ctx, pos.PlayerId, WorkMotion.Feed, (Item)item);
     }
 
@@ -326,6 +333,7 @@ public static partial class Module
             LitBy = playerId,
             LitAt = ctx.Timestamp,
             FuelUntil = ctx.Timestamp + new TimeDuration((long)(Fires.StartSeconds * scale * 1_000_000)),
+            FuelCapSeconds = Fires.MaxSecondsFor(SkillRank(ctx, playerId, "fire.hand_drill")) * scale,
         });
         EnsureFireTimer(ctx);
     }

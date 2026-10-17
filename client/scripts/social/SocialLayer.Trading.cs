@@ -10,7 +10,7 @@ namespace LifeGame;
 public partial class SocialLayer
 {
     // True while the claim panel is up (Main counts it as a full panel).
-    public bool PanelOpen => panel.IsOpen;
+    public bool PanelOpen => panel.IsOpen || town.IsOpen;
 
     void AttachTrading()
     {

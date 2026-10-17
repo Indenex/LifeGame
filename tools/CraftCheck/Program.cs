@@ -131,6 +131,7 @@ if (runTools)
     Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire to be lit");
     var fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
     Console.WriteLine($"Fire lit at ({fire.X:F1}, {fire.Z:F1})");
+    if (fire.FuelCapSeconds < Fires.MaxSeconds) Fail($"a fresh fire's fuel cap is {fire.FuelCapSeconds} s, under the base {Fires.MaxSeconds}");
     OffRocks(fire);
 
     // A failed drill loses its inputs and lights nothing.
