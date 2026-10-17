@@ -9,6 +9,7 @@ namespace LifeGame;
 // small squeak when one is hurt, and quiet rustling while one grazes close by. Keys on the
 // species, not the model (the rabbit's model is "sheep" until Modeling's figure lands), and has
 // no bleat. Reads the public animal table and the AnimalHit event in its own subscription.
+[AudioSounds]
 static class RabbitSounds
 {
     const byte RabbitSpecies = 3;        // AnimalSpecies.Rabbit (shared/Animals.cs)

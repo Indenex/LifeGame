@@ -9,6 +9,7 @@ namespace LifeGame;
 // out, played where the store stands (Sfx.PlayAnimal: full beside it, fading out to 12 m). Reads
 // the public basket_item rows, so everyone nearby hears it. Rows that arrive with a subscription
 // (walking into a chunk) are not events and stay silent.
+[AudioSounds]
 static class StorageSounds
 {
     const float Hearing = 12f;

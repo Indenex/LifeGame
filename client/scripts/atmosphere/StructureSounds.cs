@@ -5,6 +5,7 @@ namespace LifeGame;
 
 // Buildings heard (audio-16): a door opening, shutting, being barred or unbarred, as CueDefs
 // played where the building stands (Sfx.PlayAnimal: full volume beside it, fading out to 25 m).
+[AudioSounds]
 static class StructureSounds
 {
     const float Hearing = 25f;
