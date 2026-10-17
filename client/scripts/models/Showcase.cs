@@ -29,7 +29,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "wear" or "devices" or "materials")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "wear" or "devices" or "materials" or "painted")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -40,6 +40,7 @@ public partial class Showcase : Node3D
             else if (view == "wear") WearRows();
             else if (view == "devices") Devices();
             else if (view == "materials") Materials();
+            else if (view == "painted") PaintedScene();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -529,6 +530,113 @@ public partial class Showcase : Node3D
             camera.LookAtFromPosition(new Vector3(2.6f, 1.9f, 4.6f), new Vector3(-0.6f, 1.0f, -1.5f), Vector3.Up);
         else
             camera.LookAtFromPosition(new Vector3(1.5f, 3.2f, 8.5f), new Vector3(0, 1.3f, -2f), Vector3.Up);
+    }
+
+    // Justin's bar (D-232/235): a frame should read as the reference artist's. Trees,
+    // bushes, rocks, stumps, logs and ground cover are the Golden Skull pack's own
+    // painted sprites stood up as upright cards that turn to face the camera (as
+    // Octopath and Dofus-likes do); the cabin, player and sheep stay 3D in variant
+    // D's banded, rimmed paint. Prototype for model-4; the art lives in docs/ until
+    // picked. Use with Atmosphere's args, e.g. --time-of-day=0.62 --grade=1.
+    void PaintedScene()
+    {
+        const string pack = "res://../docs/art-packs/golden-skull/foliage/";
+        var cache = new Dictionary<string, Texture2D>();
+        Texture2D Tex(string name)
+        {
+            if (cache.TryGetValue(name, out var t)) return t;
+            var image = Image.LoadFromFile(ProjectSettings.GlobalizePath(pack + name + ".png"));
+            image.GenerateMipmaps();
+            return cache[name] = ImageTexture.CreateFromImage(image);
+        }
+        var rng = new RandomNumberGenerator { Seed = 7 };
+        // A card `height` metres tall standing on its bottom edge at `at`.
+        void Card(string name, Vector3 at, float height, bool shadow = true)
+        {
+            var tex = Tex(name);
+            var sprite = new Sprite3D
+            {
+                Texture = tex,
+                PixelSize = height / tex.GetHeight(),
+                Billboard = BaseMaterial3D.BillboardModeEnum.FixedY,
+                Shaded = true,
+                DoubleSided = true,
+                AlphaCut = SpriteBase3D.AlphaCutMode.Discard,
+                TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmaps,
+                CastShadow = shadow ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
+                Centered = false,
+                Offset = new Vector2(-tex.GetWidth() * 0.5f, 0),
+                Position = at,
+                FlipH = rng.Randf() < 0.5f,
+            };
+            AddChild(sprite);
+        }
+
+        // Ground: the pack's grass tile painted over the plane, in D's banded light.
+        foreach (var child in GetChildren())
+            if (child is MeshInstance3D { Mesh: PlaneMesh } ground)
+                ground.MaterialOverride = MaterialLook.For(MaterialLook.Pattern.Grass, MaterialLook.Variant.E);
+
+        // The cabin, sheep and player in variant D.
+        int cabin = 0;
+        for (int kind = 0; kind < LifeGame.Shared.Structures.Shapes.Length; kind++)
+            if (LifeGame.Shared.Structures.Shape(kind).Name == "Log cabin") cabin = kind;
+        var cabinRoot = new Node3D { Position = new Vector3(0.5f, 0, -4.5f), Rotation = new Vector3(0, 0.3f, 0) };
+        AddChild(cabinRoot);
+        foreach (var piece in StructureModel.Pieces(cabin))
+            if (piece.Stage >= 0)
+            {
+                var kindOf = MaterialLook.Classify(piece.Material, out var albedo);
+                cabinRoot.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = MaterialLook.For(kindOf, MaterialLook.Variant.D, albedo) });
+            }
+        var sheep = new MeshInstance3D { Mesh = SheepFigure.Build(SheepFigure.Variant, Look.Solid(Colors.White)).Mesh, Position = new Vector3(2.2f, 0, 1.0f), Rotation = new Vector3(0, -0.9f, 0) };
+        sheep.SetSurfaceOverrideMaterial(0, MaterialLook.For(MaterialLook.Pattern.Wool, MaterialLook.Variant.D, new Color(0.86f, 0.82f, 0.72f)));
+        sheep.SetSurfaceOverrideMaterial(1, MaterialLook.For(MaterialLook.Pattern.Skin, MaterialLook.Variant.D));
+        AddChild(sheep);
+        var player = PlayerModel.Build(HumanFigure.Appearance.For(3));
+        player.Position = new Vector3(-0.3f, 0, 1.6f);
+        player.Rotation = new Vector3(0, 0.4f, 0);
+        AddChild(player);
+        foreach (var child in player.GetChildren())
+            if (child is MeshInstance3D mi)
+                mi.MaterialOverride = MaterialLook.For(mi.Name == PlayerModel.SlotNode(PlayerModel.Body) ? MaterialLook.Pattern.Leaves : MaterialLook.Pattern.Skin, MaterialLook.Variant.D);
+
+        // A forest edge behind, a meadow in front.
+        string[] needles = { "Forest_big_tree_needle_03", "Forest_big_tree_needle_04" };
+        string[] cypress = { "Forest_big_cypress_01", "Forest_big_cypress_02", "Forest_big_cypress_03" };
+        foreach (var (x, z) in new[] { (-6.5f, -6f), (-8.5f, -3f), (-4.5f, -9f), (7f, -7.5f), (-10f, -8f), (9.5f, -4f), (4f, -10f) })
+            Card(needles[rng.RandiRange(0, 1)], new Vector3(x, 0, z), 6.5f + rng.Randf() * 1.5f);
+        foreach (var (x, z) in new[] { (5.5f, -3.5f), (-2.5f, -8.5f) })
+            Card(cypress[rng.RandiRange(0, 2)], new Vector3(x, 0, z), 5.5f + rng.Randf());
+        Card("Forest_big_tree_leaf_01", new Vector3(8f, 0, -1f), 6f);
+        Card("Forest_big_stone_01", new Vector3(-4.2f, 0, -1.8f), 1.6f);
+        Card("Forest_big_stone_02", new Vector3(6.2f, 0, 2.4f), 1.2f);
+        Card("Forest_small_tree_stump_01", new Vector3(3.6f, 0, -0.8f), 0.7f);
+        Card("Forest_small_tree_stump_03", new Vector3(-5.5f, 0, 1.5f), 0.6f);
+        Card("Forest_small_tree_log_01", new Vector3(-2.6f, 0, 3.2f), 0.6f);
+        Card("forest_bush_3", new Vector3(-3.4f, 0, -3.8f), 1.1f);
+        Card("forest_bush_4", new Vector3(4.6f, 0, -5.2f), 1.2f);
+        Card("forest_bush_5", new Vector3(-7f, 0, 0.5f), 1.0f);
+        Card("sone_2", new Vector3(1.6f, 0, 3.6f), 0.5f);
+        Card("sone_31", new Vector3(-1.2f, 0, 0.4f), 0.25f);
+        // Thick ground cover: grass tufts, clover, ferns, flowers and mushrooms.
+        string[] cover = { "Forest_small_grass_01", "Forest_small_grass_02", "Forest_small_grass_03", "Forest_small_grass_04", "Forest_small_grass_05", "Forest_small_grass_06", "Forest_small_grass_07", "Forest_small_grass_08" };
+        string[] extras = { "Forest_small_clover_01", "Forest_small_fern_01", "Forest_small_fern_02", "Forest_small_flower_01", "Forest_small_flower_02", "Forest_small_flower_03", "Forest_small_mushroom_01", "Forest_small_mushroom_03" };
+        for (int i = 0; i < 520; i++)
+        {
+            var at = new Vector3(rng.RandfRange(-12f, 12f), 0, rng.RandfRange(-11f, 6f));
+            // Keep the cabin floor and the spot by the player clear.
+            if (Mathf.Abs(at.X - 0.5f) < 2.6f && Mathf.Abs(at.Z + 4.5f) < 2.2f) continue;
+            bool extra = rng.Randf() < 0.14f;
+            Card(extra ? extras[rng.RandiRange(0, extras.Length - 1)] : cover[rng.RandiRange(0, cover.Length - 1)], at, extra ? 0.3f + rng.Randf() * 0.15f : 0.35f + rng.Randf() * 0.25f, false);
+        }
+
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        // The reference art's high three-quarter view.
+        camera.LookAtFromPosition(new Vector3(2.5f, 7.5f, 11f), new Vector3(0, 0.8f, -2f), Vector3.Up);
+        if (!args.ContainsKey("time-of-day")) return;
+        AddChild(new Atmosphere());
     }
 
     // The cold hearth: the stone ring with ash and burnt stubs.
