@@ -337,7 +337,7 @@ public static partial class Module
         var slot = FreeFireSlot(ctx, fire) ?? throw new Exception("That fire is full of pots already");
         float angle = slot * MathF.Tau / ClayRules.MaxPotsPerFire + 0.4f;
         float x = fire.X + MathF.Cos(angle) * ClayRules.FireRing, z = fire.Z + MathF.Sin(angle) * ClayRules.FireRing;
-        var finish = ctx.Timestamp + new TimeDuration((long)(ClayRules.PitFireSeconds * 1_000_000));
+        var finish = ctx.Timestamp + new TimeDuration((long)(ClayRules.PitFireSeconds / TestSpeed(ctx) * 1_000_000));
         ctx.Db.ClayPiece.Id.Update(piece with
         {
             Stage = (byte)ClayStage.Firing,
@@ -356,17 +356,20 @@ public static partial class Module
         ctx.Db.FiringTimer.Insert(new FiringTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), PieceId = piece.Id });
     }
 
+    // Fuel left is counted in firing time: a test speed-up (bot checks only) shortens the
+    // firing, so the same fuel lasts that many firings longer.
     static bool FireCanTakePot(ReducerContext ctx, Fire fire) => ClayRules.FireCanTakePot(
-        (fire.FuelUntil.MicrosecondsSinceUnixEpoch - ctx.Timestamp.MicrosecondsSinceUnixEpoch) / 1_000_000f,
+        (fire.FuelUntil.MicrosecondsSinceUnixEpoch - ctx.Timestamp.MicrosecondsSinceUnixEpoch) / 1_000_000f * TestSpeed(ctx),
         FreeFireSlot(ctx, fire) is null ? ClayRules.MaxPotsPerFire : 0);
 
     // A pit firing needs a fire with fuel for the whole firing.
     static void RequireFuelForFiring(ReducerContext ctx, Fire fire)
     {
-        float left = (fire.FuelUntil.MicrosecondsSinceUnixEpoch - ctx.Timestamp.MicrosecondsSinceUnixEpoch) / 1_000_000f;
+        float speed = TestSpeed(ctx);
+        float left = (fire.FuelUntil.MicrosecondsSinceUnixEpoch - ctx.Timestamp.MicrosecondsSinceUnixEpoch) / 1_000_000f * speed;
         if (left < ClayRules.PitFireSeconds)
         {
-            int sticks = ClayRules.SticksForFiring(left, Items.Def(Item.Stick).FuelSeconds);
+            int sticks = ClayRules.SticksForFiring(left, Items.Def(Item.Stick).FuelSeconds * speed);
             throw new Exception($"Feed the fire first: {sticks} more {(sticks == 1 ? "stick" : "sticks")} to last the {ClayRules.PitFireSeconds / 60f:0} minute firing");
         }
     }
@@ -413,7 +416,7 @@ public static partial class Module
     {
         float rain = 0f;
         RainAt(ctx, x, z, ref rain);
-        return ClayRules.DryRate(rain, WarmthAt(ctx, x, z));
+        return ClayRules.DryRate(rain, WarmthAt(ctx, x, z)) * TestSpeed(ctx);
     }
 
     // True when any ground within reach is under water, dug holes included.
