@@ -1450,6 +1450,7 @@ public sealed class SoundMix
         // A landing sets both feet down at once: heavier (gain) and lower (pitch).
         public void Trigger(Ground ground, float wetness, float weight, float pitch, float pan, bool walking = false)
         {
+            CueStats.Count("footstep");
             if (walking) leftFoot = !leftFoot;
             if (active.Count > 6) active.RemoveAt(0);
             active.Add(new Step
@@ -1592,6 +1593,7 @@ public sealed class SoundMix
         // A cue defined as data: its layers are rendered by the generic voice below.
         public void Trigger(CueDef def, float gain = 1f, float pan = 0f)
         {
+            CueStats.Count(def.Id);
             if (active.Count > 8) active.RemoveAt(0);
             active.Add(new Voice
             {
