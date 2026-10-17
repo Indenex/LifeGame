@@ -34,11 +34,13 @@ public static partial class Module
         if (held is not { Item: not 0 } || (row is { } r && r.Slot == index))
         {
             if (row is not null) ctx.Db.PlayerEquip.Owner.Delete(ctx.Sender);
+            CheckJobTool(ctx);
             return;
         }
         var next = new PlayerEquip { Owner = ctx.Sender, Slot = index, Item = held.Value.Item };
         if (row is null) ctx.Db.PlayerEquip.Insert(next);
         else ctx.Db.PlayerEquip.Owner.Update(next);
+        CheckJobTool(ctx);
     }
 
     // After the hotbar changes: the item in hand follows its slot (a swap or a new item), and an
@@ -52,6 +54,7 @@ public static partial class Module
         }
         else
             ctx.Db.PlayerEquip.Owner.Delete(ctx.Sender);
+        CheckJobTool(ctx);
     }
 
     // Using or setting down an item is a click on the item in hand (Justin): refuses any other item.
