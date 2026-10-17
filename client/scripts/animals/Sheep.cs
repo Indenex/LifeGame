@@ -84,17 +84,12 @@ public partial class Sheep : Node3D
             new(0.80f, 0.77f, 0.70f), new(0.80f, 0.77f, 0.70f), new(0.70f, 0.66f, 0.58f),
             new(0.52f, 0.50f, 0.48f), new(0.46f, 0.30f, 0.20f), new(0.62f, 0.45f, 0.28f),
         },
-        ["rabbit"] = new Color[]
-        {
-            new(0.46f, 0.36f, 0.26f), new(0.46f, 0.36f, 0.26f), new(0.40f, 0.37f, 0.33f),
-            new(0.55f, 0.43f, 0.30f), new(0.30f, 0.25f, 0.21f),
-        },
     };
     static readonly Dictionary<(string, int), Material> WoolMaterials = new();
     static ArrayMesh? sheepMesh;
     // Red deer: coats from red-brown to grey-brown; the rump, belly and throat are pale.
     static readonly Color[] Coats = { new(0.47f, 0.30f, 0.19f), new(0.50f, 0.33f, 0.21f), new(0.42f, 0.32f, 0.24f) };
-    static readonly Dictionary<int, Material> CoatMaterials = new();
+    static readonly Dictionary<(string, int), Material> CoatMaterials = new();
     static ArrayMesh? deerMesh, stagMesh;
     // Skin, face and legs share one material; their colors ride in the vertices.
     static Material? plainMaterial;
@@ -135,13 +130,14 @@ public partial class Sheep : Node3D
         if (!WoolMaterials.TryGetValue((def.Model, color), out var wool))
             WoolMaterials[(def.Model, color)] = wool = WoolLook(palette[color]);
         woolColor = palette[color];
-        if (deer)
+        if (deer || rabbit)
         {
-            // Coats vary a little, from red-brown to a greyer brown.
-            int coat = (int)(Terrain.Hash01((int)id, 17, 3) * Coats.Length) % Coats.Length;
-            if (!CoatMaterials.TryGetValue(coat, out wool))
-                CoatMaterials[coat] = wool = PaintedAnimals.Coat(Look.Solid(Coats[coat]));
-            woolColor = Coats[coat];
+            // Coats vary a little: deer from red-brown to a greyer brown, rabbits among Modeling's wild agouti browns.
+            var coats = rabbit ? RabbitFigure.Coats : Coats;
+            int coat = (int)(Terrain.Hash01((int)id, 17, 3) * coats.Length) % coats.Length;
+            if (!CoatMaterials.TryGetValue((def.Model, coat), out wool))
+                CoatMaterials[(def.Model, coat)] = wool = PaintedAnimals.Coat(Look.Solid(coats[coat]));
+            woolColor = coats[coat];
         }
 
         var (headAt, hips, figure) = Figure(def.Model, stag, wool);
