@@ -111,6 +111,18 @@ namespace LifeGame.Shared
         // x0.88 for crude work (20), x1.04 for decent (60), x1.18 for excellent (95).
         public static float QualityTimeScale(byte quality) => 0.8f + 0.4f * quality / 100f;
 
+        // A roast recipe comes from its Foods.Roasts entry, so the item and wording live in one place.
+        static ProcessDef Roast(Item raw)
+        {
+            var d = Foods.FindRoast(raw)!;
+            return new ProcessDef
+            {
+                Id = d.Process, Name = d.Name, Doing = d.Doing, Tier = 1,
+                Consumes = new[] { new Ingredient(d.Raw) },
+                Seconds = 1, Outcome = Outcome.Roast, Makes = d.Cooked,
+            };
+        }
+
         public static readonly IReadOnlyList<ProcessDef> List = new[]
         {
             // Tier 0: bare hands.
@@ -140,12 +152,7 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Hammer,
                 Seconds = Base(1, 1.5f), Minigame = Minigame.Strike, Makes = Item.HandAxe, FailBelow = 0.3f,
             },
-            new ProcessDef
-            {
-                Id = "cook.meat", Name = "Roast mutton", Doing = "Setting mutton over the fire", Tier = 1,
-                Consumes = new[] { new Ingredient(Item.RawMutton) },
-                Seconds = 1, Outcome = Outcome.Roast, Makes = Item.CookedMutton,
-            },
+            Roast(Item.RawMutton),
             // Cooking in a fired pot (ceramics-7): set at a burning fire, it simmers
             // on its own and is taken off with Use (server/spacetimedb/CookingPot.cs).
             new ProcessDef
@@ -167,12 +174,7 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.CoilPotOfWater), new Ingredient(Item.RawMutton, 2) },
                 Seconds = 2, Outcome = Outcome.Placed, Makes = Item.Tallow,
             },
-            new ProcessDef
-            {
-                Id = "cook.venison", Name = "Roast venison", Doing = "Setting venison over the fire", Tier = 1,
-                Consumes = new[] { new Ingredient(Item.RawVenison) },
-                Seconds = 1, Outcome = Outcome.Roast, Makes = Item.CookedVenison,
-            },
+            Roast(Item.RawVenison),
             new ProcessDef
             {
                 Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,

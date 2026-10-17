@@ -35,6 +35,9 @@ namespace LifeGame.Shared
         public Item Cooked;
         public Item Burnt;
         public string Process = "";
+        // How the recipe reads: "Roast mutton", "Setting mutton over the fire".
+        public string Name = "";
+        public string Doing = "";
     }
 
     public static class Foods
@@ -60,8 +63,8 @@ namespace LifeGame.Shared
 
         public static readonly IReadOnlyList<RoastDef> Roasts = new[]
         {
-            new RoastDef { Raw = Item.RawMutton, Cooked = Item.CookedMutton, Burnt = Item.BurntMutton, Process = "cook.meat" },
-            new RoastDef { Raw = Item.RawVenison, Cooked = Item.CookedVenison, Burnt = Item.BurntVenison, Process = "cook.venison" },
+            new RoastDef { Raw = Item.RawMutton, Cooked = Item.CookedMutton, Burnt = Item.BurntMutton, Process = "cook.meat", Name = "Roast mutton", Doing = "Setting mutton over the fire" },
+            new RoastDef { Raw = Item.RawVenison, Cooked = Item.CookedVenison, Burnt = Item.BurntVenison, Process = "cook.venison", Name = "Roast venison", Doing = "Setting venison over the fire" },
         };
 
         static readonly Dictionary<Item, RoastDef> RoastByRaw = Roasts.ToDictionary(r => r.Raw);
