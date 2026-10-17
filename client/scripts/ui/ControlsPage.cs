@@ -37,9 +37,15 @@ public partial class ControlsPage : Control
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
 
         var column = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = MouseFilterEnum.Ignore };
-        column.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         column.AddThemeConstantOverride("separation", 12);
-        AddChild(column);
+        // On the warm look the page is a paper window like Options (ui-68); the cold look
+        // keeps its words straight over the dimmed world.
+        if (WarmLook.On) AddChild(Ui.Window(column, roomy: true));
+        else
+        {
+            column.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+            AddChild(column);
+        }
 
         var title = new Label { Text = "Controls", HorizontalAlignment = HorizontalAlignment.Center };
         Hud.Soft(title, 26, 1f);

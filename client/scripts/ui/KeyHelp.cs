@@ -45,9 +45,20 @@ public partial class KeyHelp : CanvasLayer
         root.AddChild(shade);
 
         var column = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
-        column.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         column.AddThemeConstantOverride("separation", 18);
-        root.AddChild(column);
+        // On the warm look the list is a paper card like every other window (ui-68); the cold
+        // look keeps its words over the dimmed world.
+        if (WarmLook.On)
+        {
+            var card = Ui.Window(column, roomy: true);
+            card.MouseFilter = Control.MouseFilterEnum.Ignore;
+            root.AddChild(card);
+        }
+        else
+        {
+            column.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+            root.AddChild(column);
+        }
 
         var title = new Label { Text = "Keys", HorizontalAlignment = HorizontalAlignment.Center };
         Hud.Soft(title, 22, 0.95f);
