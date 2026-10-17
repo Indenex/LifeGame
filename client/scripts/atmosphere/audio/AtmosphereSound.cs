@@ -1,5 +1,6 @@
 using System.Linq;
 using Godot;
+using SpacetimeDB.Types;
 using LifeGame.Shared;
 
 namespace LifeGame;
@@ -111,5 +112,45 @@ public partial class Atmosphere
 
         public float Pan(Vector2 right) =>
             toward.LengthSquared() > 0.01f ? Mathf.Clamp(toward.Normalized().Dot(right), -1f, 1f) : 0f;
+    }
+
+    // Sheep bleat and deer call; each species goes to its own voices (audio-4).
+    void HearAnimal(Animal a)
+    {
+        bool running = a.State == AnimalState.Run;
+        if (AnimalDefs.Get((byte)a.Species).Bleats) Sheep.Seen(a.Id, a.X, a.Z, running, a.Growth < 100);
+        else if (a.Species == AnimalSpecies.Deer) Deer.Seen(a.Id, a.X, a.Z, running, global::LifeGame.Sheep.IsStag(a.Id));
+    }
+
+    // How much it is stag-roaring weather, 0 to 1: dusk in autumn (the year runs 0 spring,
+    // 0.25 summer, 0.5 autumn, 0.75 winter; sunset is at 0.75 of the day).
+    float StagRoarTime()
+    {
+        float autumn = Mathf.SmoothStep(0.5f, 0.53f, Year) * (1f - Mathf.SmoothStep(0.72f, 0.75f, Year));
+        float t = timeOfDay < 0f ? 0.5f : timeOfDay;
+        float dusk = Mathf.SmoothStep(0.66f, 0.74f, t) * (1f - Mathf.SmoothStep(0.82f, 0.9f, t));
+        return autumn * dusk;
+    }
+
+    // A blow on an animal: a thud, or a crack for a sneak-attack crit. An arrow's plain hit
+    // is voiced by its ArrowShot (the thunk), so only a crit adds the crack.
+    void HearHit(AnimalHit h)
+    {
+        if (h.Ranged && !h.Crit) return;
+        Sfx.PlayHit(h.Crit ? Cue.Crit : Cue.Hit, new Vector3(h.X, 0f, h.Z), new Vector3(h.FromX, 0f, h.FromZ));
+    }
+
+    const float ArrowSpeed = 60f; // metres a second: how long until the thunk is heard
+
+    // The twang and whoosh where the arrow leaves (full volume if it is you), then, when it
+    // lands, a thunk into the animal, a tree (in woods) or the ground.
+    void HearArrow(ArrowShot shot)
+    {
+        var from = new Vector3(shot.FromX, 0f, shot.FromZ);
+        var to = new Vector3(shot.ToX, 0f, shot.ToZ);
+        Sfx.PlayShot(from, to, shot.Hit
+            ? Cue.ArrowFlesh
+            : Forest.Density(World.CellOf(shot.ToX), World.CellOf(shot.ToZ)) > 0.45f ? Cue.ArrowWood : Cue.ArrowEarth,
+            (from - to).Length() / ArrowSpeed, GetTree());
     }
 }

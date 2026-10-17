@@ -17,6 +17,12 @@ extends Control
 # starts the world server before Play, and offers SpacetimeDB's official installer when the
 # `spacetime` command is missing.
 #
+# release-3: two launcher builds from the same release. The host launcher (above) runs the
+# world server on this computer. The PLAYER launcher has no server parts at all: it updates the
+# game only and connects to a server address, taken from --server, then server.cfg next to
+# the launcher (or in its LifeGame folder), then the address baked in at export (server.txt).
+# It is the same script; res://mode.txt says "player" in that build (or pass --player).
+#
 # Options, after "--" on the command line (all optional):
 #   --repo=Owner/Name    where releases come from (Indenex/LifeGame)
 #   --api=URL            GitHub API base (tests point it at a local fake)
@@ -26,6 +32,7 @@ extends Control
 #   --server=URL         the world the game connects to (http://127.0.0.1:3000)
 #   --db=NAME            database name (lifegame)
 #   --no-server          only update the game; for friends joining someone else's world
+#   --player             act as the player launcher (normally set by the build's mode.txt)
 #   --auto               press "Update and play" at start; --no-play stops before playing,
 #                        --quit exits when done (code 0 ok, 1 failed, 2 waiting on a wipe OK)
 #   --press              click the main button once at start (unlike --auto, a wipe question
@@ -52,6 +59,7 @@ var stdb_server := "local"
 var server_url := "http://127.0.0.1:3000"
 var db := "lifegame"
 var manage_server := true
+var player := false        # the player build: no server parts, joins a server address
 
 var state := {"client_build": 0, "server_build": 0, "shortcut": 0}
 var my_version := "dev"    # stamped by CI into res://version.txt; "dev" never self-updates
@@ -113,10 +121,11 @@ func _parse_args() -> void:
 		opts[kv[0]] = kv[1] if kv.size() > 1 else ""
 	repo = opts.get("repo", repo)
 	api = opts.get("api", api).trim_suffix("/")
-	server_url = opts.get("server", server_url)
 	db = opts.get("db", db)
 	stdb_server = opts.get("spacetime-server", stdb_server)
-	manage_server = not opts.has("no-server")
+	player = opts.has("player") or (FileAccess.file_exists("res://mode.txt") \
+		and FileAccess.get_file_as_string("res://mode.txt").strip_edges() == "player")
+	manage_server = not (opts.has("no-server") or player)
 	home = opts.get("home", "")
 	if home == "":
 		if OS.has_feature("editor"):
@@ -126,6 +135,23 @@ func _parse_args() -> void:
 	if DirAccess.make_dir_recursive_absolute(home.path_join("downloads")) != OK:
 		home = OS.get_user_data_dir().path_join("LifeGame")
 		DirAccess.make_dir_recursive_absolute(home.path_join("downloads"))
+	server_url = _server_address()
+
+# The world the game connects to. Host: this computer (or --server). Player: --server, else the
+# first line of server.cfg (next to the launcher, then in its LifeGame folder), else the address
+# baked in at export; "" means none yet, and the player launcher says so instead of guessing.
+func _server_address() -> String:
+	if opts.has("server"):
+		return str(opts["server"]).strip_edges()
+	if not player:
+		return server_url
+	var exe_dir := OS.get_executable_path().get_base_dir()
+	for path in [exe_dir.path_join("server.cfg"), home.path_join("server.cfg"), "res://server.txt"]:
+		if FileAccess.file_exists(path):
+			var line := FileAccess.get_file_as_string(path).strip_edges().get_slice("\n", 0).strip_edges()
+			if line != "" and not line.begins_with("#"):
+				return line
+	return ""
 
 func _load_state() -> void:
 	var f := FileAccess.open(home.path_join("state.json"), FileAccess.READ)
@@ -134,8 +160,9 @@ func _load_state() -> void:
 		if d is Dictionary:
 			for k in state.keys():
 				state[k] = int(d.get(k, 0))
-	# A game folder without state (copied in by hand) counts as unknown, so it is replaced.
-	if not FileAccess.file_exists(_game_exe()):
+	# A game folder without state (copied in by hand), or one with files missing (an
+	# interrupted or hand-made install), counts as unknown, so it is replaced.
+	if not _client_ok(home.path_join("game")):
 		state["client_build"] = 0
 
 func _save_state() -> void:
@@ -150,6 +177,21 @@ func _client_asset() -> String:
 
 func _game_exe() -> String:
 	return home.path_join("game").path_join("LifeGame.exe" if _is_windows() else "LifeGame.x86_64")
+
+# True when dir holds a complete game install: the executable, its LifeGame.pck and the
+# data_* folder with the .NET assemblies. Godot says "Unable to find the .NET assemblies
+# directory" when only the executable is there.
+func _client_ok(dir: String) -> bool:
+	var exe := "LifeGame.exe" if _is_windows() else "LifeGame.x86_64"
+	if not FileAccess.file_exists(dir.path_join(exe)) or not FileAccess.file_exists(dir.path_join("LifeGame.pck")):
+		return false
+	var d := DirAccess.open(dir)
+	if d == null:
+		return false
+	for sub in d.get_directories():
+		if sub.begins_with("data_") and not DirAccess.get_files_at(dir.path_join(sub)).is_empty():
+			return true
+	return false
 
 # --- UI ---------------------------------------------------------------------------
 
@@ -367,7 +409,10 @@ func _update_buttons() -> void:
 		play_button.visible = false
 	world_button.disabled = busy
 	game_label.text = "Game: " + _build_name(state.client_build)
-	world_label.text = ("World: " + _build_name(state.server_build)) if manage_server else "World: " + server_url
+	if manage_server:
+		world_label.text = "World: " + _build_name(state.server_build)
+	else:
+		world_label.text = "Server: " + (server_url if server_url != "" else "no address yet")
 
 func _build_name(n: int) -> String:
 	return "build %d" % n if n > 0 else "not installed" if n == 0 else "unknown"
@@ -722,6 +767,12 @@ func _install_client(zip: String) -> bool:
 		detail_label.text = "Unpacking %d of %d files" % [progress.done, progress.total]
 		await get_tree().process_frame
 	if not t.wait_to_finish():
+		_log("The game zip didn't unpack completely (%d of %d files)." % [progress.done, progress.total])
+		return false
+	# Never swap in an install that is missing pieces; the old game stays until this is whole.
+	if not _client_ok(fresh):
+		_log("The unpacked game is missing LifeGame.pck, the executable or the data_* folder.")
+		_remove_tree(fresh)
 		return false
 	if not _is_windows():
 		OS.execute("chmod", ["+x", fresh.path_join("LifeGame.x86_64")])
@@ -750,8 +801,12 @@ func _unzip(zip: String, dest: String, progress: Dictionary) -> bool:
 			var w := FileAccess.open(target, FileAccess.WRITE)
 			if w == null:
 				return false
-			w.store_buffer(r.read_file(f))
+			var data := r.read_file(f)
+			w.store_buffer(data)
+			var wrote := w.get_length()
 			w.close()
+			if wrote != data.size():
+				return false  # a short write (disk full?) must not count as installed
 		progress.done += 1
 	r.close()
 	return true
@@ -769,8 +824,15 @@ func _remove_tree(path: String) -> void:
 
 func _play() -> void:
 	var exe := _game_exe()
-	if not FileAccess.file_exists(exe):
-		_set_status("The game isn't installed yet.", "", WARN)
+	if not _client_ok(home.path_join("game")):
+		# Files are missing (or the game was never installed): fetch it again before playing.
+		state.client_build = 0
+		_save_state()
+		if latest.is_empty() or not await _update(true, false) or not _client_ok(home.path_join("game")):
+			_set_status("The game isn't installed yet.", "Press Update and play when you're online.", WARN)
+			return
+	if player and server_url == "":
+		_set_status("No server address yet.", "Ask the host for it, then put it in server.cfg next to the launcher.", WARN)
 		return
 	if manage_server:
 		_set_busy(true)
@@ -797,6 +859,10 @@ func _screenshot(path: String) -> void:
 	get_tree().quit()
 
 # --- The launcher itself ----------------------------------------------------------
+
+# The shortcut's name: the two builds can sit side by side.
+func _app_name() -> String:
+	return "LifeGame (player)" if player else "LifeGame"
 
 func _launcher_exe_name() -> String:
 	return "LifeGameLauncher.exe" if _is_windows() else "LifeGameLauncher.x86_64"
@@ -825,7 +891,12 @@ func _self_update() -> bool:
 	var info: Dictionary = manifest.launcher
 	if str(info.get("version", "")) in ["", "unknown", my_version]:
 		return false
-	var entry: Dictionary = info.windows if _is_windows() else info.linux
+	# The player launcher updates to the player build, the host launcher to the host build.
+	var section: Dictionary = info.get("player", {}) if player else info
+	if not (section.has("windows") and section.has("linux")):
+		_log("Launcher update skipped: this release has no %s launcher" % ("player" if player else "host"))
+		return false
+	var entry: Dictionary = section.windows if _is_windows() else section.linux
 	var zip := dir.path_join(entry.file)
 	_set_status("Updating the launcher...", "It restarts by itself.")
 	if not (FileAccess.file_exists(zip) and FileAccess.get_sha256(zip) == entry.sha256):
@@ -879,13 +950,13 @@ func _make_shortcuts() -> void:
 		var ico := exe  # the exe carries the icon
 		var ps := ("$w = New-Object -ComObject WScript.Shell; " +
 			"foreach ($d in @([Environment]::GetFolderPath('Desktop'), (Join-Path ([Environment]::GetFolderPath('Programs')) ''))) { " +
-			"$s = $w.CreateShortcut((Join-Path $d 'LifeGame.lnk')); $s.TargetPath = '%s'; " +
+			"$s = $w.CreateShortcut((Join-Path $d '%s.lnk')); $s.TargetPath = '%s'; " +
 			"$s.WorkingDirectory = '%s'; $s.IconLocation = '%s,0'; $s.Description = 'LifeGame'; $s.Save() }") % [
-			exe.replace("/", "\\").replace("'", "''"), exe.get_base_dir().replace("/", "\\").replace("'", "''"),
+			_app_name(), exe.replace("/", "\\").replace("'", "''"), exe.get_base_dir().replace("/", "\\").replace("'", "''"),
 			ico.replace("/", "\\").replace("'", "''")]
 		ok = OS.execute("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps]) == 0
 	else:
-		var entry := "[Desktop Entry]\nType=Application\nName=LifeGame\nComment=Update and play LifeGame\n" + \
+		var entry := "[Desktop Entry]\nType=Application\nName=%s\nComment=Update and play LifeGame\n" % _app_name() + \
 			"Exec=\"%s\"\nPath=%s\nIcon=%s\nTerminal=false\nCategories=Game;\n" % [exe, exe.get_base_dir(), icon]
 		var home_dir := OS.get_environment("HOME")
 		var apps := OS.get_environment("XDG_DATA_HOME")
@@ -900,7 +971,7 @@ func _make_shortcuts() -> void:
 				if d == desktop:
 					continue
 				DirAccess.make_dir_recursive_absolute(d)
-			var path: String = d.path_join("lifegame.desktop")
+			var path: String = d.path_join("lifegame-player.desktop" if player else "lifegame.desktop")
 			var f := FileAccess.open(path, FileAccess.WRITE)
 			if f == null:
 				continue

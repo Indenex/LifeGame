@@ -3,9 +3,12 @@ using SpacetimeDB;
 
 // Proximity chat: a message is spoken where the speaker stands, and clients near
 // that spot hear it. Messages are kept for a couple of minutes, then cleared.
+// claims-13 (D-182): the server decides who hears. Each message is stored once per
+// listener in range, in a private table, and clients read only their own rows through
+// the MyChat view, so a whisper never reaches anyone out of earshot.
 public static partial class Module
 {
-    [SpacetimeDB.Table(Accessor = "ChatMessage", Public = true)]
+    [SpacetimeDB.Table(Accessor = "ChatMessage")]
     [SpacetimeDB.Index.BTree(Accessor = "ByChunk", Columns = new[] { nameof(ChunkX), nameof(ChunkZ) })]
     public partial struct ChatMessage
     {
@@ -21,6 +24,52 @@ public static partial class Module
         public int ChunkZ;
         [SpacetimeDB.Index.BTree]
         public Timestamp SentAt;
+    }
+
+    // What one player heard: a copy of a message per listener in range, the speaker too.
+    // Private; clients read their own rows through the MyChat view. (ChatMessage above is
+    // the older public table: nothing writes it any more and it is kept so existing
+    // databases upgrade without a wipe.)
+    [SpacetimeDB.Table(Accessor = "ChatHeard")]
+    [SpacetimeDB.Index.BTree(Accessor = "ByRecipient", Columns = new[] { nameof(Recipient) })]
+    public partial struct ChatHeard
+    {
+        [PrimaryKey]
+        [AutoInc]
+        public ulong Id;
+        public Identity Recipient;
+        public uint SenderId;
+        public string SenderName;
+        public string Text;
+        public float X;
+        public float Z;
+        [SpacetimeDB.Index.BTree]
+        public Timestamp SentAt;
+    }
+
+    [SpacetimeDB.View(Accessor = "MyChat", Public = true)]
+    public static List<ChatHeard> MyChat(ViewContext ctx) => ctx.Db.ChatHeard.ByRecipient.Filter(ctx.Sender).ToList();
+
+    // Stores one row per online player (the speaker included) within range of (x, z).
+    static void Deliver(ReducerContext ctx, uint senderId, string senderName, string text, float x, float z, float range)
+    {
+        foreach (var listener in ctx.Db.Player.Iter().Where(p => p.Online).ToList())
+        {
+            if (ctx.Db.PlayerPos.PlayerId.Find(listener.PlayerId) is not { } at) continue;
+            float dx = at.X - x, dz = at.Z - z;
+            if (listener.PlayerId != senderId && dx * dx + dz * dz > range * range) continue;
+            ctx.Db.ChatHeard.Insert(new ChatHeard
+            {
+                Id = 0,
+                Recipient = listener.Identity,
+                SenderId = senderId,
+                SenderName = senderName,
+                Text = text,
+                X = x,
+                Z = z,
+                SentAt = ctx.Timestamp,
+            });
+        }
     }
 
     // Server-only: when each player last spoke, to keep chat from being flooded.
@@ -56,18 +105,7 @@ public static partial class Module
     static void SayNearby(ReducerContext ctx, float x, float z, string text)
     {
         InitChat(ctx);
-        ctx.Db.ChatMessage.Insert(new ChatMessage
-        {
-            Id = 0,
-            SenderId = 0,
-            SenderName = "",
-            Text = text,
-            X = x,
-            Z = z,
-            ChunkX = World.ChunkOf(x),
-            ChunkZ = World.ChunkOf(z),
-            SentAt = ctx.Timestamp,
-        });
+        Deliver(ctx, 0, "", text, x, z, Social.ChatRange);
     }
 
     [SpacetimeDB.Reducer]
@@ -102,18 +140,7 @@ public static partial class Module
         if (state is null) ctx.Db.ChatState.Insert(next);
         else ctx.Db.ChatState.PlayerId.Update(next);
 
-        ctx.Db.ChatMessage.Insert(new ChatMessage
-        {
-            Id = 0,
-            SenderId = player.PlayerId,
-            SenderName = player.Name,
-            Text = text,
-            X = pos.X,
-            Z = pos.Z,
-            ChunkX = pos.ChunkX,
-            ChunkZ = pos.ChunkZ,
-            SentAt = ctx.Timestamp,
-        });
+        Deliver(ctx, player.PlayerId, player.Name, text, pos.X, pos.Z, Social.RangeOf(Social.VoiceOf(text)));
     }
 
     [SpacetimeDB.Reducer]
@@ -121,6 +148,8 @@ public static partial class Module
     {
         RequireServer(ctx);
         var cutoff = new Timestamp(ctx.Timestamp.MicrosecondsSinceUnixEpoch - Social.ChatKeepMicros);
+        foreach (var message in ctx.Db.ChatHeard.SentAt.Filter((new Timestamp(0), cutoff)).ToList())
+            ctx.Db.ChatHeard.Id.Delete(message.Id);
         foreach (var message in ctx.Db.ChatMessage.SentAt.Filter((new Timestamp(0), cutoff)).ToList())
             ctx.Db.ChatMessage.Id.Delete(message.Id);
     }

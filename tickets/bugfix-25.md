@@ -1,7 +1,7 @@
 # bugfix-25: jump (Space)
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_review
+Status: done
 Branch: claude/bugfix-25
 PR: (none yet)
 
@@ -43,9 +43,11 @@ Justin's request: a jump. Space jumps. A jump clears logs, rocks, banks and ordi
 
 - 2026-10-16: built. shared/Jumping.cs (arc: apex 1.1 m, 0.65 s; fence 0.8, gate 0.9, rocks 1.5 x radius; `FenceStops` makes a fence in a claim stop non-members even mid-jump), Stamina.JumpCost 0.08; server/spacetimedb/Jump.cs (public `player_jump` row + `Jump()` reducer: refuses while sneaking and under the cooldown); client: JumpMotion (own jump: frozen takeoff direction, TrySpendStamina, Sfx.Play/Land, me.SetJump), JumpView (others: SetAirHeight/SetJump from the row, Sfx.PlayAt/LandAt), Main.Walk hooks, Building.Collide(.., airHeight) and Terrain.CollideVegetation(.., airHeight) skip what the arc clears, `building.ClaimStandingAt = social.ClaimStandingAt` (new one-line public helper in SocialLayer), Controls.cs row gets Help "Jump", Subscriptions adds player_jump. The fence collision now steps out the side you were heading to when you land on top of a line. Verified: client and server build; a scratch bot against a local server: first jump writes seq 1, an immediate repeat is "Too soon", a jump while sneaking is refused ("You can't jump while sneaking"), a later jump is seq 3. NOT verified: the feel in the running game (no Godot display here); Render clip requested.
 
+- 2026-10-16: #328 merged; CI green on ecd1e99 (https://github.com/Indenex/LifeGame/actions/runs/38981381003). Render clip of the jump was requested (PM has it). Server checks for the jump (stamina, arc) come with bugfix-24 item 2.
+
 ## Open questions / blockers
 - The four choices above go to Justin through the PM.
 - (answered, see log) claim fence = ordinary Fence/Gate inside a standing claim.
 
 ## Next step
-Wait for CI on the PR, then send the PM the green sha; Render clip of jumping a fence, a rock, a claim fence as a non-member.
+None; done and merged. Optional: tune the fence/gate/rock heights after Justin has tried it.

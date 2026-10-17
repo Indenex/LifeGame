@@ -157,23 +157,23 @@ ExpectError(b, () => b.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, b.X + 
 
 // Chat reaches the player standing nearby.
 a.Conn.Reducers.SendChat("hello neighbour");
-Pump(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Text == "hello neighbour"), 5, "chat");
-var heard = b.Conn.Db.ChatMessage.Iter().First(m => m.Text == "hello neighbour");
+Pump(() => b.Conn.Db.MyChat.Iter().Any(m => m.Text == "hello neighbour"), 5, "chat");
+var heard = b.Conn.Db.MyChat.Iter().First(m => m.Text == "hello neighbour");
 Check(new Vector(heard.X - b.X, heard.Z - b.Z).Length <= Social.ChatRange, "B hears A's chat within range");
 
 // claims-6: "/me" actions are stored the same way whatever the case, and an empty one says nothing.
 var afterHello = DateTime.UtcNow.AddSeconds(0.5);
 Pump(() => DateTime.UtcNow > afterHello, 2, "chat cooldown");
 a.Conn.Reducers.SendChat("/ME waves");
-Pump(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Text == "/me waves"), 5, "emote");
+Pump(() => b.Conn.Db.MyChat.Iter().Any(m => m.Text == "/me waves"), 5, "emote");
 Check(Social.IsEmote("/me waves") && Social.EmoteBody("/me waves") == "waves", "an action reads as \"waves\"");
 var afterWave = DateTime.UtcNow.AddSeconds(0.5);
 Pump(() => DateTime.UtcNow > afterWave, 2, "chat cooldown");
-int chatCount = b.Conn.Db.ChatMessage.Iter().Count();
+int chatCount = b.Conn.Db.MyChat.Iter().Count();
 a.LastError = null;
 a.Conn.Reducers.SendChat("/me");
-Wait(() => b.Conn.Db.ChatMessage.Iter().Count() > chatCount || a.LastError != null, 1.5);
-Check(b.Conn.Db.ChatMessage.Iter().Count() == chatCount && a.LastError == null, "an empty /me says nothing");
+Wait(() => b.Conn.Db.MyChat.Iter().Count() > chatCount || a.LastError != null, 1.5);
+Check(b.Conn.Db.MyChat.Iter().Count() == chatCount && a.LastError == null, "an empty /me says nothing");
 Check(Social.StripControl("a\nb\u001bc") == "a b c" && Social.CleanClaimName("Wil\nlow\u0000 Hollow") == "Wil low Hollow", "control characters read as spaces in chat and names");
 Check(Social.ChatDim(2f) == 1f && MathF.Abs(Social.ChatDim(Social.ChatRange) - 0.55f) < 0.01f && Social.ChatDim(16f) < 1f, "far chat lines are dimmer");
 
@@ -193,14 +193,23 @@ Check(Social.ChatDim(2f) == 1f && MathF.Abs(Social.ChatDim(Social.ChatRange) - 0
 // claims-10: whisper and shout.
 Check(Social.VoiceOf("/w hi") == Social.Voice.Whisper && Social.VoiceBody("/W  hi ") == "hi" && Social.VoiceOf("/s hey") == Social.Voice.Shout
     && Social.VoiceOf("/sky") == Social.Voice.Say && Social.RangeOf(Social.Voice.Shout) == Social.ShoutRange, "/w whispers and /s shouts");
+Walk(b, a.X + 2f, a.Z);
+Thread.Sleep(1500);
 a.Conn.Reducers.SendChat("/W  psst ");
-Check(Wait(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Text == "/w psst"), 5), "a whisper is stored as \"/w psst\"");
-int voiceCount = b.Conn.Db.ChatMessage.Iter().Count();
+Check(Wait(() => b.Conn.Db.MyChat.Iter().Any(m => m.Text == "/w psst"), 5), "a whisper is stored as \"/w psst\"");
+int voiceCount = b.Conn.Db.MyChat.Iter().Count();
 Thread.Sleep(500);
 a.Conn.Reducers.SendChat("/s");
 Wait(() => false, 1);
-Check(b.Conn.Db.ChatMessage.Iter().Count() == voiceCount, "an empty /s says nothing");
+Check(b.Conn.Db.MyChat.Iter().Count() == voiceCount, "an empty /s says nothing");
 Thread.Sleep(500);
+
+// claims-13 (D-182): the server decides who hears. Out of earshot, B receives nothing at all.
+Walk(b, a.X + Social.WhisperRange + 6f, a.Z);
+Thread.Sleep(1500);
+a.Conn.Reducers.SendChat("/w secret");
+Check(Wait(() => a.Conn.Db.MyChat.Iter().Any(m => m.Text == "/w secret"), 5), "A hears their own whisper");
+Check(!Wait(() => b.Conn.Db.MyChat.Iter().Any(m => m.Text == "/w secret"), 1.5), "a whisper never reaches someone out of earshot");
 
 // Outsiders cannot dig or take items inside the claim.
 ExpectError(b, () => b.Conn.Reducers.Dig((int)MathF.Round(b.X), (int)MathF.Round(b.Z)), "claimed", "B cannot dig inside A's claim");
@@ -233,7 +242,7 @@ string bName = $"Tobin{Random.Shared.Next(10000, 99999)}";
 b.Conn.Reducers.SetName(bName);
 Pump(() => a.Conn.Db.Player.PlayerId.Find(b.PlayerId)?.Name == bName, 5, "rename");
 ExpectError(a, () => a.Conn.Reducers.AddClaimMemberByName("Nobody" + bName), "Nobody called", "adding an unknown name is refused");
-ulong chatBeforeAdd = b.Conn.Db.ChatMessage.Iter().Select(m => m.Id).DefaultIfEmpty(0UL).Max();
+ulong chatBeforeAdd = b.Conn.Db.MyChat.Iter().Select(m => m.Id).DefaultIfEmpty(0UL).Max();
 a.LastError = null;
 a.Conn.Reducers.AddClaimMemberByName(" " + bName.ToUpperInvariant() + " ");
 Pump(() => b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.PlayerId) || a.LastError != null, 5, "membership");
@@ -250,7 +259,7 @@ Pump(() => b.Conn.Db.ClaimName.ClaimId.Find(claim.Id) == null, 5, "unname");
 Check(true, "an empty name clears it");
 a.Conn.Reducers.NameClaim("Willow Hollow");
 Pump(() => b.Conn.Db.ClaimName.ClaimId.Find(claim.Id) != null, 5, "rename");
-Pump(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Id > chatBeforeAdd && m.SenderId == 0 && m.Text.StartsWith(bName + " now shares")), 5, "added line");
+Pump(() => b.Conn.Db.MyChat.Iter().Any(m => m.Id > chatBeforeAdd && m.SenderId == 0 && m.Text.StartsWith(bName + " now shares")), 5, "added line");
 Check(true, "a chat line says who now shares the land");
 ExpectError(a, () => a.Conn.Reducers.AddClaimMemberByName(bName), "already a member", "adding a member twice is refused");
 
@@ -316,7 +325,7 @@ b.LastTradeEnd = null;
 b.Conn.Reducers.AcceptTrade(tradeId, 1, true);
 Pump(() => a.Count(Item.Stone) > aStones || b.LastError != null, 5, "swap");
 Check(a.Count(Item.Stone) == aStones + 1 && b.Count(Item.Stone) == 0 && TradeFor(a) == null, $"both accepting swaps the items ({b.LastError ?? "ok"})");
-Check(Wait(() => b.LastTradeEnd == "done", 2) && !Wait(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.SenderId == 0 && (m.Text.Contains(" trade") || m.Text.Contains(" hands "))), 1),
+Check(Wait(() => b.LastTradeEnd == "done", 2) && !Wait(() => b.Conn.Db.MyChat.Iter().Any(m => m.SenderId == 0 && (m.Text.Contains(" trade") || m.Text.Contains(" hands "))), 1),
     "both traders hear it is done, and bystanders hear nothing (D-080)");
 
 a.Conn.Reducers.AskTrade(b.PlayerId);
@@ -406,6 +415,11 @@ Walk(a, wx, wz);
 Walk(b, wx + 4, wz);
 ExpectError(b, () => b.Conn.Reducers.StrikePlayer(a.PlayerId), "Too far", "a strike out of reach misses");
 Walk(b, wx + 1, wz);
+// Moves reach the server in batches: wait until it agrees B is within reach of A.
+bool ServerInReach() =>
+    b.Conn.Db.PlayerPos.PlayerId.Find(b.PlayerId) is { } pb && b.Conn.Db.PlayerPos.PlayerId.Find(a.PlayerId) is { } pa
+    && new Vector(pb.X - pa.X, pb.Z - pa.Z).Length <= Social.StrikeReach;
+Wait(ServerInReach, 5);
 float full = Hp(b, a.PlayerId);
 b.LastError = null;
 b.Conn.Reducers.StrikePlayer(a.PlayerId);
@@ -414,8 +428,8 @@ Check(Hp(b, a.PlayerId) < full, $"a strike in the wild lands ({full:F1} -> {Hp(b
 ExpectError(b, () => b.Conn.Reducers.StrikePlayer(a.PlayerId), "Too soon", "strikes have a short cooldown");
 // Strike until A falls: A's things drop and A wakes elsewhere.
 uint carried = (uint)a.Conn.Db.MyInventory.Iter().Sum(i => i.Count);
-ulong chatBefore = b.Conn.Db.ChatMessage.Iter().Select(m => m.Id).DefaultIfEmpty(0UL).Max();
-bool StruckDown() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Id > chatBefore && m.SenderId == 0 && m.Text.Contains("struck down"));
+ulong chatBefore = b.Conn.Db.MyChat.Iter().Select(m => m.Id).DefaultIfEmpty(0UL).Max();
+bool StruckDown() => b.Conn.Db.MyChat.Iter().Any(m => m.Id > chatBefore && m.SenderId == 0 && m.Text.Contains("struck down"));
 for (int i = 0; i < 40 && !StruckDown(); i++)
 {
     var until = DateTime.UtcNow.AddSeconds(0.85);
@@ -509,7 +523,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
+                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))

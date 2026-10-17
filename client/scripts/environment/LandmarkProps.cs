@@ -5,8 +5,8 @@ using LifeGame.Shared;
 
 namespace LifeGame;
 
-// Builds the landmarks that shared/Landmarks.cs places (env-5): huge old trees,
-// rock outcrops and stream fords. Justin asked that no two look like copies of one
+// Builds the world features that shared/Features.cs places (env-5, env-10): huge old
+// trees, rock outcrops and stream fords, one builder per FeatureDef.Model. Justin asked that no two look like copies of one
 // another, so everything about each one comes from its own seed: the kind, size,
 // proportions, lean, layout, the stones and limbs lying around it, moss and wear.
 public static class LandmarkProps
@@ -26,6 +26,23 @@ public static class LandmarkProps
             list.Add(item);
         }
     }
+
+    // Builds a feature standing on cell (x, z) at its trunk point `at`; heightAt gives
+    // the ground under anything it lays round about.
+    public delegate void Builder(int x, int z, Vector3 at, Func<float, float, float> heightAt, Lists into, Color custom);
+
+    // A feature's look: its builder, and for one that blocks with a trunk, how broad
+    // the trunk is as a multiple of an ordinary tree's.
+    public sealed record Prop(Builder Build, Func<int, int, float>? Girth = null);
+
+    static readonly Dictionary<string, Prop> Props = new()
+    {
+        ["landmark.giant_tree"] = new(GiantTree, GiantGirth),
+        ["landmark.outcrop"] = new(Outcrop),
+        ["landmark.ford"] = new(Ford),
+    };
+
+    public static Prop For(FeatureDef feature) => Props[feature.Model];
 
     static int Pick(int x, int z, uint salt, int count) => Math.Min((int)(H(x, z, salt) * count), count - 1);
 
@@ -172,8 +189,9 @@ public static class LandmarkProps
     // Stepping stones across a stream, or on some crossings a fallen trunk laid
     // over the water instead. Stones vary in size and flatness, and a few are
     // missing, so each ford is its own.
-    public static void Ford(int x, int z, float top, Lists into, Color custom)
+    public static void Ford(int x, int z, Vector3 at, Func<float, float, float> heightAt, Lists into, Color custom)
     {
+        float top = at.Y;
         int row = FloorDiv(z + 13, 40);
         if (Terrain.Hash01(row, 0, 1400u) < 0.3f)
         {
