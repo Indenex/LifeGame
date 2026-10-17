@@ -75,6 +75,8 @@ var world_label: Label
 var bar: ProgressBar
 var main_button: Button
 var world_button: Button
+var refresh_button: Button
+var checking := false      # a release check is running (the Refresh button says "Checking...")
 var play_button: Button
 var log_button: Button
 var log_box: TextEdit
@@ -281,6 +283,10 @@ func _build_ui() -> void:
 	var fill_space := Control.new()
 	fill_space.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(fill_space)
+	refresh_button = _button("Refresh", false)
+	refresh_button.tooltip_text = "Check for a newer build again"
+	refresh_button.pressed.connect(_on_refresh)
+	row.add_child(refresh_button)
 	log_button = _button("Details", false)
 	log_button.pressed.connect(func(): log_box.visible = not log_box.visible)
 	row.add_child(log_button)
@@ -408,6 +414,8 @@ func _update_buttons() -> void:
 		main_button.disabled = busy
 		play_button.visible = false
 	world_button.disabled = busy
+	refresh_button.disabled = busy
+	refresh_button.text = "Checking..." if checking else "Refresh"
 	game_label.text = "Game: " + _build_name(state.client_build)
 	if manage_server:
 		world_label.text = "World: " + _build_name(state.server_build)
@@ -419,7 +427,15 @@ func _build_name(n: int) -> String:
 
 # --- Releases ---------------------------------------------------------------------
 
+# The Refresh button: look at the releases again without restarting (new builds appear while
+# the launcher is open). Ignored while anything else is running.
+func _on_refresh() -> void:
+	if busy:
+		return
+	await _refresh()
+
 func _refresh() -> void:
+	checking = true
 	_set_busy(true)
 	_set_status("Looking for the newest build...")
 	var list = await _get_json("%s/repos/%s/releases?per_page=50" % [api, repo])
@@ -443,6 +459,7 @@ func _refresh() -> void:
 	latest = releases[0] if not releases.is_empty() else {}
 	if not latest.is_empty() and await _self_update():
 		return  # a new launcher is starting in our place
+	checking = false
 	_set_busy(false)
 	if latest.is_empty():
 		if list == null:

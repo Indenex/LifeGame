@@ -19,7 +19,18 @@ public static partial class StructureModel
         public Material Material = null!;
         // Where the piece grows from when it appears.
         public Vector3 Anchor;
+        // What the piece is when the player is under or behind the building (D-168): a roof
+        // (and upper parts) hides completely from inside, a wall fades on the camera's side,
+        // and anything laid on the floor stays solid.
+        public PieceRole Role;
     }
+
+    public enum PieceRole { Fixed, Wall, Roof }
+
+    // A piece centred above the walls of a house, hut or cabin (3 m ridges, 2.0 m wall tops)
+    // belongs to the roof, and so does all thatch. Anything ending below 0.6 m (footings,
+    // sills, hearth, site pegs) stays solid.
+    const float RoofFromY = 2.15f;
 
     static readonly Dictionary<int, List<Piece>> Cache = new();
     static ShaderMaterial? wood, fiber, thatch, clay, stone;
@@ -42,12 +53,17 @@ public static partial class StructureModel
         // Stations by their shape's station kind, never by number (kinds are numbered by merge order).
         pieces = LifeGame.Shared.Structures.Shape(kind).Station switch
         {
-            LifeGame.Shared.StationKind.Table => CraftingTableModel.Pieces(),
+            LifeGame.Shared.StationKind.Table or LifeGame.Shared.StationKind.Repair => CraftingTableModel.Pieces(),
             LifeGame.Shared.StationKind.PottersBench => StationMeshes.PottersBench(),
             LifeGame.Shared.StationKind.Spindle => StationMeshes.Distaff(),
             LifeGame.Shared.StationKind.DryingRack => StationMeshes.DryingRack(),
             _ => kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 5 => BrickHouse(), 6 => JarModel.Pieces(), _ when LifeGame.Shared.Structures.Shape(kind).Trough => TroughModel.Pieces(), _ when LifeGame.Shared.Structures.IsIndoor(kind) => Hearth(), _ when LifeGame.Shared.Structures.IsRoom(kind) => LogCabin(), _ when LifeGame.Shared.Structures.IsFence(kind) => Fence(LifeGame.Shared.Structures.IsGate(kind)), _ => LeanTo() },
         };
+        // A lean-to is all roof: its sloped thatch is the wall between the camera and the player, so
+        // the near slope fades and the far slope stays rather than the whole thing clearing.
+        if (kind == (int)SpacetimeDB.Types.StructureKind.LeanTo)
+            foreach (var piece in pieces)
+                if (piece.Role == PieceRole.Roof) piece.Role = PieceRole.Wall;
         Cache[kind] = pieces;
         return pieces;
     }
@@ -234,6 +250,7 @@ public static partial class StructureModel
             Mesh = mesh,
             Material = material,
             Anchor = new Vector3(aabb.GetCenter().X, aabb.Position.Y, aabb.GetCenter().Z),
+            Role = material == Thatch || aabb.GetCenter().Y > RoofFromY ? PieceRole.Roof : aabb.End.Y < 0.6f ? PieceRole.Fixed : PieceRole.Wall,
         });
     }
 

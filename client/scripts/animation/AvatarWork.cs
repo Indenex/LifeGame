@@ -47,6 +47,14 @@ public static class AvatarWork
             else if (other(w.PlayerId) is { } a) Dress(conn, a, w.PlayerId);
         }
         conn.Db.WornItem.OnInsert += (_, w) => Changed(w);
+
+        // Quick actions anyone did (player_act, anim-4), your own included: the server
+        // notes them only once they succeed.
+        conn.Db.PlayerAct.OnInsert += (_, act) =>
+        {
+            var avatar = act.PlayerId == MyPlayerId(conn) ? me : other(act.PlayerId);
+            avatar?.Act((WorkMotion)act.Motion, act.Item == 0 ? null : (Item)act.Item);
+        };
         conn.Db.WornItem.OnDelete += (_, w) => Changed(w);
     }
 
@@ -66,6 +74,9 @@ public static class AvatarWork
             }
         if (best < 3f * 3f) avatar.Face(bx, bz);
     }
+
+    static uint? MyPlayerId(DbConnection conn) =>
+        conn.Identity is { } id ? conn.Db.Player.Identity.Find(id)?.PlayerId : null;
 
     static void Dress(DbConnection conn, Avatar avatar, uint playerId)
     {

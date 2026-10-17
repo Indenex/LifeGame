@@ -25,7 +25,7 @@ public static partial class Module
         if (animal.Fleece < FleeceToShear) throw new Exception("Its wool hasn't grown back yet");
         if (animal.State == AnimalState.Run || mind.Nervous > ShearNervousLimit)
             throw new Exception("The sheep is too skittish. Sneak up and let it settle");
-        var tool = BestTool(ctx, ItemTags.Cutting) ?? throw new Exception("You need something sharp to shear with");
+        var tool = BestTool(ctx, ItemTags.Cutting) ?? throw new Exception(NoToolMessage(ctx, ItemTags.Cutting, "You need something sharp to shear with"));
 
         // A better edge gives a cleaner fleece, up to what the shearer's skill allows.
         byte cap = 100;
@@ -33,6 +33,7 @@ public static partial class Module
         byte quality = Math.Min(tool.Quality, cap);
         AddToInventory(ctx, ctx.Sender, Item.Wool, animal.Fleece >= 100 ? 2u : 1u, quality);
         OnProcessPerformed(ctx, player.PlayerId, ShearProcess, quality, false);
+        WearTool(ctx, tool);
 
         // A shorn sheep stands looking a bit put out, but it isn't frightened off.
         ctx.Db.Animal.Id.Update(animal with { Fleece = 0, State = AnimalState.Idle });

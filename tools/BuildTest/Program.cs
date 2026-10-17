@@ -44,6 +44,21 @@ void WaitFor(Func<bool> done, int seconds, string what)
 
 WaitFor(() => bots.All(x => x.Ready), 30, "both players connected");
 
+// Building size and doorways (building-14), checked on the shared numbers both sides use.
+foreach (var kind in new[] { StructureKind.ClayHut, StructureKind.BrickHouse, StructureKind.LogCabin })
+{
+    int k = (int)kind;
+    var shape = Structures.Shape(k);
+    Check(MathF.Abs(shape.Scale - 1.25f) < 0.001f, $"{shape.Name} is built 1.25x");
+    // Walking in along the middle of the doorway crosses no wall when the door is open; a side wall does.
+    float wall = kind == StructureKind.ClayHut ? Structures.HutWallRadiusFor(k) : Structures.HouseWallZFor(k);
+    Check(!Structures.StepCrossesWalls(k, 0, 0, 0f, false, 0, wall + 0.5f, 0, wall - 0.5f), $"{shape.Name}: the open doorway lets you in");
+    Check(Structures.StepCrossesWalls(k, 0, 0, 0f, true, 0, wall + 0.5f, 0, wall - 0.5f), $"{shape.Name}: a shut door keeps you out");
+    float side = kind == StructureKind.ClayHut ? Structures.HutWallRadiusFor(k) : Structures.HouseWallXFor(k);
+    Check(Structures.StepCrossesWalls(k, 0, 0, 0f, false, -side - 0.5f, 0, -side + 0.5f, 0), $"{shape.Name}: the side wall holds");
+    Check(shape.DoorwayZ >= wall - 0.2f, $"{shape.Name}: the door sits in the front wall");
+}
+
 if (which is "lean-to" or "both")
     BuildTogether(StructureKind.LeanTo,
         new() { [Item.Stick] = 5, [Item.Fiber] = 6 },
@@ -171,8 +186,10 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     // A fence is thin: stand close, since a walk can stop a meter short and reach is 2.2 m past its line.
     float stand = shape.Round ? shape.Radius + 0.6f : shape.Fence ? 0.9f : Math.Max(1.9f, shape.HalfDepth + 0.6f);
     var front = Structures.ToWorld(sx, sz, s.Yaw, 0.6f, stand);
-    b.WalkTo(front.x + 0.6f, front.z, 1f, Pump);
-    a.WalkTo(front.x - 0.6f, front.z, 1f, Pump);
+    // Walk right up to the spot, not "within a meter": stopping 1 m short on the far side of a round hut
+    // left B 0.1 m outside the work reach (hut radius + 2.2 m) and every Build was refused.
+    b.WalkTo(front.x + 0.6f, front.z, 0.3f, Pump);
+    a.WalkTo(front.x - 0.6f, front.z, 0.3f, Pump);
     until = clock.Elapsed + TimeSpan.FromSeconds(180);
     while (a.Conn.Db.Structure.Id.Find(id) is { Complete: false } && clock.Elapsed < until)
     {
@@ -538,6 +555,7 @@ sealed class Bot
     float Step(float tx, float tz, float dt)
     {
         float dx = tx - X, dz = tz - Z, dist = MathF.Sqrt(dx * dx + dz * dz);
+        float moved = 0f; // how far this call really walked: waiting for the server is not progress
         if (dist > 0.05f)
         {
             float step = MathF.Min(dist, 5f * dt);
@@ -547,12 +565,13 @@ sealed class Bot
             {
                 X += dx / dist * step;
                 Z += dz / dist * step;
+                moved = step;
             }
             Conn.Reducers.Move(X, Z, MathF.Atan2(dx, dz));
         }
         else if (Lag() > 0.05f)
             Conn.Reducers.Move(X, Z, 0f); // there already: keep reporting until the server agrees
-        return MathF.Max(0, dist - 5f * dt);
+        return MathF.Max(0, dist - moved);
     }
 
     // Walks to a point and checks the SERVER has the bot there. The walk is a straight line, so a tree
@@ -566,7 +585,7 @@ sealed class Bot
             WalkStraight(tx, tz, within, pump);
             if (Conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen) return;
             float left = MathF.Sqrt((seen.X - tx) * (seen.X - tx) + (seen.Z - tz) * (seen.Z - tz));
-            if (left <= within + 1f) return;
+            if (left <= within + 0.6f) return;
             X = seen.X;
             Z = seen.Z;
             float dx = tx - X, dz = tz - Z, d = MathF.Sqrt(dx * dx + dz * dz);
@@ -577,7 +596,8 @@ sealed class Bot
 
     void WalkStraight(float tx, float tz, float within, Action<int> pump)
     {
-        while (Step(tx, tz, 0.1f) > within) pump(100);
+        // The cap keeps a bot that is held in place (a wall, the pace) from waiting for ever.
+        for (int guard = 0; Step(tx, tz, 0.1f) > within && guard < 900; guard++) pump(100);
         // The server limits the pace (bugfix-24): keep reporting until it has us here too.
         for (int i = 0; i < 300 && Lag() > 0.3f; i++)
         {

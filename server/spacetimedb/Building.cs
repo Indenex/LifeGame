@@ -21,6 +21,7 @@ public enum StructureKind
     DryingRack,
     PottersBench,
     LogCabin,
+    RepairTable,
     ClayTrough,
 }
 
