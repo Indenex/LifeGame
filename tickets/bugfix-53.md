@@ -20,19 +20,22 @@ Rules agreed with the PM (D-182):
 | DeviceJob | Score, InputQuality and other round internals for devices of others | Private table plus per-owner view; keep Remaining/RoundStart/RoundEnd public if the device view draws progress | Crafting |
 | Roast | Quality | Quality to a private table served to the roaster | Crafting |
 | StructureProgress | Quality, StageQualitySum, StageItems, StageHelpers | Keep public only what the build bar draws; rest private | House building |
-| BasketItem | Quality, Wear (Maker stays public) | Private table `BasketItemQuality` (item id -> quality, wear), served by a view to players who can open the basket | Ceramics / Crafting |
+| BasketItem | Whole contents of baskets in claims you don't belong to; Quality and Wear elsewhere | Moved to stage B (PM, 2026-10-17): no temporary public mirror or second migration. Stage B makes BasketItem private and serves it by view: baskets in the caller's own or member claims plus baskets in nearby chunks outside claims. Note StorageSounds.cs then only hears baskets the caller can see. | Ceramics / Crafting |
 | ClayPiece | Quality | As BasketItem | Ceramics |
 
 ## Stage B plan (before outside players join; Integration owns the Subscriptions.cs rewrite)
 Goal: a client receives positions and animals only for chunks in and near its view.
 1. Add chunk-filtered views `near_player_pos(chunkX, chunkZ)`-style are not possible (views take no arguments). So: keep a private `ViewerChunk(PlayerId, ChunkX, ChunkZ)` row per player (updated by the server on Move when the chunk changes) and public views `nearby_player_pos`, `nearby_animal`, `nearby_world_item`... that return, for the caller, rows in the 5x5 chunks around the caller's chunk, read by the existing per-chunk btree index on each table.
 2. Client reads change from `conn.Db.PlayerPos` / `Animal` to the views; this touches every lane that reads those tables, so it is one PR by Integration with all lanes listed.
-3. Remove the raw public `player_pos` and `animal` tables from the public set last (access change; migrates).
-4. Test: a bot far from another bot must not see its row; the load test must keep its traffic figure.
+3. Baskets: `nearby_basket_item` (same chunk rule, plus every basket in the caller's own or member claims) replaces public BasketItem; see the Stage A table.
+4. Remove the raw public `player_pos` and `animal` tables from the public set last (access change; migrates).
+5. Test: a bot far from another bot must not see its row; the load test must keep its traffic figure.
 Cost to measure: view recomputation per Move; check LoadTest CPU per player before and after.
 
 ## Progress log
 - 2026-10-17: PlayerHealth family done on this branch: server builds, bindings regenerate, client builds, SocialTest passes (strike lands, kill mark, full health on wake), Upgrade check passes (origin/main world carries over).
+
+- 2026-10-17: families 2 (#830, bugfix-54), 3 (bugfix-56 clay and kiln) and 4 (bugfix-57 structure stage) written; BasketItem moved to stage B on the PM's call.
 
 ## Open questions / blockers
 - Existing PlayerHealth rows get their PlayerStanding row the next time a strike touches them (EnsureHealth); until then a client treats them as not graced and not marked, which is true for almost everyone.
