@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# Imports the Quaternius Medieval Village MegaKit's textures (CC0) into
-# client/assets/quaternius/village/textures/ (building-26; the layout Modeling uses
-# for the nature kit too): base colours at 1024 px, normal maps at 512 px, plus the
-# wood grain bands House building lays along sticks and logs.
+# House building's share of the Quaternius Medieval Village MegaKit's textures (CC0) in
+# client/assets/quaternius/village/textures/ (building-26): the plaster at 1024 px and
+# the wood grain bands laid along sticks and logs. Modeling's import_village.py brings in
+# the rest (T_WoodTrim, T_RockTrim, ...) at the same sizes; one copy of each file only.
 #
 #   python3 -I tools/art/quaternius/village_textures.py <villagekit-godot.zip>
 #
@@ -11,9 +11,8 @@ import io, os, sys, zipfile
 from PIL import Image, ImageOps
 
 KIT = "Godot/addons/quaternius/materials/"
-BASE = ["T_WoodTrim_BaseColor", "T_Plaster_BaseColor", "T_RoundRocks_BaseColor", "T_RockTrim_BaseColor",
-        "T_UnevenBrick_BaseColor", "T_Brick_BaseColor", "T_RoundTiles_BaseColor", "T_FlatTiles_BaseColor"]
-NORMAL = ["T_WoodTrim_Normal", "T_Plaster_Normal", "T_RoundRocks_Normal", "T_RockTrim_Normal", "T_UnevenBrick_Normal"]
+BASE = ["T_Plaster_BaseColor", "T_RoundRocks_BaseColor"]
+NORMAL = ["T_Plaster_Normal", "T_RoundRocks_Normal"]
 
 def main(zip_path):
     out = os.path.join(os.path.dirname(__file__), "../../../client/assets/quaternius/village/textures")
