@@ -2,7 +2,7 @@
 Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
 Status: in_progress
-Branch: claude/anim-14 (stacked on claude/anim-13, #613)
+Branch: claude/anim-14 (stacked on claude/anim-13, #613, with Modeling's claude/model-15-faces merged in)
 PR: (not yet)
 
 ## Goal
@@ -15,9 +15,10 @@ The chibi blinks, looks happy while eating, waving or swaying by a fire, and loo
 
 ## Progress log
 - 2026-10-17 07:40: face selection logic built in PlayerAnimator; client builds. Not wired to the model yet.
+- 2026-10-17 08:00: merged Modeling's claude/model-15-faces (e372053b). PlayerAnimator.Face now uses their Face enum; Avatar._Process calls PlayerModel.SetFace every frame. Client builds.
 
 ## Open questions / blockers
-- Waiting on Modeling's SetFace branch.
+- Merges after Modeling's faces PR and #613.
 
 ## Next step
-When Modeling sends the branch, merge it in and call `PlayerModel.SetFace((Skeleton3D)figure, (Face)animator.Face)` in Avatar._Process after animator.Update. Then build, open the PR, and request a Render C clip.
+Open the PR (base claude/anim-13) and request a Render C clip of blink, eat, wave and lie down.

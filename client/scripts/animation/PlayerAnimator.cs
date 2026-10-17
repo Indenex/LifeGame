@@ -141,21 +141,20 @@ public sealed class PlayerAnimator
 
     // The face to show (#16): blinking every few seconds, happy while eating or waving or
     // swaying by a fire, sleepy when lying down, yawning or idle late at night. The
-    // same order as Modeling's Face enum, so Avatar can cast it straight across.
-    public enum Expression : byte { Open, Closed, Happy, Sleepy }
-    public Expression Face { get; private set; }
+    // Modeling's Face parts show it (PlayerModel.SetFace).
+    public Face Face { get; private set; }
     float blinkIn = 3f, blinkLeft;
     int blinkCount;
 
     void Expressions(float dt)
     {
         bool lying = Rest == RestKind.Lie && restStage > 2.5f;
-        Expression mood =
-            lying && Asleep ? Expression.Closed
-            : lying || shownGesture == Gesture.Yawn ? Expression.Sleepy
-            : shownAct == WorkMotion.Eat || shownGesture is Gesture.Wave or Gesture.Sway ? Expression.Happy
-            : walkBlend < 0.3f && Atmosphere.Night > 0.7f ? Expression.Sleepy
-            : Expression.Open;
+        Face mood =
+            lying && Asleep ? Face.Closed
+            : lying || shownGesture == Gesture.Yawn ? Face.Sleepy
+            : shownAct == WorkMotion.Eat || shownGesture is Gesture.Wave or Gesture.Sway ? Face.Happy
+            : walkBlend < 0.3f && Atmosphere.Night > 0.7f ? Face.Sleepy
+            : Face.Open;
         // Blink every 2.5 to 6 s, now and then twice; sleepy eyes blink slower.
         blinkIn -= dt;
         if (blinkLeft > 0f) blinkLeft -= dt;
@@ -163,9 +162,9 @@ public sealed class PlayerAnimator
         {
             blinkLeft = 0.13f;
             bool twice = Mathf.PosMod(time * 3.7f + seed, 1f) < 0.2f && blinkCount++ % 2 == 0;
-            blinkIn = twice ? 0.25f : (mood == Expression.Sleepy ? 4f : 2.5f) + Mathf.PosMod(seed * 17f + time * 1.3f, 3.5f);
+            blinkIn = twice ? 0.25f : (mood == Face.Sleepy ? 4f : 2.5f) + Mathf.PosMod(seed * 17f + time * 1.3f, 3.5f);
         }
-        Face = blinkLeft > 0f && mood is Expression.Open or Expression.Sleepy ? Expression.Closed : mood;
+        Face = blinkLeft > 0f && mood is Face.Open or Face.Sleepy ? Face.Closed : mood;
     }
 
     // How much hop is in the walk (#17): full on the chibi, a trace on a tall figure.
