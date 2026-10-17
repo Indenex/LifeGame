@@ -392,7 +392,7 @@ public partial class Terrain : Node3D
                 }
                 float sapling = tree + 0.03f * edge * (1f - heath);
                 float rocky = Mathf.SmoothStep(0.7f, 0.85f, World.Noise(x, z, 16f, 65));
-                float rock = sapling + 0.004f + 0.07f * rocky + (shore ? 0.08f : 0f);
+                float rock = sapling + 0.004f + 0.07f * rocky + (shore ? ShoreStones(x, z) : 0f);
                 if (!nearSpawn && roll < sapling)
                 {
                     // Saplings crowd the grove edges, a half to three quarters full size.
