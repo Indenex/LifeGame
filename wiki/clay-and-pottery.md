@@ -4,7 +4,7 @@ A fired clay pot is the first major goal. Pots carry water and lead into cooking
 
 ## Steps
 - **Find clay.** Clay is underground; dig for it (F). Deeper clay is better. Digging with a tool lets you reach deeper than bare hands.
-- **Shape it.** Shaping is a minigame. A good wall gives a better pot.
+- **Shape it.** Shaping is done at a Potter's bench inside a claim, and it is a minigame. A good wall gives a better pot.
 - **Dry it.** Wet clay cannot be fired safely. Drying is slower in rain and faster beside a burning fire.
 - **Fire it.** Fire turns dry clay into pottery. A pot fired before it is dry will crack. Cracked pieces are not wasted: they can be used to improve later clay.
 

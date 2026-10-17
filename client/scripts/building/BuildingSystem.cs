@@ -605,8 +605,15 @@ public partial class BuildingSystem : Node
         if (Structures.IsIndoor(placeKind) && !rows.Values.Any(s => s.Complete && Structures.IsHome((int)s.Kind)
                 && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, at.X, at.Z, -Structures.HearthWallGap)))
             return "A hearth goes inside a finished hut or house";
+        // Only basic survival buildings stand outside a claim (building-13); the server checks the same.
+        if (!Structures.IsWild(placeKind) && !MayBar(at.X, at.Z))
+            return $"A {Structures.Shape(placeKind).Name.ToLowerInvariant()} has to stand inside your claim";
         return Structures.GroundProblem(placeKind, at.X, at.Z, yaw, terrain.HeightAt);
     }
+
+    // True when this kind can't be laid out where the player stands because it needs a claim
+    // the player belongs to (the build menu greys it with "Needs a claim").
+    public bool NeedsClaimHere(int kind) => !Structures.IsWild(kind) && !MayBar(me.Position.X, me.Position.Z);
 
     // Where the mouse points on the ground, found by stepping along the camera ray.
     Vector3? PointUnderMouse()

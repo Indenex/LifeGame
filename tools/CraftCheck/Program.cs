@@ -188,10 +188,11 @@ conn.Reducers.StartCraft("weave.basket", 0);
 Pump(() => lastError != null, 5, "a basket away from a table to be refused");
 Console.WriteLine($"Basket with no table: {lastError}");
 lastError = null;
-conn.Reducers.PlaceStructure(StructureKind.CraftingTable, x + 2f, z, 0f);
-Pump(() => lastError != null, 5, "a table outside a claim to be refused");
-if (lastError?.Contains("inside your claim") != true) Fail($"a table outside a claim: {lastError}");
-Console.WriteLine($"Table outside a claim: {lastError}");
+// Only basic survival buildings stand outside a claim (building-13): a station that isn't the table is refused.
+conn.Reducers.PlaceStructure(StructureKind.SpindleStation, x + 2f, z, 0f);
+Pump(() => lastError != null, 5, "a spindle station outside a claim to be refused");
+if (lastError?.Contains("inside your claim") != true) Fail($"a spindle station outside a claim: {lastError}");
+Console.WriteLine($"Spindle station outside a claim: {lastError}");
 Gather(Item.Fiber, 6);
 Craft("cord.twist", 0, Item.Cordage);
 Craft("cord.twist", 0, Item.Cordage);
@@ -382,6 +383,19 @@ Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({st
     WalkTo(ctrunk.X, ctrunk.Z);
     Craft("chop.log", 0, Item.Log);
     Console.WriteLine("The mended axe chops again");
+}
+
+// Crafting-20: a bow and arrows (animals-15) are made at the bench by hand: the bow from
+// sticks and cordage, three arrows from sticks and fiber, both with a cutting tool.
+{
+    Gather(Item.Stick, 5);
+    Gather(Item.Fiber, 8);
+    while (CountOf(Item.Cordage) < 2) Craft("cord.twist", 0, null);
+    Craft("lash.bow", 0, Item.Bow);
+    uint arrowsBefore = CountOf(Item.Arrow);
+    Craft("carve.arrows", 0, Item.Arrow);
+    if (CountOf(Item.Arrow) != arrowsBefore + 3) Fail($"one arrow craft made {CountOf(Item.Arrow) - arrowsBefore} arrows, not 3");
+    Console.WriteLine("Made a bow and three arrows");
 }
 
 // Crafting-23: a batch device (D-195, D-209). A settling tub cleans a loaded batch of clay

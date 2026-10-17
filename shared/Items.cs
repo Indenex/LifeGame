@@ -94,6 +94,9 @@ namespace LifeGame.Shared
         public ItemTags Tags;
         // Quality matters for made things; raw materials always come at a flat quality.
         public bool HasQuality;
+        // Shooting (animals-15): what a bow or an arrow is worth in the damage formula,
+        // bowPower x arrowPower x quality terms. Zero for everything else.
+        public float BowPower, ArrowPower;
         // A thing that sits visibly in the world, so it can be set down where you choose
         // (crafting-21). Small things like tinder and cordage just go to the bag.
         public bool Placeable;
@@ -184,8 +187,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Basket, Name = "Basket", Plural = "Baskets", Tags = ItemTags.Container, HasQuality = true, Placeable = true },
             new ItemDef { Id = Item.BowDrill, Name = "Bow drill", Plural = "Bow drills", Tags = ItemTags.FireBow, HasQuality = true, Wears = true, RepairCost = Lashing },
             new ItemDef { Id = Item.Log, Name = "Log", Plural = "Logs", FuelSeconds = 360, Placeable = true },
-            new ItemDef { Id = Item.Bow, Name = "Bow", Plural = "Bows", HasQuality = true, Use = UseAction.Tool },
-            new ItemDef { Id = Item.Arrow, Name = "Arrow", Plural = "Arrows", HasQuality = true },
+            new ItemDef { Id = Item.Bow, Name = "Bow", Plural = "Bows", HasQuality = true, BowPower = 60f, Wears = true, RepairCost = Lashing, Use = UseAction.Tool },
+            new ItemDef { Id = Item.Arrow, Name = "Arrow", Plural = "Arrows", HasQuality = true, ArrowPower = 0.65f },
             new ItemDef { Id = Item.SleepingMat, Name = "Sleeping mat", Plural = "Sleeping mats" },
             new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries", Use = UseAction.Eat },
             new ItemDef { Id = Item.RawMutton, Name = "Raw mutton", Plural = "Raw mutton", HasQuality = true },
