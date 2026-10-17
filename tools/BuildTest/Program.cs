@@ -829,9 +829,17 @@ sealed class Bot
     // Starts a craft and waits for it to finish. The job row can reach us after the
     // inputs leave the inventory, so an empty job table alone doesn't mean done: wait
     // until the job has come and gone, or the made item has turned up.
+    // World tool actions need the tool on the bar and equipped (crafting-29). Equipping toggles, so only once.
+    bool axeEquipped;
+
     public void Craft(string processId, Action<int> pump, float score = 0.6f)
     {
         var def = Processes.Find(processId)!;
+        if (def.Outcome == Outcome.Chop)
+        {
+            Conn.Reducers.SetHotbarSlot(9, (ushort)Item.StoneAxe);
+            if (!axeEquipped) { Conn.Reducers.EquipSlot(9); axeEquipped = true; }
+        }
         uint before = CountOf(def.Makes);
         Conn.Reducers.StartCraft(processId, score);
         var until = DateTime.UtcNow.AddSeconds(def.Seconds * 1.2f + 5);
