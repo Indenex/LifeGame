@@ -1249,3 +1249,81 @@ Owner: Claims.
 ## D-307 — 2026-10-17 — Every hotbar slot equips, Minecraft-style
 **Decision:** The hotbar is Minecraft-style. Any number key puts that slot's item in hand, the held item is used with a click (eat, drink, place, wear, swing), and the same key puts it away. The held item shows in the character's hand for everyone (Animation). The equipped slot is server-side (PlayerEquip, D-305). E stays for world interaction. Tickets: crafting-29, ui-36 (#583), anim-next.
 **Who:** Justin: "Every slot equips".
+
+## D-308 — 2026-10-17 — Frost "in between": silvered grass tips, white-edged rocks and leaves
+**Decision:** Frost sits "in between": grass tips clearly silvered, rocks and leaf tops white-edged, never snow-like (#597).
+**Who:** Justin, choosing the in-between frost look (relayed by the PM; no direct quote).
+
+## D-309 — 2026-10-17 — Character menu as a "Cutesy page"
+**Decision:** The character menu is a "Cutesy page": pastel paper, polaroid or sticker frames, chibis bobbing, doodles (ui-39).
+**Who:** Justin, choosing the Cutesy page (relayed by the PM; no direct quote).
+
+## D-310 — 2026-10-17 — No move to Unity; work on Godot shadows
+**Decision:** No move to Unity. The spike's conclusion is accepted. "Shadows might be nice", so Godot shadow quality work goes ahead (atmos-shadows-1). Merged meshes come via env-24.
+**Who:** Justin: "Shadows might be nice" (relayed by the PM).
+
+## D-311 — 2026-10-17 — Pot slip decoration is a banded rim with a free colour picker
+**Decision:** Pot slip decoration is a banded rim (one or two bands), with colours from a free picker in the mark's allowed range (ceramics-14).
+**Who:** Justin, choosing the banded rim (relayed by the PM; no direct quote).
+
+## D-312 — 2026-10-17 — The Unity worker may push claude/atmos-shadows-1 and open a PR
+**Decision:** The Unity worker may push `claude/atmos-shadows-1` and open a PR.
+**Who:** Justin, giving the go-ahead (relayed by the PM; no direct quote).
+
+## D-313 — 2026-10-17 — Art direction: cutesy, relaxing, with a hint of realism
+**Decision:** The art direction is now cutesy, relaxing, with a hint of realism. It refines the Golden Skull and Dofus painted direction (D-274) toward the chibi. The lighting and shadow feel of the Godot reference frames from the Unity spike (`renders/unity-spike-*-godot.png` on `claude/unity-spike`, our own current game with the HUD hidden) is kept as the baseline, but less realistic and more cutesy to match the chibi.
+**Who:** Justin: "I like the shadows/lighting from the unity screenshots, but I want something less realistic, more cutesy to match the chibi. Cutesy, relaxing, with a hint of realism should be our art direction in the meantime."
+
+## D-314 — 2026-10-17 — UI look: "Warm paper windows"
+**Decision:** The UI look is "Warm paper windows". Every centre window becomes cream paper like the character page: 24 px round corners, soft shadow, brown Nunito text, pastel accents. The HUD stays light and boxless, with Nunito and a soft warm outline. Tickets: ui-41 (font) and ui-42 (paper frame rollout).
+**Who:** Justin, choosing "Warm paper windows" (relayed by the PM; no direct quote).
+
+## D-315 — 2026-10-17 — Cutesy extras picked
+**Decision:** Cutesy extras picked, with owners:
+- #1 soft rim light (Modeling, with Atmosphere).
+- #8 soft bloom and light leaks, and #10 gentle vignette (Atmosphere, each with a toggle).
+- #12 ambient life: butterflies, fireflies, pollen, falling leaves, snow (Environment).
+- #15 idle fidgets, #16 blinking and expressions, and #17 hop and squish movement (Animation).
+- #18 bouncy UI with reduce-motion (UX).
+
+Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, tilt-shift, paper grain, sparkles and emotes, footprint puffs, floating +1, photo mode.
+**Who:** Justin, picking the extras (relayed by the PM; no direct quote).
+
+## D-316 — 2026-10-17 — "Smart priority" for main builds over PR runs
+**Decision:** "Smart priority": the Main priority workflow pauses PR runs only while a main Build or Release is actually waiting for a runner, and never cancels a PR run already more than about 4 minutes in. This refines D-301.
+**Who:** Justin, choosing "Smart priority" (relayed by the PM; no direct quote).
+
+## D-317 — 2026-10-17 — Soft rim light defaults to 0.5
+**Decision:** The soft rim light (D-315 #1) defaults to `Painted.RimStrength` 0.5: a thin glow mostly visible when backlit, tinted by Atmosphere's `rim_tint` by time of day (#620).
+**Who:** Justin: "Do 0.5".
+
+## D-318 — 2026-10-17 — Pebble's shell replaced by the Art R&D Blender-pipeline shell
+**Decision:** Pebble's shell is replaced by the Art R&D Blender-pipeline shell (v4 cute: big friendly plates, chunky soft rim, caramel, honey and sage-olive colours), #623. It is the first asset authored in Blender headless with a script-painted texture. The pipeline is in `docs/art-pipeline.md`.
+**Who:** Justin: "Yes" (to the PM's proposal).
+
+## D-319 — 2026-10-17 — Painted surfaces must be smooth and clean
+**Decision:** Painted surfaces must be smooth and clean: soft broad gradients and soft light bands, with no small brush dabs, crevice speckle or noise. This refines D-274 and D-313. Modeling is changing the shared painted shader centrally, with a before/after for Justin before merging.
+**Who:** Justin: "The textures of those is awful, the weird pitted look is not cutesy."
+
+## D-320 — 2026-10-17 — Merge queue with batches replaces PR-pausing priority
+**Decision:** "Merge queue + batches". Green PRs go into GitHub's merge queue and are tested together in batches every ~10 to 15 minutes, then land and release as one. No PR runs are paused or cancelled any more. This supersedes D-301 and D-316. Ticket integration-16.
+**Who:** Justin, choosing "Merge queue + batches" (relayed by the PM; no direct quote).
+
+## D-321 — 2026-10-17 — Hotbar look: "Paper buttons"
+**Decision:** The hotbar is "Paper buttons": cream paper discs with a soft brown rim and shadow, the key number in brown Nunito, and a butter-gold ring on the item in hand (ui-45).
+**Who:** Justin, choosing "Paper buttons" (relayed by the PM; no direct quote).
+
+## D-322 — 2026-10-17 — Sitting and lying down are just a pose
+**Decision:** Sitting and lying down are "Just a pose", with no gameplay effect.
+**Who:** Justin, choosing "Just a pose" (relayed by the PM; no direct quote).
+
+## D-323 — 2026-10-17 — Autopilot while Justin sleeps
+**Decision:** While Justin sleeps, the PM decides open design questions on the recommended option and records each as a PM-default decision marked "PM default while Justin asleep; revisit". The PM keeps merging green PRs. Look choices (D-154) that are already prototyped wait for his morning review rather than being finalised.
+**Who:** Justin (2026-10-17, about 08:00): "I'm going to sleep. Can you handle things automatically until then? No questions?"
+
+PM defaults taken under this decision (each: PM default while Justin asleep; revisit):
+1. Animation's next item is emotes: wave, cheer, a little dance and a bow, on a key or wheel, shown to everyone through PlayerAct. UX adds the wheel. Not chosen: chibi swimming polish, two-arm heavy carry. (PM default while Justin asleep; revisit)
+2. UX ui-47 adds a "Waking up..." paper veil with a bobbing sun while the game connects. It fades over 0.6 s and is built under D-313 and the Cutesy page. (PM default while Justin asleep; revisit)
+3. Shadow quality defaults to Medium: 4096, 4 cascades, 50 m, about today's cost. The other levels, Low and High, are in Options. High would be crisper but costs about 60% more shadow draw calls. (PM default while Justin asleep; revisit)
+4. Butterflies (env-30, #656) are slightly larger than life, about a 34 cm wingspan, so they read at the default zoom. The alternatives were life-size at 18 cm (barely visible) and storybook at 50 cm. Ambient life gets an Options setting: Off, Some or Full, default Full. (PM default while Justin asleep; revisit)
+5. Town bans stay keyed per character, not per login. A banned player can make a new character, but it starts with nothing, and the Marshal can ban again. Not chosen: a hidden per-login ban on the server, which is stricter but means one bad character locks out the player's other characters. (PM default while Justin asleep; revisit)

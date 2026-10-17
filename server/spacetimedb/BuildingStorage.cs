@@ -99,7 +99,7 @@ public static partial class Module
     static bool CanLock(ReducerContext ctx, Structure s, StructureDoor door)
     {
         // Claim gates are members only (D-160); outside a claim, whoever hung the gate keeps the right.
-        if (Structures.IsGate((int)s.Kind) && ClaimAt(ctx, s.X, s.Z) is { } gateClaim) return HasClaimRights(ctx, gateClaim, ctx.Sender);
+        if (Structures.IsGate((int)s.Kind) && ClaimAt(ctx, s.X, s.Z) is { } gateClaim) return ClaimGateLockAllows(ctx, gateClaim);
         if (door.HungBy == ctx.Sender) return true;
         return ClaimAt(ctx, s.X, s.Z) is { } claim && HasClaimRights(ctx, claim, ctx.Sender);
     }

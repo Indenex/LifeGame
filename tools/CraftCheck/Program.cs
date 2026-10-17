@@ -457,6 +457,49 @@ if (runStations)
         if (lastError?.Contains("equip") != true) Fail($"chopping with the axe only in the bag: {lastError}");
         Console.WriteLine($"Axe not equipped: {lastError}");
         EquipTool(Item.StoneAxe);
+
+        // Walking off ends a job in progress (crafting-31): start a chop, step 3 m away from the tree, and the job
+        // stops with no log and no further progress.
+        {
+            var (tx0, tz0) = NearestTree();
+            var trunk0 = Trees.Trunk(tx0, tz0);
+            WalkTo(trunk0.X, trunk0.Z);
+            uint logsBefore = CountOf(Item.Log);
+            lastError = null;
+            conn.Reducers.StartCraft("chop.log", 0);
+            Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, "a chop to start");
+            if (lastError != null) Fail($"chop for the walk-away check: {lastError}");
+            float awayX = x - trunk0.X, awayZ = z - trunk0.Z;
+            float awayLen = MathF.Max(MathF.Sqrt(awayX * awayX + awayZ * awayZ), 0.01f);
+            awayX /= awayLen; awayZ /= awayLen;
+            float startX = x, startZ = z;
+            for (int step = 1; step <= 6 && conn.Db.MyCraftJob.Count > 0; step++)
+            {
+                x = startX + awayX * 0.5f * step;
+                z = startZ + awayZ * 0.5f * step;
+                conn.Reducers.Move(x, z, 0f);
+                Pump(() => false, 0.25f, null);
+            }
+            Pump(() => conn.Db.MyCraftJob.Count == 0, 5, "the chop to stop when the player walked off");
+            Pump(() => false, 3f, null);
+            if (CountOf(Item.Log) != logsBefore) Fail("a chop the player walked away from still gave a log");
+            if (conn.Db.CraftWork.PlayerId.Find(myId) != null) Fail("the work row stayed after the player walked away");
+            Console.WriteLine("Walking away stopped the chop");
+            // Cancelling by hand stops it too, and putting the axe away mid-chop.
+            WalkTo(trunk0.X, trunk0.Z);
+            conn.Reducers.StartCraft("chop.log", 0);
+            Pump(() => conn.Db.MyCraftJob.Count > 0, 5, "a second chop to start");
+            conn.Reducers.EquipSlot(9);
+            Pump(() => conn.Db.MyCraftJob.Count == 0, 5, "the chop to stop when the axe was put away");
+            EquipTool(Item.StoneAxe);
+            conn.Reducers.StartCraft("chop.log", 0);
+            Pump(() => conn.Db.MyCraftJob.Count > 0, 5, "a third chop to start");
+            conn.Reducers.CancelCraft();
+            Pump(() => conn.Db.MyCraftJob.Count == 0, 5, "the chop to stop on CancelCraft");
+            Pump(() => false, 3f, null);
+            if (CountOf(Item.Log) != logsBefore) Fail("a cancelled chop still gave a log");
+            Console.WriteLine("Putting the axe away and CancelCraft stopped a chop");
+        }
     }
 
     // Crafting-20: a bow and arrows (animals-15) are made at the bench by hand: the bow from
@@ -505,20 +548,36 @@ return 0;
 // Lights a fire (or tries to). The server sets a fire only on clear, level ground
 // near the crafter, away from other fires, hearths, boulders and trunks (Hearths.cs);
 // when it finds none here, step a few metres along and try again.
+// Lights a fire on a spot the shared ground rules accept (FireGround) and clear of other fires,
+// nearest first; if the server still refuses one, the next candidate is tried.
 void FireCraft(string processId, float score)
 {
-    for (int attempt = 0; ; attempt++)
+    var fires = conn.Db.Fire.Iter().ToList();
+    var spots = new List<(float X, float Z)>();
+    for (int ring = 0; ring <= 6; ring++)
     {
+        float r = 1.2f + ring * 0.35f;
+        int steps = ring == 0 ? 1 : 16;
+        for (int k = 0; k < steps; k++)
+        {
+            float a = k * MathF.Tau / steps;
+            float sx = x + MathF.Sin(a) * r, sz = z + MathF.Cos(a) * r;
+            if (!FireGround.Clear(sx, sz, (i, j) => conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j))?.Depth ?? 0)) continue;
+            if (fires.Any(f => MathF.Sqrt((f.X - sx) * (f.X - sx) + (f.Z - sz) * (f.Z - sz)) < Fires.Spacing)) continue;
+            spots.Add((sx, sz));
+        }
+    }
+    int tries = 0;
+    foreach (var spot in spots.Take(12))
+    {
+        tries++;
         lastError = null;
-        conn.Reducers.StartCraft(processId, score);
+        conn.Reducers.StartFireAt(processId, score, spot.X, spot.Z);
         Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
         if (lastError == null) break;
-        if (!lastError.Contains("clear, level ground") || attempt >= 8)
-            Fail($"{processId} at ({x:F1}, {z:F1}), try {attempt + 1}: {lastError}");
-        float a = attempt * MathF.PI / 4f;
-        Console.WriteLine($"No ground for a fire at ({x:F1}, {z:F1}); stepping along");
-        WalkTo(x + MathF.Cos(a) * 4f, z + MathF.Sin(a) * 4f);
+        if (!lastError.Contains("clear, level ground") && !lastError.Contains("too close")) Fail($"{processId} at ({spot.X:F1}, {spot.Z:F1}): {lastError}");
     }
+    if (lastError != null || conn.Db.MyCraftJob.Count == 0) Fail($"{processId}: no fire spot accepted near ({x:F1}, {z:F1}) after {tries} tries: {lastError}");
     var def = Processes.Find(processId)!;
     Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds * 1.2f + 5, $"{processId} to finish");
 }

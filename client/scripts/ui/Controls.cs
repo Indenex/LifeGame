@@ -54,6 +54,8 @@ public static class Controls
         new("sneak", new[] { Key.Ctrl }, "Sneak (hold)", "Hold {key} to sneak up on animals", OnRequest: true),
         // Building reads Shift inside its door offer, so this follows the Use key.
         new("bar_door", None, "Bar or unbar a hut door", Fixed: true, KeyText: "Shift {use}"),
+        // anim-12: sit down, press again to lie down; walking gets you up (Animation's Avatar).
+        new("rest", new[] { Key.H }, "Sit or lie down", "{key} to sit down. Press it again to lie down; walk off to get up", OnRequest: true),
         new("dig", new[] { Key.F }, "Dig", "{key} digs the ground in front of you. Hold it to keep digging"),
         // Animals binds strike (click, or Z) and Skills binds craft_play_minigame (Ctrl)
         // with these keys; they join the key list once those lanes land.
