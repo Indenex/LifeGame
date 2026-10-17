@@ -931,7 +931,7 @@ int PotCheck()
     {
         if (watch.Elapsed > TimeSpan.FromMinutes(3)) Fail("could not pick 3 berries");
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
-        var bush = conn.Db.ForageBush.Iter().Where(b => b.RipeAt.MicrosecondsSinceUnixEpoch <= now)
+        var bush = conn.Db.ForageBush.Iter().Where(b => b.RipeAt.MicrosecondsSinceUnixEpoch <= now && Forages.Of(b.Kind, b.Id).Yield == Item.Berries)
             .OrderBy(b => DistanceTo(b.X, b.Z, x, z)).FirstOrDefault();
         if (bush == null) { Pump(() => false, 2, null); continue; }
         WalkTo(bush.X, bush.Z, 1.5f);

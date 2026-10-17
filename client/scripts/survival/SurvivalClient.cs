@@ -16,7 +16,7 @@ public partial class SurvivalClient : Node
     readonly NeedsHud needsHud = new();
     readonly StaminaBar staminaBar = new();
     readonly RestSpotView restSpots = new();
-    readonly Dictionary<ulong, BerryBush> bushes = new();
+    readonly Dictionary<ulong, Node3D> bushes = new();
 
     Node world = null!;
     Terrain terrain = null!;
@@ -89,7 +89,8 @@ public partial class SurvivalClient : Node
             Id = "survival.forage",
             Priority = 10,
             Find = at => conn != null && NearestRipeBush() is { } bush
-                ? new UseOffer(Needs.IsHazelBush(bush.Id) ? "Gather hazelnuts" : "Pick berries", Mathf.Max(0f, new Vector2(bush.X - at.X, bush.Z - at.Z).Length() - Needs.BushRadius), () => conn.Reducers.Forage(bush.Id),
+                && Forages.Of(bush.Kind, bush.Id) is var def
+                ? new UseOffer(def.Prompt, Mathf.Max(0f, new Vector2(bush.X - at.X, bush.Z - at.Z).Length() - def.Radius), () => conn.Reducers.Forage(bush.Id),
                     Target: new Vector3(bush.X, 0, bush.Z), Again: Use.HoldInterval)
                 : null,
         });
@@ -121,7 +122,7 @@ public partial class SurvivalClient : Node
         conn.Db.MyVitals.OnUpdate += (_, _, v) => OnVitals(v);
         conn.Db.Drenched.OnDelete += (_, d) => { if (AvatarOf(d.PlayerId) is { } a && a.GetNodeOrNull<WetLook>(nameof(WetLook)) is { } w) w.Wetness = 0f; };
         conn.Db.ForageBush.OnInsert += (_, b) => AddBush(b);
-        conn.Db.ForageBush.OnUpdate += (_, _, b) => { if (bushes.TryGetValue(b.Id, out var n)) n.Ripe = IsRipe(b); };
+        conn.Db.ForageBush.OnUpdate += (_, _, b) => { if (bushes.TryGetValue(b.Id, out var n)) SetRipe(n, IsRipe(b)); };
         conn.Db.ForageBush.OnDelete += (_, b) => RemoveNode(bushes, b.Id);
     }
 
@@ -199,7 +200,7 @@ public partial class SurvivalClient : Node
             ripenTimer = 1f;
             UpdateSeason();
             foreach (var b in conn.Db.ForageBush.Iter())
-                if (bushes.TryGetValue(b.Id, out var node)) node.Ripe = IsRipe(b);
+                if (bushes.TryGetValue(b.Id, out var node)) SetRipe(node, IsRipe(b));
         }
 
         if (!walkedThisFrame) Rest((float)delta);
@@ -345,14 +346,15 @@ public partial class SurvivalClient : Node
         if (conn == null) return null;
         var p = player.Position;
         ForageBush? best = null;
-        float bestDistance = Needs.BushPickDistance - 0.2f;
+        float bestEdge = Needs.BushReach - 0.2f;
         foreach (var b in conn.Db.ForageBush.Iter())
         {
-            float d = new Vector2(b.X - p.X, b.Z - p.Z).Length();
-            if (d <= bestDistance && IsRipe(b))
+            // Measured to the edge of what grows there, as the server does.
+            float edge = new Vector2(b.X - p.X, b.Z - p.Z).Length() - Forages.Of(b.Kind, b.Id).Radius;
+            if (edge <= bestEdge && IsRipe(b))
             {
                 best = b;
-                bestDistance = d;
+                bestEdge = edge;
             }
         }
         return best;
@@ -375,7 +377,7 @@ public partial class SurvivalClient : Node
         return false;
     }
 
-    // A hazel bush (survival-30) is ripe only in autumn, whatever its timer says; refreshed with the bushes.
+    // Hazels (survival-30) bear only in autumn and mushrooms never in winter, whatever their timer says; refreshed with the bushes.
     Season season = Season.Spring;
 
     void UpdateSeason()
@@ -385,16 +387,25 @@ public partial class SurvivalClient : Node
     }
 
     bool IsRipe(ForageBush b) =>
-        NowMicros >= b.RipeAt.MicrosecondsSinceUnixEpoch && (!Needs.IsHazelBush(b.Id) || Needs.HazelnutsRipe(season));
+        NowMicros >= b.RipeAt.MicrosecondsSinceUnixEpoch && Forages.Of(b.Kind, b.Id).InSeason(season);
+
+    static void SetRipe(Node3D node, bool ripe)
+    {
+        if (node is BerryBush bush) bush.Ripe = ripe;
+        else if (node is MushroomPatch patch) patch.Ripe = ripe;
+    }
 
     // --- World objects -----------------------------------------------------
 
     void AddBush(ForageBush b)
     {
         if (bushes.ContainsKey(b.Id)) return;
-        var bush = new BerryBush(b.Id) { Position = new Vector3(b.X, terrain.HeightAt(b.X, b.Z) - 0.05f, b.Z), Ripe = IsRipe(b) };
-        bushes[b.Id] = bush;
-        world.AddChild(bush);
+        Node3D node = b.Kind == Forages.MushroomKind
+            ? new MushroomPatch(b.Id) { Position = new Vector3(b.X, terrain.HeightAt(b.X, b.Z) - 0.01f, b.Z) }
+            : new BerryBush(b.Id) { Position = new Vector3(b.X, terrain.HeightAt(b.X, b.Z) - 0.05f, b.Z) };
+        SetRipe(node, IsRipe(b));
+        bushes[b.Id] = node;
+        world.AddChild(node);
     }
 
     static void RemoveNode<T>(Dictionary<ulong, T> nodes, ulong id) where T : Node

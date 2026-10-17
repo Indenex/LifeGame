@@ -139,11 +139,26 @@ Settle(200);
 if (MathF.Abs((V().Food - foodH) - Needs.HazelnutFood) > 0.01f)
     Fail($"a hazelnut gave {V().Food - foodH:F3} food, expected {Needs.HazelnutFood:F3}");
 Ok($"a hazelnut gives {Needs.HazelnutFood:P0} food (from Foods)");
-var allBushes = conn.Db.ForageBush.Iter().ToList();
+var allBushes = conn.Db.ForageBush.Iter().Where(b => b.Kind == Forages.BerryBushKind).ToList();
 int hazels = allBushes.Count(b => Needs.IsHazelBush(b.Id));
 if (allBushes.Count < 6 || hazels * 5 < allBushes.Count || hazels * 2 > allBushes.Count)
     Fail($"{hazels} of {allBushes.Count} bushes are hazel; expected about a third");
 Ok($"{hazels} of {allBushes.Count} bushes are hazel, the rest bear berries");
+
+// --- Mushrooms (survival-35): patches in the shade beside trees, and they feed like the data says ---
+var patches = conn.Db.ForageBush.Iter().Where(b => b.Kind == Forages.MushroomKind).ToList();
+if (patches.Count < allBushes.Count / 4) Fail($"only {patches.Count} mushroom patches for {allBushes.Count} bushes");
+foreach (var m in patches)
+{
+    int mx = World.CellOf(m.X), mz = World.CellOf(m.Z);
+    if (Trees.GrowsAt(mx, mz)) Fail($"a mushroom patch at ({m.X:F1}, {m.Z:F1}) sits on a tree");
+    bool shade = false;
+    for (int dx = -3; dx <= 3 && !shade; dx++)
+        for (int dz = -3; dz <= 3 && !shade; dz++)
+            shade = dx * dx + dz * dz <= 9 && Trees.GrowsAt(mx + dx, mz + dz);
+    if (!shade) Fail($"a mushroom patch at ({m.X:F1}, {m.Z:F1}) has no tree within 3 m");
+}
+Ok($"{patches.Count} mushroom patches, each beside a tree");
 
 // --- Stew: a good meal, the pot comes back at its quality ---
 Give(Item.PotOfStew, 77);
@@ -248,6 +263,16 @@ for (int dx = -Needs.WakeOpenRadius; dx <= Needs.WakeOpenRadius; dx++)
         if (dx * dx + dz * dz <= Needs.WakeOpenRadius * Needs.WakeOpenRadius && Trees.GrowsAt(wcx + dx, wcz + dz)) near++;
 if (near > 0) Fail($"woke at ({woke.X:F1}, {woke.Z:F1}) with {near} trees within {Needs.WakeOpenRadius} m");
 Ok($"woke in the open at ({woke.X:F1}, {woke.Z:F1}), no tree within {Needs.WakeOpenRadius} m");
+
+// A mushroom feeds like the data says (survival-35); checked here, where waking left room to eat.
+Give(Item.Mushrooms);
+float foodM = V().Food;
+conn.Reducers.Eat((ushort)Item.Mushrooms);
+Pump(() => CountOf(Item.Mushrooms) == 0, 5, "the mushroom to be eaten");
+Settle(200);
+if (MathF.Abs((V().Food - foodM) - Needs.MushroomFood) > 0.01f)
+    Fail($"a mushroom gave {V().Food - foodM:F3} food, expected {Needs.MushroomFood:F3}");
+Ok($"a mushroom gives {Needs.MushroomFood:P0} food (from Foods)");
 
 Console.WriteLine("Survival check passed");
 conn.Disconnect();
