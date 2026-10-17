@@ -1,9 +1,9 @@
 # ceramics-8: Potter's bench
 Lane: Clay and ceramics
 Owner: Clay and ceramics lane (handed off 2026-10-16 ~20:00 from Opus session_01Diab34HTvew38VmUaqhj5Q to a fresh Sonnet session, D-159)
-Status: in_progress
+Status: done
 Branch: claude/clay-ceramics-8-kfr4kr (stacked on crafting-stations #160; contains ceramics-7). One PR for ceramics-7 + -8 after #160 merges (PM).
-PR: (opening 2026-10-16 20:45, see progress log)
+PR: #256
 
 ## Goal
 D-112 (Justin): shaping pots needs a Potter's bench inside a claim; clay preparation (clean, grit, grog, temper, brick, daub) stays a hand craft. Done when:
@@ -30,9 +30,11 @@ First fired pot still reachable in about 1 to 2 hours of play.
 
 - 2026-10-16 20:45: #160 and #192 (craft times) on main; merged main (5781182): bench = kind 10 after CraftingTable 9; pinch/coil/jar keep Base() times plus Station. Server, ClayCheck build. ClayCheck --pot PASSED on fresh db (c8final); earlier run on pre-#160 merge also passed. Upgrade check vs origin/main PASSED. Opening the one combined PR now. Mutton for --lamp: Animals says use spear x2 + ButcherCarcass (DebugGiveMeat comes later). Bug fixes #254 adds RequireServer(ctx) to DryClay/FinishFiring/FinishKiln: merge main when it lands.
 
-- 2026-10-16 20:50: PM: #197 is merged. Merged main (4696cf7); bench now uses Modeling's StationMeshes.PottersBench() and client/scripts/ceramics/BenchModel.cs is deleted. CookingMeshes is not on main yet (only on claude/model-2-env); asked Modeling when it lands. Hearth (#202) also appends kind 10: whichever of #202 and #256 merges second merges main and re-appends, then re-runs upgrade-check.
+- 2026-10-16 20:50: PM: #197 is merged main (4696cf7); bench now uses Modeling's StationMeshes.PottersBench() and client/scripts/ceramics/BenchModel.cs is deleted. CookingMeshes is not on main yet (only on claude/model-2-env); asked Modeling when it lands. Hearth (#202) also appends kind 10: whichever of #202 and #256 merges second merges main and re-appends, then re-runs upgrade-check.
 
 - 2026-10-16 21:27: #202 (Hearth) merged first. Merged main: PottersBench is now kind 11 (after Hearth 10). Server, ClayCheck build; upgrade-check vs origin/main PASSED; ClayCheck --pot PASSED (c8f2). Head af05862. CI on 94bedff was green. Sent PM the sha.
+
+- 2026-10-17: #256 merged. Nothing left.
 
 ## Open questions / blockers
 - Modeling's `CookingMeshes` (client/scripts/models/CookingMeshes.cs, claude/model-2-env, after #197): once on main, in SimmerView.Show add `new MeshInstance3D { Mesh = CookingMeshes.Under }` as a sibling of the pot body (unscaled) and `CookingMeshes.Floaters(dish, PotMesh.WaterLine(CoilPot).X * PotView.Size)` at the liquid disc's height + 0.002 (PotOfBroth->Broth, PotOfStew->Stew, Tallow->Tallow). Materials are baked in.
@@ -41,4 +43,4 @@ First fired pot still reachable in about 1 to 2 hours of play.
 - Bench cost decided: 1 log + 2 stones (D-127).
 
 ## Next step
-When #160 is on main: `git merge origin/main` into claude/clay-ceramics-8-kfr4kr, build server/client/ClayCheck, run ClayCheck --pot on a fresh db and tools/upgrade-check.sh origin/main, push, open ONE PR (title \"ceramics-7 + ceramics-8: cooking pot and Potter's bench\"; body: what players get from both tickets, cross-lane hooks incl. CraftJob.VesselQuality (Crafting-approved, no wipe), checks), subscribe to it, and send the PM the green sha.
+Merged. Nothing left.

@@ -1,9 +1,9 @@
 # ceramics-13: Clay trough (pipe network designed, parked)
 Lane: Clay and ceramics
 Owner: Clay and ceramics lane (Sonnet session_01Sc3N1RCsurSszfX5YwGzMU)
-Status: in_progress
+Status: done
 Branch: claude/clay-ceramics-13-kfr4kr
-PR: (none yet)
+PR: #417
 
 ## DECISION (2026-10-17, Justin via the PM): option 4, trough and drains only, no pipe network for now.
 Build a fired clay **trough** you fill by hand (pour from water pots). It is placeable, holds a good amount, players (and animals, via an Animals hook) can drink from it, and needs no upkeep (D-148). Drain tiles only if they serve a real purpose; if not, leave them out and tell the PM. A Def entry per docs/CONTENT.md, small, and rendered. The pipe-network design below stays on file for later.
@@ -52,11 +52,12 @@ Not fluid physics: a **graph**.
 3. Both, in order: option 1 first, then roof gutters on the same pipe pieces.
 4. Trough and drains only (no source-to-sink network): a clay trough you fill by hand. Smallest, but keeps the chore this feature is meant to remove.
 
+- 2026-10-17: #417 merged (clay trough, StructureKind.ClayTrough = kind 17). Drains and pipe network left out on purpose; the design stays in this ticket.
+
 ## Open questions / blockers
 - Waiting on Justin's pick of the core loop (via the PM).
 - Does Environment have, or can it add, a shared `WaterAt` query and springs?
 - Slip decoration is parked as ceramics-14.
 
 ## Next step
-Open the PR, send the PM the green sha and the 'drains left out' note, send Render a request (a trough set down by a hut: empty, half full, full; a player pouring in a pot), then watch CI. Older text follows.
-When the PM relays Justin's pick: ask Environment for the `WaterAt` query, wait for building-12 (so the cistern and pipe are single Def entries), then build `ClayForm.Pipe`, `clay.pipe` and the Water graph for the picked option. Also still to do: re-run `ClayCheck --kiln --jar` once House building's #362 (claim-only kiln and bench) is on main.
+Merged (clay trough, StructureKind.ClayTrough = kind 17). Drains and pipe network left out on purpose; the design stays in this ticket.
