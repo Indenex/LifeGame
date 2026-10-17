@@ -16,7 +16,7 @@ public readonly record struct CueLayer(Src Source, float Start, float Decay, flo
 // Length is how long the voice lives, seconds. Send is how much goes to the reverb.
 public sealed record CueDef(string Id, float Length, CueLayer[] Layers, float Send = 0f);
 
-public static class CueDefs
+public static partial class CueDefs
 {
     static CueLayer Splash(float at, float decay, float gain, float lo = 500f, float hi = 3500f) => new(Src.Noise, at, decay, gain, lo, hi, 0.01f);
     static CueLayer Crunch(float at, float decay, float gain, float lo = 1200f, float hi = 5500f) => new(Src.Noise, at, decay, gain, lo, hi, 0.002f);
