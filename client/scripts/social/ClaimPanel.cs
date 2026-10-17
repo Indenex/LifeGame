@@ -194,7 +194,7 @@ public partial class ClaimPanel : CanvasLayer
             {
                 Kind = "bag", Width = 5, Empty = "Nothing",
                 Source = () => Conn != null
-                    ? Conn.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count))
+                    ? Conn.Db.MyInventory.Iter().Where(i => i.Count > 0 && !i.OnBelt).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count))
                     : Enumerable.Empty<BagStack>(),
                 Accepts = d => d["from"].AsString() == "stash",
                 Receive = d => { if (Claim is { } c) Conn?.Reducers.TakeFromStash(c.Id, (ushort)d["item"].AsInt32(), (byte)d["quality"].AsInt32(), (uint)d["count"].AsInt64()); },

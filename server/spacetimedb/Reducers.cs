@@ -385,13 +385,9 @@ public static partial class Module
         }
     }
 
-    static void AddToInventory(ReducerContext ctx, Identity owner, Item item, uint count, byte quality, uint wear = 0)
-    {
-        if (FindStack(ctx, owner, item, quality, wear) is { } stack)
-            ctx.Db.InventoryItem.Id.Update(stack with { Count = stack.Count + count });
-        else
-            ctx.Db.InventoryItem.Insert(new InventoryItem { Id = 0, Owner = owner, Item = (ushort)item, Quality = quality, Count = count, Wear = wear });
-    }
+    // Into the bag: onto a matching bag stack, never onto the tools belt (Inventory.cs, ui-18).
+    static void AddToInventory(ReducerContext ctx, Identity owner, Item item, uint count, byte quality, uint wear = 0) =>
+        AddToBag(ctx, owner, item, count, quality, wear);
 
     static void RemoveFromStack(ReducerContext ctx, InventoryItem stack, uint count)
     {
