@@ -10,13 +10,14 @@ namespace LifeGame;
 // The server checks the same rule (EquippedTool); this is only for the prompts.
 public static class Equipped
 {
-    // The equipped slot's item, or null when no slot is equipped or the slot is empty.
-    public static Item? Item(DbConnection? conn)
-    {
-        if (conn?.Identity is not { } me || conn.Db.PlayerEquip.Owner.Find(me) is not { } equip) return null;
-        var slot = conn.Db.MyHotbar.Iter().FirstOrDefault(s => s.Index == equip.Slot);
-        return slot is { } s && Items.IsKnown(s.Item) ? (Item)s.Item : null;
-    }
+    // The item in hand: the server keeps it on PlayerEquip.Item (other players' rows too, so their
+    // clients can show it); null when nothing is held.
+    public static Item? Item(DbConnection? conn) =>
+        conn?.Identity is { } me ? ItemOf(conn.Db.PlayerEquip.Owner.Find(me)) : null;
+
+    // The item another (or this) player holds, from their PlayerEquip row.
+    public static Item? ItemOf(PlayerEquip? equip) =>
+        equip is { Item: not 0 } e && Items.IsKnown(e.Item) ? (Item)e.Item : null;
 
     // Whether a working tool with these tags is equipped: carried in the bag (not on the belt)
     // and not spent.

@@ -295,6 +295,15 @@ if (runStations)
         Pump(() => lastError != null, 5, "placing out of reach to be refused");
         Console.WriteLine($"Placing out of reach: {lastError}");
 
+        // Setting a thing down is a click on the item in hand (crafting-29): refused until it is held.
+        conn.Reducers.EquipSlot(255);
+        lastError = null;
+        conn.Reducers.PlaceItem(basket.Item, basket.Quality, basket.Wear, x + 1.8f, z, 0f);
+        Pump(() => lastError != null, 5, "placing a basket that is not in hand to be refused");
+        if (lastError?.Contains("hand") != true) Fail($"placing a basket not held: {lastError}");
+        Console.WriteLine($"Basket not in hand: {lastError}");
+        EquipTool(Item.Basket);
+
         bool placedOk = false;
         for (int k = 0; k < 12 && !placedOk; k++)
         {
