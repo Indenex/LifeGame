@@ -2,7 +2,7 @@
 Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
 Status: in_progress
-Branch: claude/environment-fallen-giant (merged #718); follow-up claude/environment-giant-log
+Branch: claude/environment-fallen-giant (merged #718); follow-up claude/environment-giant-log (PR #740)
 PR: (none yet)
 
 ## Goal
@@ -37,4 +37,4 @@ Files: `shared/Features.cs` (FeatureId.FallenGiant = 4, appended), `shared/Landm
 - (none)
 
 ## Next step
-Render (149,-54) zoom 4 to check the new log, open the follow-up PR, send the Render request.
+Wait for PR #740 CI; send the green sha to the PM. Render A has the still request.
