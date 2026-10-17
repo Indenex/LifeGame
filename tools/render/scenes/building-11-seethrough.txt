@@ -3,6 +3,8 @@
 client-as-puppet
 client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1
 wait 35
+key Return
+wait 3
 give 1 120 50
 give 2 20 50
 give 15 40 50
@@ -11,6 +13,34 @@ give 3 80 50
 give 110 40 50
 give 109 40 50
 place 1 0 -3 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
 build
 build
 build
@@ -53,6 +83,34 @@ build
 build
 build
 build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
 wait 2
 stroll 0 -2.5
 arrive
@@ -71,6 +129,34 @@ arrive
 stroll 3.5 9
 arrive
 place 14 0 -3 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
 build
 build
 build

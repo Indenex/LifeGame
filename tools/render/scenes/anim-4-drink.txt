@@ -5,6 +5,8 @@ client-movie 24
 client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.1 --debug-position=30,76 --render-cam=3,0.6,90,0.3
 sql UPDATE player_pos SET x = 30.0, z = 76.0, chunk_x = 1, chunk_z = 4
 frames 360
+key Return
+frames +12
 mark drink-start
 key g
 frames +60
