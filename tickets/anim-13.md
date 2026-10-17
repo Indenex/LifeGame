@@ -24,6 +24,7 @@ Everything is client-side from state every client already has (positions, the fi
 ## Progress log
 - 2026-10-17 07:40: built; client builds.
 - 2026-10-17 07:50: pushed e2a67c28, opened #613 (base claude/anim-12); Render C clip requested.
+- 2026-10-17 07:40 UTC: CI on 37cd95aa green (run 39013074722: clients pass, server jobs skipped as the diff over anim-12 is client-only).
 
 ## Open questions / blockers
 - #16 (blinking and expressions) needs switchable face parts from Modeling. I proposed `PlayerModel.SetFace(figure, Face {Open, Closed, Happy, Sleepy})` to Modeling (session_01JKX3FNjkrEkAqoTaFJiXAm); waiting on their answer. That will be anim-14.
