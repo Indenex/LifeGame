@@ -246,10 +246,15 @@ public static class WaterLook
             vec2 f = flow_at(p);
             // Running water is a little rougher than a still pond.
             float fine = (0.012 + 0.03 * wind_strength) * (1.0 + 1.5 * length(f));
-            float h0 = swell(p, t) * amp + fine_ripples(p, t, f) * fine + sim(p);
+            float h0 = swell(p, t) * amp + fine_ripples(p, t, f) * fine;
             vec2 slope = vec2(
-                swell(p + vec2(e, 0.0), t) * amp + fine_ripples(p + vec2(e, 0.0), t, f) * fine + sim(p + vec2(e, 0.0)) - h0,
-                swell(p + vec2(0.0, e), t) * amp + fine_ripples(p + vec2(0.0, e), t, f) * fine + sim(p + vec2(0.0, e)) - h0) / e;
+                swell(p + vec2(e, 0.0), t) * amp + fine_ripples(p + vec2(e, 0.0), t, f) * fine - h0,
+                swell(p + vec2(0.0, e), t) * amp + fine_ripples(p + vec2(0.0, e), t, f) * fine - h0) / e;
+            // The simulation's slope across two of its texels: a finer step lands
+            // inside one texel, where the filtered height is flat-faceted, and the
+            // light breaks into stair-stepped blocks along the grid.
+            const float es = 0.2;
+            slope += vec2(sim(p + vec2(es, 0.0)) - sim(p - vec2(es, 0.0)), sim(p + vec2(0.0, es)) - sim(p - vec2(0.0, es))) / (2.0 * es);
             float rain = smoothstep(0.02, 0.6, rain_amount);
             if (rain > 0.0) slope += rings(p, t, mix(0.15, 0.9, rain)) * 0.1 * rain;
             vec3 n = normalize(vec3(-slope.x, 1.0, -slope.y));
