@@ -46,6 +46,36 @@ public static partial class Module
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 
+    // Test hook for the check bots (SocialTest): the server admin (the database owner, through
+    // the CLI) puts a finished pot on the ground beside a player (offsets from where they stand,
+    // kept non-negative by callers so the CLI doesn't read them as flags), with some bowls
+    // already ladled. Cooking one for real takes minutes of a fire and a fired pot.
+    [SpacetimeDB.Reducer]
+    public static void AdminPlaceSimmerPot(ReducerContext ctx, uint playerId, float dx, float dz, ushort dish, byte served)
+    {
+        var config = ctx.Db.ClaimConfig.Id.Find(0) ?? throw new Exception("Not set up");
+        if (config.Admin != Me(ctx)) throw new Exception("Only the server admin can do that");
+        var owner = ctx.Db.Player.PlayerId.Find(playerId) ?? throw new Exception("No such player");
+        var at = ctx.Db.PlayerPos.PlayerId.Find(playerId) ?? throw new Exception("They are not in the world");
+        float x = at.X + dx, z = at.Z + dz;
+        if (!float.IsFinite(x) || !float.IsFinite(z) || (Item)dish is not (Item.PotOfBroth or Item.PotOfStew)) throw new Exception("Invalid pot");
+        ctx.Db.SimmerPot.Insert(new SimmerPot
+        {
+            Id = 0,
+            FireId = 0,
+            Owner = owner.Identity,
+            PlayerId = playerId,
+            Dish = dish,
+            Quality = 50,
+            X = x,
+            Z = z,
+            ChunkX = World.ChunkOf(x),
+            ChunkZ = World.ChunkOf(z),
+            PutAt = ctx.Timestamp - new TimeDuration(10L * 60 * 1_000_000),
+            Served = served,
+        });
+    }
+
     static bool SameGroup(ReducerContext ctx, Identity a, Identity b) =>
         ctx.Db.GroupMember.Member.Find(a) is { } ma && ctx.Db.GroupMember.Member.Find(b) is { } mb && ma.GroupId == mb.GroupId;
 }

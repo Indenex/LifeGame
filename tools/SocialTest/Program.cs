@@ -848,6 +848,25 @@ Check(Wait(() => a.Conn.Db.MyGroup.Count == 2 && b.Conn.Db.MyGroup.Count == 2, 5
 Check(!b.Conn.Db.MyGroupInvites.Iter().Any(), "the invitation is gone once answered");
 ExpectError(a, () => a.Conn.Reducers.InviteToGroup(b.PlayerId), "already in your group", "a member can't be invited again");
 ExpectError(b, () => b.Conn.Reducers.AnswerGroup(groupInvite.Id, true), "gone", "an answered invitation can't be used twice");
+// survival-37: a finished pot of A's, shared with the group. Placed by the admin hook so the
+// test needn't cook one for real.
+uint potsBefore = a.Count(Item.CoilPot);
+// One bowl left: B, in A's group, ladles it, and A gets the empty pot back.
+AsOwner("admin_place_simmer_pot", a.PlayerId.ToString(), "0.1", "0.1", ((ushort)Item.PotOfStew).ToString(), "2");
+Check(Wait(() => b.Conn.Db.SimmerPot.Iter().Any(p => p.PlayerId == a.PlayerId), 5), "B sees A's finished pot");
+var sharedPot = b.Conn.Db.SimmerPot.Iter().First(p => p.PlayerId == a.PlayerId);
+b.LastError = null;
+b.Conn.Reducers.LadlePot(sharedPot.Id);
+Check(Wait(() => !b.Conn.Db.SimmerPot.Iter().Any(p => p.Id == sharedPot.Id), 5), $"B ladles the last bowl from A's pot and it leaves the fire ({b.LastError ?? "ok"})");
+Check(Wait(() => a.Count(Item.CoilPot) == potsBefore + 1, 5), "A gets the empty pot back after the last bowl");
+// Bowls already ladled: A taking it off gets only the empty pot, no stew to eat twice.
+AsOwner("admin_place_simmer_pot", a.PlayerId.ToString(), "0.1", "0.1", ((ushort)Item.PotOfStew).ToString(), "1");
+Check(Wait(() => a.Conn.Db.SimmerPot.Iter().Any(p => p.PlayerId == a.PlayerId), 5), "A sees the second pot");
+var servedPot = a.Conn.Db.SimmerPot.Iter().First(p => p.PlayerId == a.PlayerId);
+uint stewBefore = a.Count(Item.PotOfStew);
+a.Conn.Reducers.TakeOffPot(servedPot.Id);
+Check(Wait(() => a.Count(Item.CoilPot) == potsBefore + 2, 5) && a.Count(Item.PotOfStew) == stewBefore, "taking off a pot that has been ladled from gives back only the empty pot");
+
 Walk(b, b.X + 80, b.Z);
 a.LastError = null;
 a.Conn.Reducers.SendChat("/g over here");
@@ -857,6 +876,13 @@ Check(Wait(() => a.Conn.Db.MyGroup.Count == 0 && b.Conn.Db.MyGroup.Count == 0, 5
 ExpectError(b, () => b.Conn.Reducers.LeaveGroup(), "not in a group", "leaving with no group is refused");
 Thread.Sleep(600);
 ExpectError(a, () => a.Conn.Reducers.SendChat("/g anyone?"), "not in a group", "/g with no group says so");
+
+// Out of the group, B can't ladle from A's pot (survival-37).
+Walk(b, a.X + 1f, a.Z);
+AsOwner("admin_place_simmer_pot", a.PlayerId.ToString(), "0.1", "0.1", ((ushort)Item.PotOfStew).ToString(), "0");
+Check(Wait(() => b.Conn.Db.SimmerPot.Iter().Any(p => p.PlayerId == a.PlayerId), 5), "B sees A's third pot");
+var strangerPot = b.Conn.Db.SimmerPot.Iter().First(p => p.PlayerId == a.PlayerId);
+ExpectError(b, () => b.Conn.Reducers.LadlePot(strangerPot.Id), "not shared", "someone outside the group can't ladle from the pot");
 
 Console.WriteLine(failures == 0 ? "All social checks passed" : $"{failures} checks failed");
 // The SDK keeps background threads alive, so leave explicitly.
@@ -904,7 +930,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_characters", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_standing", "SELECT * FROM my_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_group", "SELECT * FROM my_group_invites", "SELECT * FROM my_town_store",
+                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_characters", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_standing", "SELECT * FROM my_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_group", "SELECT * FROM my_group_invites", "SELECT * FROM my_town_store", "SELECT * FROM simmer_pot",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))

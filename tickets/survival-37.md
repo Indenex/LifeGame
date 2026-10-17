@@ -11,9 +11,10 @@ PR: (once opened)
 ## Progress log
 - 2026-10-17 17:50: built. Server: `SimmerPot.Served` (additive, default 0), `LadlePot` in `server/spacetimedb/SharedPot.cs` (reach, group, done, not full, cooldown), `TakeOffPot` returns just the pot after any bowl. Client: a `survival.ladle` Use offer in `SurvivalClient` for finished pots of group-mates (your own pot keeps "Take the pot off the fire"). ClayCheck: an early ladle is refused as "simmering". The full ladle flow needs two players in a group around a pot, which no tool has yet. Server compiles; ctx-sender gate ok.
 
+- 2026-10-17 18:10: #866 green at 0191a5f2 (run https://github.com/Indenex/LifeGame/actions/runs/39054579271). PM asked for full-flow coverage: added `AdminPlaceSimmerPot` (owner-only test hook in SharedPot.cs) and SocialTest steps: a group-mate ladles the last bowl and the owner gets the pot back; taking off a ladled-from pot returns only the empty pot; after leaving the group B is refused as "not shared". The SocialTest steps can only run in CI (bindings).
+
 ## Open questions / blockers
 - Justin: who may ladle (group only / anyone near / owner serves). Sent to the PM.
-- Not CI-covered: three ladles ending in the pot returning, and the group check. A two-bot cooking case is the follow-up.
 
 ## Next step
 Open the PR from claude/survival-5zelch, wait for CI and send the green sha plus a render request (two players at a fire, ladling) to the PM.
