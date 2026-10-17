@@ -21,8 +21,6 @@ public static class WorkMotions
         if (processId == "fire.bow_drill") return WorkMotion.BowDrill;
         if (processId == "hide.scrape") return WorkMotion.Scrape;
         if (processId == "hide.stretch") return WorkMotion.Wrap;
-        // Crushing temper (grit, grog) is pounding with a stone, not kneading.
-        if (processId is "clay.grit" or "clay.grog") return WorkMotion.Pound;
         string family = processId.Split('.')[0];
         return family switch
         {

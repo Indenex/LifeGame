@@ -17,6 +17,7 @@ Crushing stone into grit and potsherds into grog (clay.grit, clay.grog) now look
 
 ## Progress log
 - 2026-10-17 11:05: built; server and client build.
+- 2026-10-17 11:15: moved the grit/grog motion onto their ProcessDefs (`Motion = Pound`, D-206) instead of a special case in `WorkMotions.For`; `hide.scrape_deer` (a hand craft) now scrapes instead of falling back to Gather. Both build.
 
 ## Open questions / blockers
 - (none)
