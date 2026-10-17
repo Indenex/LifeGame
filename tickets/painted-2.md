@@ -3,7 +3,7 @@ Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm), Opus helper
 Status: in_review
 Branch: claude/painted-2-bushes (stacked on claude/painted-1-rocks, itself on #544 claude/model-10-painted-trees)
-PR: (not opened; stacked)
+PR: #561
 
 ## Goal
 The second family in the painted rollout (painted-1 rocks, -2 bushes, -3 ground props, -4 animals, -5 structures, -6 items). The world's bushes read as painted leaves in the Golden Skull / Dofus style: flat colour bands, violet shade and a soft ink edge, in muted olive and grey-green beside the painted trees, with no saturated greens. Justin sees the forest bushes, heather, gorse and the berry bush in the painted look.
