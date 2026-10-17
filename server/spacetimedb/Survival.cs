@@ -256,13 +256,17 @@ public static partial class Module
         float dx = bush.X - pos.X, dz = bush.Z - pos.Z;
         if (dx * dx + dz * dz > Needs.BushReach * Needs.BushReach)
             throw new Exception("Out of reach");
+        bool hazel = Needs.IsHazelBush(bush.Id);
+        if (hazel && !Needs.HazelnutsRipe(SeasonNow(ctx).Season))
+            throw new Exception("The hazelnuts are not ripe until autumn");
         if (ctx.Timestamp.MicrosecondsSinceUnixEpoch < bush.RipeAt.MicrosecondsSinceUnixEpoch)
-            throw new Exception("No ripe berries yet");
+            throw new Exception(hazel ? "No ripe hazelnuts yet" : "No ripe berries yet");
         var state = RequireCooldown(ctx, player);
 
+        var yield = hazel ? Item.Hazelnuts : Item.Berries;
         ctx.Db.ForageBush.Id.Update(bush with { RipeAt = Later(ctx, Needs.BushRegrowMicros) });
-        AddToInventory(ctx, Me(ctx), Item.Berries, 3, Items.RawQuality);
-        NoteAct(ctx, player.PlayerId, WorkMotion.Pluck, Item.Berries);
+        AddToInventory(ctx, Me(ctx), yield, hazel ? (uint)Needs.HazelnutsPerPick : 3, Items.RawQuality);
+        NoteAct(ctx, player.PlayerId, WorkMotion.Pluck, yield);
         OnProcessPerformed(ctx, player.PlayerId, Needs.ForageProcess, Items.RawQuality, false);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
