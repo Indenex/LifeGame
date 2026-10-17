@@ -17,3 +17,6 @@ Animation's anim-4 (#382) adds the public event table `player_act {PlayerId, Mot
 
 ## Next step
 Wait for CI; then convert the next simple cues (Place, Hit, Jump) to CueDefs, one per PR, within 1 dB (measure with `cues:45`).
+
+## audio-9: Cue.Place converted
+- 2026-10-17: `Cue.Place` now plays `CueDefs.Place` (a knock tone and a low scuff); `CueDefs.ForCue(Cue)` maps converted enum cues to their entries and `SoundMix.Play(Cue)` uses it, so callers (building) are unchanged and the enum stays append-only. Old Place code removed. Loudest 50 ms -27.6 dBFS vs -27.5 before (within 1 dB). Edges and fuzz soak clean; client builds. Branch claude/audio-9-place. Next: Hit, Crit, Jump, then the rest, one per PR.

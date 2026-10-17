@@ -184,7 +184,14 @@ public sealed class SoundMix
     // gain and pan (-1 left to 1 right) place it in the world, e.g. another player's jump.
     public void Play(CueDef def, float gain = 1f, float pan = 0f) => cues.Trigger(def, Math.Clamp(Fin(gain), 0f, 4f), Side(pan));
 
-    public void Play(Cue cue, float gain = 1f, float pan = 0f) => cues.Trigger(cue, Math.Clamp(Fin(gain), 0f, 4f), Side(pan));
+    public void Play(Cue cue, float gain = 1f, float pan = 0f)
+    {
+        gain = Math.Clamp(Fin(gain), 0f, 4f);
+        pan = Side(pan);
+        // Cues that have been converted to data play from their CueDef.
+        if (CueDefs.ForCue(cue) is { } def) cues.Trigger(def, gain, pan);
+        else cues.Trigger(cue, gain, pan);
+    }
 
     // The work in your hands: its sound runs until Working(Work.None). WorkDone
     // closes it with a thunk, a snap if it failed, or a breath of flame for a drill.
@@ -1692,14 +1699,6 @@ public sealed class SoundMix
                             float open = Math.Min(1f, t / 0.35f);
                             float w = v.Low.Process(x, Lowpass.Coef(300f + 2500f * open, rate));
                             s = w * MathF.Sin(MathF.PI * Math.Min(1f, t / 0.9f)) * 0.24f;
-                            break;
-                        }
-                        case Cue.Place:
-                        {
-                            // Something set on the ground: a dull knock and a scuff.
-                            v.Phase += 2f * MathF.PI * 95f * v.Pitch * dt;
-                            float scuff = v.Low.Process(x, Lowpass.Coef(1200f, rate)) * Burst(t, 0f, 0.04f);
-                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.05f) * 0.13f + scuff * 0.12f;
                             break;
                         }
                         case Cue.Hit:
