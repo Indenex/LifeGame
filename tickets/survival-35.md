@@ -15,9 +15,11 @@ Forage is now data (D-206): `shared/Forages.cs` has one `ForageDef` per kind (yi
 
 - 2026-10-17 15:25: Modeling's painted mushrooms are on #836 (model-34: `Mushrooms.Patch(v)`, `Mushrooms.Picked(v)`, `ItemModels.MushroomItem`). The wiring commit is ready as /mnt/project-files/survival/survival-35/0001-survival-35-draw-mushrooms-with-Modeling-s-painted-p.patch: MushroomPatch draws the two meshes (Ripe picks which), SurvivalClient.Setup sets `ItemModels.MushroomItem = Item.Mushrooms`, the stand-in cap leaves SurvivalItemLook. It won't compile until #836 is on main.
 
+- 2026-10-17 15:45: #836 merged; merged main and applied the model wiring (Modeling's painted Patch/Picked meshes, ItemModels.MushroomItem set in SurvivalClient.Setup, stand-in cap gone).
+
 ## Open questions / blockers
-- Waiting on #836 to merge before the model wiring can be pushed.
+- (none)
 - Justin: whether mushrooms are the next wild food at all (PM question, option 1 of 3).
 
 ## Next step
-When #836 merges: merge main into claude/survival-mushrooms, `git am` the patch above, push, wait for CI and send the green sha to the PM (after #832 merges).
+Wait for CI on #837 and send the green sha to the PM (merge after #832); then re-run tools/FirstEvening (PM asked) and render request for the patches.
