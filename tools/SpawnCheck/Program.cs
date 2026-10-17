@@ -147,7 +147,7 @@ WaitFor(() => MyPos() is { } p && p.X > stepX - 0.5f, 10, "can walk on after rec
     // Walking itself is tested here and nowhere else (integration-12): this walker is strict, so a stall
     // fails the check instead of repositioning the bot as the other tools' walkers would.
     var walker = new BotWalker(conn, myId, "Spawn check", "bot", Pump, msg => { Check(false, msg); }, strict: true);
-    void WalkTo(float tx, float tz) => walker.To(ref cxw, ref czw, tx, tz, 0.2f);
+    void WalkTo(float tx, float tz) => walker.To(ref cxw, ref czw, tx, tz, 0.2f, stand: true);
     WalkTo(sx, wz);
     WalkTo(wx0 + (wx1 - wx0) / 2f, wz);
     Check(MyPos() is { } mid && mid.X > wx0 + 1, "the server lets us stand in the water");

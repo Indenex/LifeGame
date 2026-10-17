@@ -31,10 +31,12 @@ public static class StationMeshes
     static void EnsureMaterials()
     {
         if (plain != null) return;
-        wood = Relief(8f, 0.55f, 0.25f);
-        stone = Relief(4f, 0.8f, 0.3f);
-        plant = Relief(9f, 0.7f, 0.25f);
-        plain = Look.Solid(Colors.White);
+        // On the painted look by family (painted-15, D-319), so stations and batch devices
+        // are smooth like the structures round them, wherever they are drawn.
+        wood = PaintedStructures.Of(Relief(8f, 0.55f, 0.25f), PaintedStructures.Family.Wood);
+        stone = PaintedStructures.Of(Relief(4f, 0.8f, 0.3f), PaintedStructures.Family.Stone);
+        plant = PaintedStructures.Of(Relief(9f, 0.7f, 0.25f), PaintedStructures.Family.Thatch);
+        plain = PaintedStructures.Of(Relief(1f, 0f, 0f), PaintedStructures.Family.Plain);
     }
 
     sealed class Kit

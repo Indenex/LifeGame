@@ -35,6 +35,7 @@ public static partial class Module
             Item = item,
             Quality = quality,
             Wear = wear,
+            Maker = stack.Maker,
             Placed = true,
             Yaw = yaw,
             X = x,

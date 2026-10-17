@@ -71,6 +71,12 @@ public partial class Main : Node3D
 
     public override void _Ready()
     {
+        // First, so it sees every window built after it (the --warm prototype, D-313).
+        AddChild(new WarmLook());
+        AddChild(new Bounce());
+        // ui-47: a soft "Waking up…" veil until you stand in the world.
+        // The veil gives way to the world, or to the character menu when a login has characters (ui-39).
+        AddChild(new WakeVeil { Done = () => spawned || characterMenu.IsOpen });
         SetupInput();
         SetupView();
         SetupEnvironment();
@@ -94,6 +100,8 @@ public partial class Main : Node3D
         // Setting crafted things down (ui-16): from the bag, a hotbar key or the after-craft prompt.
         placing.Terrain = terrain;
         placing.Me = me;
+        // Fires go where you choose (ui-30); the ring turns amber where the server would say no.
+        crafting.PickSpot = (label, min, picked) => placing.PickSpot(label, min, picked, FireSpotProblem);
         placing.CameraRig = cameraRig;
         placing.View = view;
         placing.Note = hud.Note;
@@ -158,6 +166,7 @@ public partial class Main : Node3D
         station.Conn = () => conn;
         station.Crafting = crafting;
         station.Me = () => me.Position;
+        crafting.PlayerAt = () => me.Position;
         AddChild(station);
         // Choosing how you look (ui-21): opens by itself at first join, and from Options.
         lookPicker.Conn = () => conn;
@@ -191,7 +200,7 @@ public partial class Main : Node3D
         var keyHelp = new KeyHelp();
         AddChild(keyHelp);
         // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.
-        var menu = new PauseMenu { ToCharacters = ReturnToMenu, Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || admin.IsOpen || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
+        var menu = new PauseMenu { ToCharacters = ReturnToMenu, Unstuck = RequestUnstuck, Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || admin.IsOpen || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
         AddChild(menu);
         // First child, so Esc reaches it only after every lane panel had its turn.
         MoveChild(menu, 0);
@@ -208,6 +217,13 @@ public partial class Main : Node3D
             OpenChat = social.OpenChat,
         };
         AddChild(playerMenu);
+        // ui-48: the emote wheel (Q); the server checks the emote and everyone sees it (anim-16).
+        AddChild(new EmoteWheel
+        {
+            Blocked = playerMenu.Blocked,
+            Play = e => conn?.Reducers.Emote((byte)e.Motion),
+            SomeoneNear = () => others.Values.Any(o => o.Position.DistanceTo(me.Position) < 10f),
+        });
         var cameraDrag = new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing };
         cameraDrag.Clicked += playerMenu.Clicked;
         AddChild(cameraDrag);
@@ -431,7 +447,9 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         herd.Bind(conn, terrain, () => me.Position);
         jumpView.Attach(conn, id => others.GetValueOrDefault(id), () => myId);
-        conn.OnUnhandledReducerError += (_, e) => { Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
+        // A dig that lands inside the server's cooldown ("Still working") is not a failure to give up on: a held
+        // key tries again after the next interval, so one early repeat on a laggy link does not end the hold.
+        conn.OnUnhandledReducerError += (_, e) => { if (!e.Message.Contains("Still working")) Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
         Use.Busy = () => crafting.Working;
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
@@ -458,6 +476,7 @@ public partial class Main : Node3D
         SaveToken(token);
         hud.SetStatus("Connected");
         ServerCheck.Warn = hud.Warn;
+        HookUnstuck(c);
         c.SubscriptionBuilder()
             .OnApplied(_ => { if (c.Db.ServerInfo.Id.Find(0) is { } info) ServerCheck.Compare(info.Build); })
             .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
@@ -568,6 +587,18 @@ public partial class Main : Node3D
         foreach (var other in others.Values) other.QueueFree();
         others.Clear();
         AtCharacterMenu();
+    }
+
+    // Why a fire can't go at (x, z), or null: Crafting's shared ground rule (level, dry, clear of
+    // rocks and trunks) and the spacing from other fires and hearths, as the server checks them.
+    string? FireSpotProblem(float x, float z)
+    {
+        if (!FireGround.Clear(x, z, terrain.DepthAt, terrain.ClearedAt)) return "Not here: a fire wants level, dry ground clear of rocks and trees";
+        if (conn == null) return null;
+        bool near(float fx, float fz) => new Vector2(fx - x, fz - z).Length() < Fires.Spacing;
+        if (conn.Db.Fire.Iter().Any(f => near(f.X, f.Z)) || conn.Db.ColdHearth.Iter().Any(h => near(h.X, h.Z)))
+            return "Too close to another fire";
+        return null;
     }
 
     PlayerPos? MyPos() => conn?.Db.MyPlayerPos.Iter().FirstOrDefault();

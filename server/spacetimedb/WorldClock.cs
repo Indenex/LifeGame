@@ -130,6 +130,7 @@ public static partial class Module
         EnsureWorldClock(ctx);
         var clock = ctx.Db.WorldClock.Id.Find(0)!.Value;
         ctx.Db.WorldClock.Id.Update(clock with { ServerNow = ctx.Timestamp });
+        SweepSignalFires(ctx);
 
         var w = ctx.Db.Weather.Id.Find(0)!.Value;
         if (ctx.Timestamp.MicrosecondsSinceUnixEpoch >= w.NextChangeAt.MicrosecondsSinceUnixEpoch)

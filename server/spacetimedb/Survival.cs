@@ -213,6 +213,11 @@ public static partial class Module
         [PrimaryKey]
         public uint PlayerId;
         public Timestamp At;
+        // Where they were at that report (D-182): the next one must come from a different place.
+        [Default(0f)]
+        public float X;
+        [Default(0f)]
+        public float Z;
     }
 
     // The client ran for Stamina.RunPerUse seconds: train Endurance. Reports closer
@@ -223,7 +228,17 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var last = ctx.Db.RunReport.PlayerId.Find(player.PlayerId);
         if (last is { } r && SecondsBetween(r.At, ctx.Timestamp) < Stamina.RunPerUse * 0.9f) return;
-        var row = new RunReport { PlayerId = player.PlayerId, At = ctx.Timestamp };
+        // The server can't see a run, but it can see a player who stands still and reports one
+        // (D-182): they must have moved just now and be well away from where they last reported.
+        var pos = RequirePos(ctx, player);
+        var state = ctx.Db.PlayerState.PlayerId.Find(player.PlayerId);
+        if (state is not { } st || SecondsBetween(st.LastMoveAt, ctx.Timestamp) > Stamina.RunReportMoveWindow) return;
+        if (last is { } l)
+        {
+            float dx = pos.X - l.X, dz = pos.Z - l.Z;
+            if (dx * dx + dz * dz < Stamina.RunReportMinMeters * Stamina.RunReportMinMeters) return;
+        }
+        var row = new RunReport { PlayerId = player.PlayerId, At = ctx.Timestamp, X = pos.X, Z = pos.Z };
         if (last is null) ctx.Db.RunReport.Insert(row);
         else ctx.Db.RunReport.PlayerId.Update(row);
         OnProcessPerformed(ctx, player.PlayerId, Stamina.RunProcess, Items.RawQuality, false);
@@ -312,6 +327,8 @@ public static partial class Module
                     Id = 0,
                     Item = stack.Item,
                     Quality = stack.Quality,
+                    Wear = stack.Wear,
+                    Maker = stack.Maker,
                     X = x,
                     Z = z,
                     ChunkX = World.ChunkOf(x),

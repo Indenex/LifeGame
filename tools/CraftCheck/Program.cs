@@ -386,6 +386,11 @@ if (runStations)
         Pump(() => CountOf(Item.StoneAxe) == 1, 5, "the axe back out of the stash");
         var backAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
         if (backAxe.Wear != spentAxe.Wear) Fail($"the axe came back with different wear ({spentAxe.Wear} -> {backAxe.Wear})");
+        // The maker (crafting-25): made by this player, kept through the stash; raw things have none.
+        if (spentAxe.Maker != myId) Fail($"the axe's maker is {spentAxe.Maker}, not {myId}");
+        if (stashedAxe.Maker != myId || backAxe.Maker != myId) Fail("the axe lost its maker in the stash");
+        if (conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)Item.Log).Any(r => r.Maker != 0)) Fail("a chopped log has a maker");
+        Console.WriteLine($"The axe is made by player {myId} and kept that through the stash");
         Console.WriteLine("The axe kept its wear through the stash");
 
         // Spend the digging stick too, then show a spent stick no longer reaches the deeper level.
@@ -415,11 +420,17 @@ if (runStations)
         uint cordageBefore = CountOf(Item.Cordage);
         lastError = null;
         var oldAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+        // Hang the spent axe on the tools belt first: mending keeps it there.
+        conn.Reducers.PutOnBelt(oldAxe.Id, 255);
+        Pump(() => conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.StoneAxe && r.OnBelt), 5, "the axe onto the belt");
+        oldAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
         int toolmakingBefore = conn.Db.MySkills.Iter().Where(r => r.Spec == "toolmaking").Sum(r => (int)r.Points);
         conn.Reducers.RepairTool(oldAxe.Item, oldAxe.Quality, oldAxe.Wear);
         Pump(() => lastError != null || conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.StoneAxe && r.Wear != oldAxe.Wear), 5, "the axe to be mended");
         if (lastError != null) Fail($"mending the axe: {lastError}");
         var mendedAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+        if (!mendedAxe.OnBelt) Fail("the mended axe fell off the belt into the bag");
+        if (mendedAxe.Maker != myId) Fail("the mended axe lost its maker");
         byte expectQ = Durability.RepairedQuality(oldAxe.Quality, oldAxe.Wear);
         if (Durability.IsSpent(mendedAxe.Quality, mendedAxe.Wear) || Durability.Used(mendedAxe.Wear) != 0) Fail("the mended axe still shows wear");
         if (mendedAxe.Quality != expectQ || mendedAxe.Quality > oldAxe.Quality) Fail($"mended axe quality {mendedAxe.Quality}, expected {expectQ} (was {oldAxe.Quality})");
@@ -428,6 +439,9 @@ if (runStations)
         Console.WriteLine($"Mended the axe: quality {oldAxe.Quality} -> {mendedAxe.Quality}, 1 cordage");
         Pump(() => conn.Db.MySkills.Iter().Where(r => r.Spec == "toolmaking").Sum(r => (int)r.Points) > toolmakingBefore, 5, "mending to train Toolmaking");
         Console.WriteLine("Mending trained Toolmaking");
+        // A belt tool is storage only (crafting-29): take it back into the bag to use it.
+        conn.Reducers.TakeOffBelt(mendedAxe.Id, 65535);
+        Pump(() => conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.StoneAxe && !r.OnBelt), 5, "the axe off the belt");
 
         uint cordageNow = CountOf(Item.Cordage);
         lastError = null;
@@ -457,6 +471,49 @@ if (runStations)
         if (lastError?.Contains("equip") != true) Fail($"chopping with the axe only in the bag: {lastError}");
         Console.WriteLine($"Axe not equipped: {lastError}");
         EquipTool(Item.StoneAxe);
+
+        // Walking off ends a job in progress (crafting-31): start a chop, step 3 m away from the tree, and the job
+        // stops with no log and no further progress.
+        {
+            var (tx0, tz0) = NearestTree();
+            var trunk0 = Trees.Trunk(tx0, tz0);
+            WalkTo(trunk0.X, trunk0.Z);
+            uint logsBefore = CountOf(Item.Log);
+            lastError = null;
+            conn.Reducers.StartCraft("chop.log", 0);
+            Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, "a chop to start");
+            if (lastError != null) Fail($"chop for the walk-away check: {lastError}");
+            float awayX = x - trunk0.X, awayZ = z - trunk0.Z;
+            float awayLen = MathF.Max(MathF.Sqrt(awayX * awayX + awayZ * awayZ), 0.01f);
+            awayX /= awayLen; awayZ /= awayLen;
+            float startX = x, startZ = z;
+            for (int step = 1; step <= 6 && conn.Db.MyCraftJob.Count > 0; step++)
+            {
+                x = startX + awayX * 0.5f * step;
+                z = startZ + awayZ * 0.5f * step;
+                conn.Reducers.Move(x, z, 0f);
+                Pump(() => false, 0.25f, null);
+            }
+            Pump(() => conn.Db.MyCraftJob.Count == 0, 5, "the chop to stop when the player walked off");
+            Pump(() => false, 3f, null);
+            if (CountOf(Item.Log) != logsBefore) Fail("a chop the player walked away from still gave a log");
+            if (conn.Db.CraftWork.PlayerId.Find(myId) != null) Fail("the work row stayed after the player walked away");
+            Console.WriteLine("Walking away stopped the chop");
+            // Cancelling by hand stops it too, and putting the axe away mid-chop.
+            WalkTo(trunk0.X, trunk0.Z);
+            conn.Reducers.StartCraft("chop.log", 0);
+            Pump(() => conn.Db.MyCraftJob.Count > 0, 5, "a second chop to start");
+            conn.Reducers.EquipSlot(9);
+            Pump(() => conn.Db.MyCraftJob.Count == 0, 5, "the chop to stop when the axe was put away");
+            EquipTool(Item.StoneAxe);
+            conn.Reducers.StartCraft("chop.log", 0);
+            Pump(() => conn.Db.MyCraftJob.Count > 0, 5, "a third chop to start");
+            conn.Reducers.CancelCraft();
+            Pump(() => conn.Db.MyCraftJob.Count == 0, 5, "the chop to stop on CancelCraft");
+            Pump(() => false, 3f, null);
+            if (CountOf(Item.Log) != logsBefore) Fail("a cancelled chop still gave a log");
+            Console.WriteLine("Putting the axe away and CancelCraft stopped a chop");
+        }
     }
 
     // Crafting-20: a bow and arrows (animals-15) are made at the bench by hand: the bow from
@@ -472,7 +529,38 @@ if (runStations)
         Console.WriteLine("Made a bow and three arrows");
     }
 
-    // Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1
+    // Crafting-26: a spade (a log, a stone and cordage, carved with a cutting tool) digs
+// faster than a digging stick. A second dig half a stick-cooldown after the first lands
+// with the spade in the bag; it would be refused with the stick alone.
+{
+    Gather(Item.Stone, 1);
+    Gather(Item.Fiber, 3);
+    while (CountOf(Item.Cordage) < 1) Craft("cord.twist", 0, null);
+    if (CountOf(Item.Log) < 1)
+    {
+        var (lx, lz) = NearestTree();
+        var tr = Trees.Trunk(lx, lz);
+        WalkTo(tr.X, tr.Z);
+        Craft("chop.log", 0, Item.Log);
+    }
+    Craft("carve.spade", 0, Item.Spade);
+    var (sx, sz) = (World.CellOf(x) + 3, World.CellOf(z) + 3);
+    WalkTo(sx * World.CellSize, sz * World.CellSize);
+    EquipTool(Item.Spade);
+    Pump(() => false, World.DigCooldownMicros / 1_000_000f + 0.1f, null);
+    lastError = null;
+    conn.Reducers.Dig(sx, sz);
+    Pump(() => (conn.Db.TerrainEdit.CellKey.Find(World.CellKey(sx, sz))?.Depth ?? 0) >= 1 || lastError != null, 5, "the first spade dig");
+    if (lastError != null) Fail($"first spade dig: {lastError}");
+    Pump(() => false, World.DigCooldownMicros / 1_000_000f * 0.85f, null);
+    conn.Reducers.Dig(sx, sz);
+    Pump(() => (conn.Db.TerrainEdit.CellKey.Find(World.CellKey(sx, sz))?.Depth ?? 0) >= 2 || lastError != null, 5, "the quick second dig");
+    if (lastError != null || (conn.Db.TerrainEdit.CellKey.Find(World.CellKey(sx, sz))?.Depth ?? 0) < 2)
+        Fail($"the spade did not dig faster than a stick ({lastError})");
+    Console.WriteLine("A spade digs faster than a stick");
+}
+
+// Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1
     // and put some in this player's inventory (the identity is printed) to check it.
     if (Environment.GetEnvironmentVariable("CRAFTCHECK_ROAST") == "1")
     {

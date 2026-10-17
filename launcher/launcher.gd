@@ -40,17 +40,23 @@ extends Control
 #   --screenshot=PATH    save the window to PATH once the launcher is idle, then quit
 #   --no-shortcut        don't create the desktop and menu shortcuts
 #   --no-self-update     never replace the launcher itself
+#   --window-size=WxH    open at this size and neither restore nor remember the window (tests)
 
 const WIPE_MARK := "<!-- world-wipe -->"
+const BASE_SIZE := Vector2i(860, 560)  # the window's first size, before DPI scaling
+const MIN_SIZE := Vector2i(640, 540)   # never smaller than this (and never smaller than the layout needs)
 const NOTES_OPEN := "<!-- notes -->"      # the release body lists the patch notes between these
 const NOTES_CLOSE := "<!-- /notes -->"
 
-const BG := Color(0.07, 0.08, 0.06)
-const PANEL := Color(0.09, 0.10, 0.07, 0.92)
-const CREAM := Color(0.97, 0.94, 0.87)
-const MUTED := Color(0.97, 0.94, 0.87, 0.6)
-const ACCENT := Color(0.55, 0.68, 0.38)
-const WARN := Color(0.93, 0.62, 0.38)
+# The look is D-314 "Warm paper windows": cream paper with brown Nunito text, round corners, a
+# soft shadow and pastel accents, like the game's centre windows.
+const BG := Color(0.91, 0.85, 0.73)             # the table the paper lies on
+const PANEL := Color(0.985, 0.96, 0.90)         # the paper
+const INK := Color(0.36, 0.27, 0.19)            # brown text
+const MUTED := Color(0.36, 0.27, 0.19, 0.62)
+const ACCENT := Color(0.66, 0.79, 0.58)         # pastel sage: the one thing to press
+const ACCENT_DEEP := Color(0.52, 0.68, 0.44)    # its progress bar
+const WARN := Color(0.76, 0.38, 0.22)           # terracotta, readable on cream
 
 var opts := {}
 var repo := "Indenex/LifeGame"
@@ -64,6 +70,8 @@ var manage_server := true
 var notes_box: TextEdit      # "What's new": the patch notes of the builds you are about to get / just got
 var whats_new_button: Button
 var whats_new_from := -1    # build the last update started from; -1 = use the installed build
+var spacer: Control            # takes the room the What's new box doesn't
+var window_timer: Timer       # saves the window after it stops moving
 var address_edit: LineEdit   # player build: where friends type the host's address
 var player := false        # the player build: no server parts, joins a server address
 
@@ -95,6 +103,7 @@ signal wipe_answered(go: bool)
 
 func _ready() -> void:
 	_parse_args()
+	_setup_window()
 	_build_ui()
 	_load_state()
 	if FileAccess.file_exists("res://version.txt"):
@@ -112,9 +121,82 @@ func _ready() -> void:
 		else:
 			await _update_and_play()
 		if opts.has("quit"):
+			_save_window()
 			get_tree().quit(exit_code)
 	if opts.has("screenshot"):
 		await _screenshot(opts["screenshot"])
+
+# --- The window -------------------------------------------------------------------
+
+# Resizable, with a minimum that follows the layout, sharp on high-DPI screens, and back where
+# it was last time (LifeGame/window.json: x, y, w, h in screen pixels).
+func _setup_window() -> void:
+	var win := get_window()
+	var scale := 1.0
+	if not opts.has("window-size"):
+		scale = maxf(1.0, DisplayServer.screen_get_scale(win.current_screen))
+	win.content_scale_factor = scale
+	win.min_size = Vector2i(Vector2(MIN_SIZE) * scale)
+	win.wrap_controls = true   # the window can't be made smaller than the buttons and boxes need
+	var size := Vector2i(Vector2(BASE_SIZE) * scale)
+	var pos := Vector2i.ZERO
+	var has_pos := false
+	if opts.has("window-size"):
+		var wh: PackedStringArray = str(opts["window-size"]).split("x")
+		if wh.size() == 2 and wh[0].is_valid_int() and wh[1].is_valid_int():
+			size = Vector2i(wh[0].to_int(), wh[1].to_int())
+	else:
+		var saved := _read_window()
+		if not saved.is_empty():
+			size = saved.size
+			pos = saved.pos
+			has_pos = saved.has_pos
+	var usable := DisplayServer.screen_get_usable_rect(win.current_screen)
+	if usable.size.x > 0:
+		size = Vector2i(mini(size.x, usable.size.x), mini(size.y, usable.size.y))
+	win.size = size.max(win.min_size)
+	if has_pos and _on_a_screen(Rect2i(pos, win.size)):
+		win.position = pos
+	if not opts.has("window-size"):
+		window_timer = Timer.new()
+		window_timer.one_shot = true
+		window_timer.wait_time = 0.6
+		window_timer.timeout.connect(_save_window)
+		add_child(window_timer)
+		win.size_changed.connect(func(): window_timer.start())
+
+func _read_window() -> Dictionary:
+	var f := FileAccess.open(home.path_join("window.json"), FileAccess.READ)
+	if not f:
+		return {}
+	var d = JSON.parse_string(f.get_as_text())
+	if not (d is Dictionary) or not (d.has("w") and d.has("h")):
+		return {}
+	return {"size": Vector2i(int(d.w), int(d.h)), "pos": Vector2i(int(d.get("x", 0)), int(d.get("y", 0))), "has_pos": d.has("x") and d.has("y")}
+
+# True when most of the title bar of a window at this rect is on some screen.
+func _on_a_screen(r: Rect2i) -> bool:
+	var bar := Rect2i(r.position, Vector2i(r.size.x, 40))
+	for i in DisplayServer.get_screen_count():
+		var area := Rect2i(DisplayServer.screen_get_position(i), DisplayServer.screen_get_size(i))
+		var hit := area.intersection(bar)
+		if hit.size.x >= 120 and hit.size.y >= 20:
+			return true
+	return false
+
+func _save_window() -> void:
+	if opts.has("window-size"):
+		return
+	var win := get_window()
+	if win.mode != Window.MODE_WINDOWED:
+		return
+	var f := FileAccess.open(home.path_join("window.json"), FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify({"x": win.position.x, "y": win.position.y, "w": win.size.x, "h": win.size.y}))
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_save_window()
 
 # --- Options and state ------------------------------------------------------------
 
@@ -203,7 +285,25 @@ func _client_ok(dir: String) -> bool:
 
 # --- UI ---------------------------------------------------------------------------
 
+# Nunito (SIL OFL, launcher/fonts), loaded from its raw bytes so it needs no import step; the
+# variable weight axis gives the light, regular and heavy faces. Falls back to the default font.
+var _nunito: FontFile
+func _font(weight: int) -> Font:
+	if _nunito == null and FileAccess.file_exists("res://fonts/Nunito.font.bin"):
+		_nunito = FontFile.new()
+		_nunito.data = FileAccess.get_file_as_bytes("res://fonts/Nunito.font.bin")
+	if _nunito == null:
+		return ThemeDB.fallback_font
+	var face := FontVariation.new()
+	face.base_font = _nunito
+	face.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): weight}
+	return face
+
 func _build_ui() -> void:
+	var th := Theme.new()
+	th.default_font = _font(600)
+	th.default_font_size = 15
+	theme = th
 	RenderingServer.set_default_clear_color(BG)
 	var bg := ColorRect.new()
 	bg.color = BG
@@ -215,10 +315,13 @@ func _build_ui() -> void:
 	panel.offset_left = 28; panel.offset_top = 28; panel.offset_right = -28; panel.offset_bottom = -28
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = PANEL
-	sb.set_corner_radius_all(14)
+	sb.set_corner_radius_all(24)
 	sb.set_content_margin_all(26)
-	sb.border_color = Color(CREAM, 0.08)
+	sb.border_color = Color(INK, 0.10)
 	sb.set_border_width_all(1)
+	sb.shadow_color = Color(0.30, 0.20, 0.10, 0.20)
+	sb.shadow_size = 16
+	sb.shadow_offset = Vector2(0, 5)
 	panel.add_theme_stylebox_override("panel", sb)
 	add_child(panel)
 
@@ -229,7 +332,8 @@ func _build_ui() -> void:
 	var title := Label.new()
 	title.text = "LifeGame"
 	title.add_theme_font_size_override("font_size", 40)
-	title.add_theme_color_override("font_color", CREAM)
+	title.add_theme_font_override("font", _font(850))
+	title.add_theme_color_override("font_color", INK)
 	col.add_child(title)
 
 	var versions := HBoxContainer.new()
@@ -240,13 +344,13 @@ func _build_ui() -> void:
 	versions.add_child(game_label)
 	versions.add_child(world_label)
 
-	var spacer := Control.new()
+	spacer = Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(spacer)
 
 	status_label = Label.new()
 	status_label.add_theme_font_size_override("font_size", 20)
-	status_label.add_theme_color_override("font_color", CREAM)
+	status_label.add_theme_color_override("font_color", INK)
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(status_label)
 	detail_label = _small("", MUTED)
@@ -262,6 +366,17 @@ func _build_ui() -> void:
 		address_edit.placeholder_text = "e.g. http://203.0.113.5:3000 (ask the host)"
 		address_edit.text = server_url
 		address_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		for k in ["normal", "focus", "read_only"]:
+			var st := _notes_style()
+			st.set_content_margin_all(9)
+			st.set_corner_radius_all(12)
+			if k == "focus":
+				st.border_color = Color(ACCENT_DEEP, 0.8)
+				st.set_border_width_all(2)
+			address_edit.add_theme_stylebox_override(k, st)
+		address_edit.add_theme_color_override("font_color", INK)
+		address_edit.add_theme_color_override("font_placeholder_color", MUTED)
+		address_edit.add_theme_color_override("caret_color", INK)
 		address_edit.text_submitted.connect(func(_t): _on_main())
 		addr_row.add_child(address_edit)
 
@@ -269,9 +384,10 @@ func _build_ui() -> void:
 	notes_box.editable = false
 	notes_box.visible = false
 	notes_box.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
-	notes_box.custom_minimum_size = Vector2(0, 150)
+	notes_box.custom_minimum_size = Vector2(0, 90)
+	notes_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	notes_box.add_theme_font_size_override("font_size", 15)
-	notes_box.add_theme_color_override("font_readonly_color", CREAM)
+	notes_box.add_theme_color_override("font_readonly_color", INK)
 	notes_box.add_theme_stylebox_override("normal", _notes_style())
 	notes_box.add_theme_stylebox_override("focus", _notes_style())
 	notes_box.add_theme_stylebox_override("read_only", _notes_style())
@@ -282,10 +398,10 @@ func _build_ui() -> void:
 	bar.show_percentage = false
 	bar.max_value = 1.0
 	var track := StyleBoxFlat.new()
-	track.bg_color = Color(CREAM, 0.12)
+	track.bg_color = Color(INK, 0.12)
 	track.set_corner_radius_all(4)
 	var fill := StyleBoxFlat.new()
-	fill.bg_color = ACCENT
+	fill.bg_color = ACCENT_DEEP
 	fill.set_corner_radius_all(4)
 	bar.add_theme_stylebox_override("background", track)
 	bar.add_theme_stylebox_override("fill", fill)
@@ -298,8 +414,10 @@ func _build_ui() -> void:
 	log_box.add_theme_font_size_override("font_size", 12)
 	col.add_child(log_box)
 
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	# A flow, so the buttons wrap onto a second line when the window is narrow.
+	var row := HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", 10)
+	row.add_theme_constant_override("v_separation", 8)
 	col.add_child(row)
 	main_button = _button("Update and play", true)
 	main_button.pressed.connect(_on_main)
@@ -310,9 +428,6 @@ func _build_ui() -> void:
 	world_button = _button("Update world only", false)
 	world_button.pressed.connect(_on_world_only)
 	row.add_child(world_button)
-	var fill_space := Control.new()
-	fill_space.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(fill_space)
 	refresh_button = _button("Refresh", false)
 	refresh_button.tooltip_text = "Check for a newer build again"
 	refresh_button.pressed.connect(_on_refresh)
@@ -335,7 +450,7 @@ func _build_wipe_overlay() -> void:
 	wipe_overlay.visible = false
 	add_child(wipe_overlay)
 	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.65)
+	dim.color = Color(0.30, 0.20, 0.10, 0.50)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	wipe_overlay.add_child(dim)
 	var center := CenterContainer.new()
@@ -346,11 +461,13 @@ func _build_wipe_overlay() -> void:
 	var box := PanelContainer.new()
 	box.custom_minimum_size = Vector2(540, 0)
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.11, 0.12, 0.09)
-	sb.set_corner_radius_all(14)
+	sb.bg_color = PANEL
+	sb.set_corner_radius_all(24)
 	sb.set_content_margin_all(26)
 	sb.border_color = Color(WARN, 0.45)
 	sb.set_border_width_all(1)
+	sb.shadow_color = Color(0.30, 0.20, 0.10, 0.25)
+	sb.shadow_size = 18
 	box.add_theme_stylebox_override("panel", sb)
 	center.add_child(box)
 	var col := VBoxContainer.new()
@@ -361,7 +478,7 @@ func _build_wipe_overlay() -> void:
 	title.add_theme_font_size_override("font_size", 22)
 	title.add_theme_color_override("font_color", WARN)
 	col.add_child(title)
-	wipe_text = _small("", CREAM)
+	wipe_text = _small("", INK)
 	wipe_text.add_theme_font_size_override("font_size", 15)
 	wipe_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(wipe_text)
@@ -385,7 +502,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _notes_style() -> StyleBoxFlat:
 	var st := StyleBoxFlat.new()
-	st.bg_color = Color(CREAM, 0.05)
+	st.bg_color = Color(INK, 0.05)
 	st.set_corner_radius_all(8)
 	st.set_content_margin_all(12)
 	return st
@@ -407,24 +524,24 @@ func _button(text: String, primary: bool, danger := false) -> Button:
 		st.set_corner_radius_all(8)
 		st.content_margin_left = 22 if primary else 14
 		st.content_margin_right = st.content_margin_left
-		var base := ACCENT if primary else Color(WARN, 0.16) if danger else Color(CREAM, 0.10)
+		var base := ACCENT if primary else Color(WARN, 0.16) if danger else Color(INK, 0.10)
 		match s:
 			"hover": base = base.lightened(0.12) if primary else Color(base, base.a + 0.08)
 			"pressed": base = base.darkened(0.15)
 			"disabled": base = Color(base.darkened(0.35), base.a * 0.45)
 			"focus":
 				st.draw_center = false
-				st.border_color = Color(CREAM, 0.5)
+				st.border_color = Color(INK, 0.5)
 				st.set_border_width_all(1)
 		st.bg_color = base
 		b.add_theme_stylebox_override(s, st)
-	var fc := BG if primary else WARN if danger else CREAM
+	var fc := INK if primary else WARN if danger else INK
 	for k in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		b.add_theme_color_override(k, fc)
-	b.add_theme_color_override("font_disabled_color", Color(CREAM, 0.28))
+	b.add_theme_color_override("font_disabled_color", Color(INK, 0.28))
 	return b
 
-func _set_status(text: String, detail := "", color := CREAM) -> void:
+func _set_status(text: String, detail := "", color := INK) -> void:
 	status_label.text = text
 	status_label.add_theme_color_override("font_color", color)
 	detail_label.text = detail
@@ -561,6 +678,7 @@ func _show_whats_new(on: bool) -> void:
 		_log("What's new:\n" + notes_box.text)
 		notes_box.scroll_vertical = 0
 	notes_box.visible = on and notes_box.text != ""
+	spacer.visible = not notes_box.visible
 
 func _toggle_whats_new() -> void:
 	_show_whats_new(not notes_box.visible)
@@ -624,14 +742,24 @@ func _fetch(rel: Dictionary, names: Array, from: float, to: float) -> Dictionary
 	var dir := home.path_join("downloads").path_join(rel.tag)
 	DirAccess.make_dir_recursive_absolute(dir)
 	var manifest_path := dir.path_join("release.json")
-	if not rel.assets.has("release.json") or not await _download(rel.assets["release.json"], manifest_path, "release.json", from, from):
+	if not rel.assets.has("release.json"):
+		_set_status("Build %d has no file list." % rel.build, "It may still be publishing. Try Refresh in a minute.", WARN)
+		return {}
+	if not await _download(rel.assets["release.json"], manifest_path, "release.json", from, from):
+		_set_status("Download failed.", "Check the internet connection and try again.", WARN)
 		return {}
 	var manifest = JSON.parse_string(FileAccess.get_file_as_string(manifest_path))
-	if not manifest is Dictionary:
+	var sums := {}
+	if manifest is Dictionary:
+		var srv = manifest.get("server", {})
+		var cli = manifest.get("client", {})
+		for e in [srv, cli.get("linux", {}), cli.get("windows", {})]:
+			if e is Dictionary and e.has("file") and e.has("sha256"):
+				sums[e.file] = e.sha256
+	if sums.size() < 3:
+		DirAccess.remove_absolute(manifest_path)
+		_set_status("Build %d has a damaged file list." % rel.build, "Try Refresh in a minute; it will download fresh.", WARN)
 		return {}
-	var sums := {manifest.server.file: manifest.server.sha256,
-		manifest.client.linux.file: manifest.client.linux.sha256,
-		manifest.client.windows.file: manifest.client.windows.sha256}
 	var out := {}
 	var step: float = (to - from) / max(names.size(), 1)
 	for i in names.size():
@@ -978,10 +1106,11 @@ func _play() -> void:
 	_set_status("Have a good evening in the woods.")
 	# Leave the launcher up longer after an update, so the patch notes can be read.
 	await get_tree().create_timer(10.0 if notes_box.visible and not opts.has("auto") else 1.5).timeout
+	_save_window()
 	get_tree().quit()
 
 func _screenshot(path: String) -> void:
-	while busy:
+	while busy and not wipe_overlay.visible:   # --press leaves the wipe question open for the shot
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw

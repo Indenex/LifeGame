@@ -26,6 +26,16 @@ public static class AvatarWork
         conn.Db.CraftWork.OnInsert += (_, w) => { if (other(w.PlayerId) is { } a) Start(a, w.ProcessId, tool: w.Tool); };
         conn.Db.CraftWork.OnDelete += (_, w) => { if (other(w.PlayerId) is { } a) Start(a, null); };
 
+        // Warmth from burning fires, for a happy sway by the fire (#15).
+        Avatar.FireWarmthAt = at =>
+        {
+            long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+            float warmth = 0f;
+            foreach (var f in conn.Db.Fire.Iter())
+                if (f.FuelUntil.MicrosecondsSinceUnixEpoch > now)
+                    warmth = Math.Max(warmth, Fires.WarmthFrom(f.X, f.Z, at.X, at.Z));
+            return warmth;
+        };
         me.SneakChanged += sneaking => conn.Reducers.SetSneaking(sneaking);
         conn.Db.PlayerSneaking.OnInsert += (_, s) => { if (other(s.PlayerId) is { } a) a.Sneaking = true; };
         conn.Db.PlayerSneaking.OnDelete += (_, s) => { if (other(s.PlayerId) is { } a) a.Sneaking = false; };
@@ -38,6 +48,7 @@ public static class AvatarWork
             var work = conn.Db.CraftWork.PlayerId.Find(p.PlayerId);
             Start(a, work?.ProcessId, tool: work?.Tool ?? 0);
             Dress(conn, a, p.PlayerId);
+            if (conn.Db.PlayerRest.PlayerId.Find(p.PlayerId) is { } rest) a.Rest((RestKind)rest.Kind, rest.Seat, rest.Kind == (byte)RestKind.Lie, instant: true);
             if (conn.Db.Player.PlayerId.Find(p.PlayerId) is { } who)
                 a.Equip(Equipped.ItemOf(conn.Db.PlayerEquip.Owner.Find(who.Identity)), instant: true);
         };
@@ -74,6 +85,21 @@ public static class AvatarWork
         conn.Db.ArrowShot.OnInsert += (_, shot) => AvatarOf(conn, me, other, shot.PlayerId)?.Act(WorkMotion.Shoot, Item.Bow);
         conn.Db.StrikeEvent.OnInsert += (_, hit) => AvatarOf(conn, me, other, hit.VictimId)?.Act(WorkMotion.Flinch, null);
         conn.Db.WornItem.OnDelete += (_, w) => Changed(w);
+
+        // Sitting and lying down (player_rest, anim-12), your own included: the rest key
+        // asks the server, and the pose follows its row.
+        me.RestRequested += kind =>
+        {
+            // Sitting down near a burning fire, turn to face it (anim-15).
+            if (kind == RestKind.Sit && NearestFire(conn, me.Position) is { } fire) me.Face(fire.X, fire.Z);
+            if (kind == RestKind.None) conn.Reducers.StandUp();
+            else conn.Reducers.Rest((byte)kind);
+        };
+        void Resting(PlayerRest row, bool gone) =>
+            AvatarOf(conn, me, other, row.PlayerId)?.Rest(gone ? RestKind.None : (RestKind)row.Kind, row.Seat, asleep: !gone && row.Kind == (byte)RestKind.Lie);
+        conn.Db.PlayerRest.OnInsert += (_, row) => Resting(row, false);
+        conn.Db.PlayerRest.OnUpdate += (_, _, row) => Resting(row, false);
+        conn.Db.PlayerRest.OnDelete += (_, row) => Resting(row, true);
     }
 
     // Felling: face the nearest standing trunk within reach (shared/Trees.cs cells).
@@ -91,6 +117,20 @@ public static class AvatarWork
                 if (d < best) (best, bx, bz) = (d, tx, tz);
             }
         if (best < 3f * 3f) avatar.Face(bx, bz);
+    }
+
+    static (float X, float Z)? NearestFire(DbConnection conn, Godot.Vector3 at)
+    {
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+        (float, float)? best = null;
+        float bestD = Fires.WarmthRadius * Fires.WarmthRadius;
+        foreach (var f in conn.Db.Fire.Iter())
+        {
+            if (f.FuelUntil.MicrosecondsSinceUnixEpoch <= now) continue;
+            float d = (f.X - at.X) * (f.X - at.X) + (f.Z - at.Z) * (f.Z - at.Z);
+            if (d < bestD) (best, bestD) = ((f.X, f.Z), d);
+        }
+        return best;
     }
 
     static Avatar? AvatarOf(DbConnection conn, Avatar me, Func<uint, Avatar?> other, uint playerId) =>

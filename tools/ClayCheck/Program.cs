@@ -120,7 +120,7 @@ Gather(Item.Fiber, (kilnRun ? 12u : 4u) + 3 + Social.MarkerFiber);
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);
 int cell = 0;
-uint clayWanted = jarRun ? 70u : kilnRun ? 38u : potRun ? 12u : lampRun ? (tallowRun ? 12u : 4u) : 12u;
+uint clayWanted = jarRun ? 70u : kilnRun ? 38u : potRun ? 17u : lampRun ? (tallowRun ? 12u : 4u) : 12u;
 while (CountOf(Item.Clay) < clayWanted)
 {
     int cx = clayX + cell % 5 - 2, cz = clayZ + cell / 5 % 5 - 2;
@@ -754,11 +754,16 @@ void TroughCheck(Structure kiln)
     Pump(() => lastError != null || CountOf(Item.PinchPotOfWater) == 1, 3, "a pot of water");
     if (lastError != null) Fail($"filling a pot: {lastError}");
     WalkTo(placed.X - 1.2f, placed.Z, 0.2f);
+    uint wearBefore = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.PinchPotOfWater).Wear;
     lastError = null;
     conn.Reducers.PourIntoTrough(placed.Id);
     Pump(() => lastError != null || conn.Db.TroughWater.StructureId.Find(placed.Id) is { Litres: 2 }, 3, "the trough to fill");
     if (lastError != null) Fail($"pouring: {lastError}");
     if (CountOf(Item.PinchPot) != 1 || CountOf(Item.PinchPotOfWater) != 0) Fail("the emptied pot did not come back");
+    // The pot's maker (and slip) ride its Wear number: the emptied pot must come back with it.
+    uint wearAfter = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.PinchPot).Wear;
+    if (wearAfter != wearBefore) Fail($"the emptied pot lost its maker: {wearAfter:X}, was {wearBefore:X}");
+    Log($"The emptied pot kept its maker ({wearAfter:X})");
     Log("Poured a pot in: the trough holds 2 L");
     Log("STAGE trough-poured");
 
@@ -826,6 +831,32 @@ int PotCheck()
     foreach (var cp in coilPieces)
         if (cp.Mark != expectedMark) Fail($"coil pot mark {cp.Mark:X}, expected {expectedMark:X}");
     Log($"Pots carry their maker, player {Marks.Maker(expectedMark)}");
+
+    // Slip round the rim (ceramics-14): a band count other than one or two is refused; both wet pots
+    // get two bands in a free colour that is clamped and snapped; each takes one clean clay; and the
+    // slip rides on the same number as the maker, so it must survive the fire, pick-up and filling.
+    while (CountOf(Item.CleanClay) < 2 && CountOf(Item.Clay) >= 2) Craft("clay.clean", 0, Item.CleanClay);
+    if (CountOf(Item.CleanClay) < 2) Log("Not enough clean clay for slip; slip not checked this run");
+    else
+    {
+        lastError = null;
+        conn.Reducers.SlipPiece(coils[0], 0x5E7A3A, 3);
+        Pump(() => lastError != null, 3, "three bands to be refused");
+        if (lastError?.Contains("one or two bands") != true) Fail($"three bands: {lastError}");
+        uint cleanBefore = CountOf(Item.CleanClay);
+        foreach (var id in coils)
+        {
+            lastError = null;
+            conn.Reducers.SlipPiece(id, 0x5E7A3A, 2);
+            Pump(() => lastError != null || Slip.Has(conn.Db.ClayPiece.Id.Find(id)!.Mark), 3, "slip on a wet pot");
+            if (lastError != null) Fail($"slipping a wet pot: {lastError}");
+        }
+        expectedMark = Slip.With(expectedMark, 0x5E7A3A, 2);
+        foreach (var id in coils)
+            if (conn.Db.ClayPiece.Id.Find(id)!.Mark != expectedMark) Fail($"slipped pot mark {conn.Db.ClayPiece.Id.Find(id)!.Mark:X}, expected {expectedMark:X}");
+        if (CountOf(Item.CleanClay) != cleanBefore - 2) Fail($"slip took {cleanBefore - CountOf(Item.CleanClay)} clean clay, expected 2");
+        Log($"Slip: two bands in {Slip.Color(expectedMark):X6} on both pots, maker kept ({Marks.Maker(expectedMark)}), 2 clean clay used");
+    }
     LightFireNear(coilPieces.Average(p => p.X) + 1.3f, coilPieces.Average(p => p.Z));
     if (coilPieces.Any(p => DistanceTo(p.X, p.Z, fire.X, fire.Z) > ClayRules.FireReach)) Fail("coil pot set down out of the fire's reach");
     KeepFireGoing();
@@ -863,7 +894,7 @@ int PotCheck()
     Gather(Item.CoilPot, 1);
     var firedRow = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.CoilPot);
     if (firedRow.Wear != expectedMark) Fail($"the fired pot lost its mark: {firedRow.Wear:X}, expected {expectedMark:X}");
-    Log("The fired pot kept its mark through the pit fire and the pick-up");
+    Log("The fired pot kept its mark (and slip) through the pit fire and the pick-up");
     WalkTo(waterX, waterZ, 1.5f);
     lastError = null;
     conn.Reducers.FillPots();
@@ -1023,6 +1054,14 @@ void SetUpBench()
         InMyClaim(sx, sz, 7f) && DistanceTo(sx, sz, marker.X, marker.Z) >= 10f && ClearGround(sx, sz, -3, 6, -2, 4));
     Log($"Built a potter's bench at {bench.X:F1}, {bench.Z:F1}; {CountOf(Item.Stone)} stones left");
     Log("STAGE bench");
+    // The kiln run's pots carry their maker, so the trough steps can check it survives pouring and scooping.
+    if (kilnRun)
+    {
+        lastError = null;
+        conn.Reducers.SetMark(Marks.All[3].Id, Marks.Presets[2]);
+        Pump(() => lastError != null || conn.Db.PlayerMark.PlayerId.Find(myId) != null, 3, "the mark to be set");
+        if (lastError != null) Fail($"setting the mark: {lastError}");
+    }
 }
 
 // Stands where pots are shaped: just on the player's (south) side of the bench.

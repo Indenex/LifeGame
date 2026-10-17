@@ -125,6 +125,9 @@ public static partial class Module
             z = fromZ;
         }
 
+        // Stepping off gets a sitting or lying player up (Resting.cs).
+        if ((x - fromX) * (x - fromX) + (z - fromZ) * (z - fromZ) > 0.02f * 0.02f) StopResting(ctx, player.PlayerId);
+
         var input = new MoveInput { PlayerId = player.PlayerId, X = x, Z = z, Heading = heading };
         if (pending is not null)
             ctx.Db.MoveInput.PlayerId.Update(input);
@@ -149,6 +152,7 @@ public static partial class Module
                 ChunkZ = (short)World.ChunkOf(input.Z),
             });
             ctx.Db.MoveInput.PlayerId.Delete(input.PlayerId);
+            if (ctx.Db.Player.PlayerId.Find(input.PlayerId) is { } mover) CheckJobReach(ctx, mover, input.X, input.Z);
         }
     }
 
@@ -159,14 +163,15 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         RequireReach(RequirePos(ctx, player), cellX * World.CellSize, cellZ * World.CellSize);
         RequireClaimAccess(ctx, cellX * World.CellSize, cellZ * World.CellSize);
+        // The equipped digging tool reaches one level deeper than hands (D-041), and a spade works faster than a stick (Equip.cs).
+        var stickTool = EquippedTool(ctx, ItemTags.Digging);
+        float toolSpeed = stickTool is { } held ? Items.Def((Item)held.Item).DigSpeed : 1f;
         // Skilled diggers work faster.
-        var state = RequireCooldown(ctx, player, (long)(World.DigCooldownMicros * DurationScale(ctx, player.PlayerId, Skills.Dig)));
+        var state = RequireCooldown(ctx, player, (long)(World.DigCooldownMicros / toolSpeed * DurationScale(ctx, player.PlayerId, Skills.Dig)));
 
         long key = World.CellKey(cellX, cellZ);
         var edit = ctx.Db.TerrainEdit.CellKey.Find(key);
         short depth = edit?.Depth ?? 0;
-        // A digging stick reaches one level deeper than hands, down to finer clay (D-041).
-        var stickTool = EquippedTool(ctx, ItemTags.Digging);
         bool stick = stickTool is not null;
         if (depth >= World.MaxDigDepth + (stick ? 1 : 0))
             throw new Exception(stick ? "Too deep even for a digging stick" : "Too deep to dig by hand");
@@ -203,7 +208,7 @@ public static partial class Module
         RequireClaimAccess(ctx, item.X, item.Z);
 
         ctx.Db.WorldItem.Id.Delete(itemId);
-        AddToInventory(ctx, Me(ctx), (Item)item.Item, 1, item.Quality, item.Wear);
+        AddToInventory(ctx, Me(ctx), (Item)item.Item, 1, item.Quality, item.Wear, item.Maker);
         PerformedProcess(ctx, player.PlayerId, Skills.Forage, item.X, item.Z);
         NoteAct(ctx, player.PlayerId, WorkMotion.PickUp, (Item)item.Item);
     }
@@ -221,6 +226,7 @@ public static partial class Module
             Item = item,
             Quality = quality,
             Wear = stack.Wear,
+            Maker = stack.Maker,
             X = pos.X,
             Z = pos.Z,
             ChunkX = pos.ChunkX,
@@ -341,14 +347,14 @@ public static partial class Module
         {
             uint n = Math.Min(count, stack.Count);
             RemoveFromStack(ctx, stack, n);
-            AddToInventory(ctx, to, item, n, quality, stack.Wear);
+            AddToInventory(ctx, to, item, n, quality, stack.Wear, stack.Maker);
             count -= n;
         }
     }
 
     // Into the bag: onto a matching bag stack, never onto the tools belt (Inventory.cs, ui-18).
-    static void AddToInventory(ReducerContext ctx, Identity owner, Item item, uint count, byte quality, uint wear = 0) =>
-        AddToBag(ctx, owner, item, count, quality, wear);
+    static void AddToInventory(ReducerContext ctx, Identity owner, Item item, uint count, byte quality, uint wear = 0, uint maker = 0) =>
+        AddToBag(ctx, owner, item, count, quality, wear, maker);
 
     static void RemoveFromStack(ReducerContext ctx, InventoryItem stack, uint count)
     {

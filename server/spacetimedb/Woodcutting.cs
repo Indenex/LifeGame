@@ -73,12 +73,16 @@ public static partial class Module
     // A chop finished: the log goes in the bag and the tree remembers it.
     static void ChopTree(ReducerContext ctx, CraftJob job, ProcessDef def)
     {
-        AddToInventory(ctx, job.Owner, def.Makes, def.MakesCount, Items.RawQuality);
         int x = (int)MathF.Round(job.X), z = (int)MathF.Round(job.Z);
         long key = World.CellKey(x, z);
         var row = ctx.Db.ChoppedTree.CellKey.Find(key);
-        // Someone else felled it while this chop was under way: the log still counts.
-        if (row is { Felled: true }) return;
+        // Someone else felled it while this chop was under way: the tree gives nothing more (D-182).
+        if (row is { Felled: true })
+        {
+            News(ctx, job.PlayerId, "The tree came down before your last swing landed.");
+            return;
+        }
+        AddToInventory(ctx, job.Owner, def.Makes, def.MakesCount, Items.RawQuality);
         byte logs = (byte)((row?.Logs ?? 0) + 1);
         bool felled = Trees.Felling && logs >= Trees.LogsPerTree;
         var next = new ChoppedTree

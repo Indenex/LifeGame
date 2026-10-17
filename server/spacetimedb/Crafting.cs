@@ -257,7 +257,11 @@ public static partial class Module
         else if (def.Outcome == Outcome.Chop)
             ChopTree(ctx, job, def);
         else
-            AddToInventory(ctx, job.Owner, def.Makes, def.MakesCount, Items.Def(def.Makes).HasQuality ? job.Quality : Items.RawQuality);
+        {
+            // What a hand makes carries its maker; raw material does not (crafting-25).
+            bool made = Items.Def(def.Makes).HasQuality;
+            AddToInventory(ctx, job.Owner, def.Makes, def.MakesCount, made ? job.Quality : Items.RawQuality, maker: made ? job.PlayerId : 0u);
+        }
     }
 
     // Puts one burnable item on a fire within reach.

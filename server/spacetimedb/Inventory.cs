@@ -12,18 +12,31 @@ using SpacetimeDB;
 
 public static partial class Module
 {
+    // What makes two things the same stack: the item, its quality, its wear and its maker
+    // (crafting-25). Every place that merges, splits or moves stacks compares this and
+    // nothing else, so a new part of a stack's identity is added here once. Sites:
+    // AddToBag, ToBag, MoveCarried, Drop and PickUp, BasketPut/BasketTake/SpillBasket,
+    // StashItem/TakeFromStash/RemoveClaim, PlaceItem, WearTool's split, RepairTool, Die.
+    readonly record struct StackKey(ushort Item, byte Quality, uint Wear, uint Maker);
+
+    static StackKey KeyOf(InventoryItem r) => new(r.Item, r.Quality, r.Wear, r.Maker);
+    static StackKey KeyOf(WorldItem r) => new(r.Item, r.Quality, r.Wear, r.Maker);
+    static StackKey KeyOf(BasketItem r) => new(r.Item, r.Quality, r.Wear, r.Maker);
+    static StackKey KeyOf(ClaimStash r) => new(r.Item, r.Quality, r.Wear, r.Maker);
+
     // Adds to the bag: onto a matching bag stack, or as a new stack in the first free place.
-    static void AddToBag(ReducerContext ctx, Identity owner, Item item, uint count, byte quality, uint wear)
+    static void AddToBag(ReducerContext ctx, Identity owner, Item item, uint count, byte quality, uint wear, uint maker)
     {
+        var key = new StackKey((ushort)item, quality, wear, maker);
         foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((owner, (ushort)item)))
-            if (!row.OnBelt && row.Quality == quality && row.Wear == wear)
+            if (!row.OnBelt && KeyOf(row) == key)
             {
                 ctx.Db.InventoryItem.Id.Update(row with { Count = row.Count + count });
                 return;
             }
         ctx.Db.InventoryItem.Insert(new InventoryItem
         {
-            Id = 0, Owner = owner, Item = (ushort)item, Quality = quality, Count = count, Wear = wear,
+            Id = 0, Owner = owner, Item = (ushort)item, Quality = quality, Count = count, Wear = wear, Maker = maker,
             Slot = FreeBagPlace(ctx, owner),
         });
     }
@@ -132,7 +145,7 @@ public static partial class Module
             return;
         }
         foreach (var same in ctx.Db.InventoryItem.ByOwnerItem.Filter((row.Owner, row.Item)))
-            if (!same.OnBelt && same.Quality == row.Quality && same.Wear == row.Wear)
+            if (!same.OnBelt && KeyOf(same) == KeyOf(row))
             {
                 ctx.Db.InventoryItem.Id.Update(same with { Count = same.Count + row.Count });
                 ctx.Db.InventoryItem.Id.Delete(row.Id);

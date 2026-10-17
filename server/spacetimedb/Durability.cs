@@ -41,7 +41,7 @@ public static partial class Module
         else
         {
             RemoveFromStack(ctx, tool, 1);
-            ctx.Db.InventoryItem.Insert(tool with { Id = 0, Count = 1, Wear = wear });
+            ctx.Db.InventoryItem.Insert(tool with { Id = 0, Count = 1, Wear = wear, OnBelt = false, Slot = FreeBagPlace(ctx, tool.Owner) });
         }
     }
 
@@ -87,8 +87,16 @@ public static partial class Module
 
         // Taking the cordage may have changed the stack's row; look it up again.
         var again = FindStack(ctx, Me(ctx), (Item)item, quality, wear) ?? stack;
-        RemoveFromStack(ctx, again, 1);
-        AddToInventory(ctx, Me(ctx), (Item)item, 1, Durability.RepairedQuality(quality, wear), Durability.Repaired(quality, wear));
+        byte mendedQuality = Durability.RepairedQuality(quality, wear);
+        uint mendedWear = Durability.Repaired(quality, wear);
+        // A tool on the belt is mended where it hangs, not dropped back into the bag.
+        if (again.OnBelt && again.Count == 1)
+            ctx.Db.InventoryItem.Id.Update(again with { Quality = mendedQuality, Wear = mendedWear });
+        else
+        {
+            RemoveFromStack(ctx, again, 1);
+            AddToInventory(ctx, Me(ctx), (Item)item, 1, mendedQuality, mendedWear, again.Maker);
+        }
         PerformedProcess(ctx, player.PlayerId, Skills.Repair, pos.X, pos.Z);
     }
 }
