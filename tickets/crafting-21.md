@@ -19,6 +19,8 @@ Justin (via the PM): finished crafts go to the bag; real-world items (bricks, po
 ## Progress log
 - 2026-10-16: built on crafting-durability; server, client and CraftCheck pass locally; upgrade check run.
 
+- 2026-10-16: PM's ask bundled here: CraftJob.Tool and CraftWork.Tool (ushort item id, [Default] 0, no wipe) set in StartCraft from the tool BestTool picked, so other players see the exact tool in hand (Animation anim-3, #372). CraftCheck checks a tool craft's work row names a tool. Merged the latest crafting-durability head.
+
 ## Open questions / blockers
 - UX wires ServerPlaceLink once this is on main (they are building against a mock on claude/ux-ui-place-xlrh2s).
 - Fired pots and bricks come out of the kiln or the drying stage, not an Outcome.Item craft, so Finished won't fire for them; Ceramics can raise a prompt from their own finish if Justin wants it.

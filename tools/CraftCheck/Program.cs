@@ -42,6 +42,7 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM structure",
                 "SELECT * FROM claim",
                 "SELECT * FROM my_claim_stash",
+                "SELECT * FROM craft_work",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -479,6 +480,13 @@ void Craft(string processId, float score, Item? expect)
     Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
     if (lastError != null) Fail($"{processId}: {lastError}");
     var def = Processes.Find(processId)!;
+    // Other players see the tool in hand (CraftWork.Tool, for Animation): it is the one a tool craft used.
+    if (def.NeedsTool != ItemTags.None)
+    {
+        Pump(() => conn.Db.CraftWork.PlayerId.Find(myId) != null || conn.Db.MyCraftJob.Count == 0, 3, null);
+        if (conn.Db.CraftWork.PlayerId.Find(myId) is { Tool: 0 })
+            Fail($"{processId} needs a tool but its work row names none");
+    }
     Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds * 1.2f + 5, $"{processId} to finish");
     if (expect is { } item)
     {

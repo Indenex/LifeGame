@@ -13,6 +13,9 @@ public static partial class Module
         public string ProcessId;
         // Known from the start; the client plays it as a snap when the work ends.
         public bool Failed;
+        // The tool in hand (an item id), 0 for none, so other players see the exact tool.
+        [Default((ushort)0)]
+        public ushort Tool;
     }
 
     // Crafting declares and calls these (Crafting.cs, crafting-12) when a job starts
@@ -22,7 +25,7 @@ public static partial class Module
     static partial void OnCraftStarted(ReducerContext ctx, CraftJob job)
     {
         ctx.Db.CraftWork.PlayerId.Delete(job.PlayerId);
-        ctx.Db.CraftWork.Insert(new CraftWork { PlayerId = job.PlayerId, ProcessId = job.ProcessId, Failed = job.Failed });
+        ctx.Db.CraftWork.Insert(new CraftWork { PlayerId = job.PlayerId, ProcessId = job.ProcessId, Failed = job.Failed, Tool = job.Tool });
     }
 
     static partial void OnCraftEnded(ReducerContext ctx, CraftJob job) => ctx.Db.CraftWork.PlayerId.Delete(job.PlayerId);
