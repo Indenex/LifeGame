@@ -56,8 +56,13 @@ public partial class BuildMenu : CanvasLayer
         panel.Visible = false;
         AddChild(panel);
         Panels.Centre(this, Close);
-        if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-buildmenu")))
+        // --screenshot-buildmenu opens the first tab; =Walls (any tab's name) opens that one.
+        foreach (var arg in OS.GetCmdlineUserArgs().Where(a => a.StartsWith("--screenshot-buildmenu")))
+        {
+            string wanted = arg.Split('=').ElementAtOrDefault(1) ?? "";
+            category = Order.FirstOrDefault(c => c.Equals(wanted, System.StringComparison.OrdinalIgnoreCase)) ?? "";
             GetTree().CreateTimer(1.5).Timeout += Open;
+        }
     }
 
     public void Open()
