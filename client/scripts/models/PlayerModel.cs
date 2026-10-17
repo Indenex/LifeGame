@@ -67,6 +67,7 @@ public static class PlayerModel
             Remember(figure, look);
             var built = ChibiFigure.Build(ChibiLook(look));
             if (figure.GetNodeOrNull<MeshInstance3D>("Body") is { } chibi) chibi.Mesh = built.Mesh;
+            ChibiShell.Sync(figure, ChibiLook(look));
             // Put back on whatever it wears, cut for the new race.
             for (byte slot = 0; slot <= Feet; slot++)
                 Wear(figure, slot, figure.HasMeta($"worn{slot}") ? (ushort)figure.GetMeta($"worn{slot}").AsInt32() : (ushort)0);

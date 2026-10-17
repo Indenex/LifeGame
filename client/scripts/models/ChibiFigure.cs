@@ -50,7 +50,7 @@ public static class ChibiFigure
 
     public static HumanFigure.Built Build(Look look)
     {
-        string key = look.ToString() + Painted;
+        string key = look.ToString() + Painted + ChibiShell.Enabled;
         if (Cache.TryGetValue(key, out var done)) return done;
         var material = Painted ? (Material)ChibiLook.Material : flat ??= LifeGame.Look.Solid(Colors.White);
         bool kit = look.Race == Race.Kit, pebble = look.Race == Race.Pebble, bramble = look.Race == Race.Bramble;
@@ -102,7 +102,8 @@ public static class ChibiFigure
                 new Vector3(-0.16f, shoulderY + 0.02f, 0.07f), new Vector3(-0.05f, waistY + 0.12f, 0.19f), new Vector3(0.1f, waistY - 0.04f, 0.2f), new Vector3(0.19f, hipY - 0.02f, 0.1f),
             }, 0.018f, 5);
         }
-        if (pebble)
+        // The authored shell (ChibiShell) replaces the built belly plate and shell.
+        if (pebble && !ChibiShell.Enabled)
         {
             // The belly plate: a pale shield on the front with painted seam lines.
             k.Bone(HumanRig.Spine).Paint(BellyPlate).Ellipsoid(new Vector3(0, waistY - 0.02f, 0.15f), new Vector3(0.14f, 0.19f, 0.06f), 14, 8);
@@ -369,6 +370,7 @@ public static class ChibiFigure
         var skeleton = HumanRig.Skeleton(built.Joints);
         skeleton.AddChild(new MeshInstance3D { Name = "Body", Mesh = built.Mesh, Skeleton = new NodePath("..") });
         skeleton.AddChild(new MeshInstance3D { Name = PlayerModel.SlotNode(PlayerModel.Body), Mesh = built.LeafWrap, Skeleton = new NodePath("..") });
+        ChibiShell.Sync(skeleton, look);
         return skeleton;
     }
 }

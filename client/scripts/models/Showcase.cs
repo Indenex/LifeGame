@@ -729,6 +729,8 @@ public partial class Showcase : Node3D
     {
         int Arg(string name, int fallback) => int.TryParse(args.GetValueOrDefault(name, ""), out int v) ? v : fallback;
         var look = new ChibiFigure.Look((ChibiFigure.Race)Arg("race", 1), Arg("main", 0), Arg("second", 0), Arg("style", 1));
+        // --built-shell draws Pebble with ChibiFigure's built shell instead of the authored one.
+        ChibiShell.Enabled = !args.ContainsKey("built-shell");
         var yaws = new[] { 25f, -35f, -95f, -125f, 145f };
         for (int i = 0; i < yaws.Length; i++)
         {
