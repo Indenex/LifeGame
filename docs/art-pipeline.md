@@ -122,10 +122,7 @@ Justin asked what else the Blender pipeline could do. Each piece below is render
 - *Axe:* replace the held StoneAxe mesh.
 
 **Known rough edges:**
-- Bramble's side locks bulge a little at the cheeks.
-- A small dark bake mark at Pebble's right temple.
-- The sheep's wool is bright in full sun, and it is cream only so far.
+- The sheep's wool is cream only so far (toned down about 8% for full sun).
 - The axe stone reads pale in sun.
-- Two of the birch crowns nearly touch in the wide sheet.
 - A 6-tier pine has a small top tier.
 - The sheep is about 3.5 times today's triangle count.
