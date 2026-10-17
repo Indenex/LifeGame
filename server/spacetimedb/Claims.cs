@@ -164,7 +164,7 @@ public static partial class Module
     {
         if (ClaimAt(ctx, x, z) is not { } claim) return;
         if (!HasClaimRights(ctx, claim, Me(ctx)))
-            throw new Exception($"This land is claimed by {claim.OwnerName}");
+            throw new Exception(BanRefusal(ctx, claim, Me(ctx)) ?? $"This land is claimed by {claim.OwnerName}");
         // Working a neighbour's land under a town roster does not keep their claim standing.
         if (IsOwnerOrMember(ctx, claim, Me(ctx))) TendByWork(ctx, claim);
     }
@@ -300,6 +300,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void SetClaimPvp(ReducerContext ctx, ulong claimId, bool allow)
     {
+        MeterCall(ctx);
         var claim = RequireOwnClaim(ctx, claimId);
         ctx.Db.Claim.Id.Update(claim with { AllowPvp = allow });
     }
@@ -307,6 +308,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void AddClaimMember(ReducerContext ctx, uint playerId)
     {
+        MeterCall(ctx);
         var claim = RequireOwnStandingClaim(ctx);
         var who = ctx.Db.Player.PlayerId.Find(playerId) ?? throw new Exception("No such player");
         AddMember(ctx, claim, who);
@@ -318,6 +320,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void AddClaimMemberByName(ReducerContext ctx, string name)
     {
+        MeterCall(ctx);
         var claim = RequireOwnStandingClaim(ctx);
         name = (name ?? "").Trim();
         if (name.Length == 0) throw new Exception("Type the name of whoever you want to add");
@@ -352,6 +355,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void RemoveClaimMember(ReducerContext ctx, uint playerId)
     {
+        MeterCall(ctx);
         var claim = RequireOwnStandingClaim(ctx);
         foreach (var m in ctx.Db.ClaimMember.ClaimId.Filter(claim.Id).ToList())
             if (m.PlayerId == playerId) ctx.Db.ClaimMember.Id.Delete(m.Id);
@@ -361,6 +365,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void LeaveClaim(ReducerContext ctx, ulong claimId)
     {
+        MeterCall(ctx);
         foreach (var m in ctx.Db.ClaimMember.ClaimId.Filter(claimId).ToList())
             if (m.Member == Me(ctx)) ctx.Db.ClaimMember.Id.Delete(m.Id);
     }
@@ -370,6 +375,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void AbandonClaim(ReducerContext ctx, ulong claimId)
     {
+        MeterCall(ctx);
         var claim = RequireOwnClaim(ctx, claimId);
         RemoveClaim(ctx, claim);
     }
@@ -379,6 +385,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void StashItem(ReducerContext ctx, ulong claimId, ushort item, byte quality, uint count)
     {
+        MeterCall(ctx);
         if (count == 0) throw new Exception("Nothing to leave");
         var claim = RequireStashAccess(ctx, claimId);
         uint carried = CarriedCount(ctx, Me(ctx), (Item)item, quality);
@@ -402,6 +409,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void TakeFromStash(ReducerContext ctx, ulong claimId, ushort item, byte quality, uint count)
     {
+        MeterCall(ctx);
         if (count == 0) throw new Exception("Nothing to take");
         var claim = RequireStashAccess(ctx, claimId);
         uint held = 0;
@@ -428,6 +436,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void SetClaimLifetime(ReducerContext ctx, long seconds)
     {
+        MeterCall(ctx);
         var config = ctx.Db.ClaimConfig.Id.Find(0) ?? throw new Exception("Claims are not set up");
         if (config.Admin != Me(ctx)) throw new Exception("Only the server admin can change this");
         if (seconds < 30) throw new Exception("At least 30 seconds");

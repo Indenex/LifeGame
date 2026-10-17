@@ -89,14 +89,19 @@ public static class ItemModels
     {
         var (build, upright) = Recipe(item);
         if (build == null) return null;
+        return Assemble(build, upright, held, wear, item);
+    }
+
+    static Mesh Assemble(Action<Kit> build, bool upright, bool held, int wear, Item? item, bool keepOrigin = false)
+    {
         // Only tools that wear have a worn look; everything else ignores it.
-        if (!WearMarks.ContainsKey(item)) wear = 0;
+        if (item is not { } worn || !WearMarks.ContainsKey(worn)) wear = 0;
         // Laying down turns the held frame so -Y (the working end) points along +X
         // and the thin side faces up.
         var lay = upright || held ? Transform3D.Identity : new Transform3D(new Basis(Vector3.Back, Mathf.Pi / 2f), Vector3.Zero);
         var kit = new Kit(PlayerModel.Style.Flat, lay);
         build(kit);
-        if (wear > 0) WearMarks[item](kit, wear);
+        if (wear > 0) WearMarks[item!.Value](kit, wear);
 
         EnsureMaterials();
         var surfaces = new List<(Godot.Collections.Array Arrays, Material Material)>();
@@ -121,7 +126,7 @@ public static class ItemModels
         Take(kit.Wood, wood!, wear == 0 ? 1f : wear == 1 ? 0.82f : 0.6f, PaintedItems.Family.Wood);
         Take(kit.Stone, stone!, 1f, PaintedItems.Family.Stone);
         Take(kit.Plant, plant!, wear == 0 ? 1f : wear == 1 ? 0.84f : 0.62f, PaintedItems.Family.Fibre);
-        Take(kit.Plain, plain!, 1f, PaintedItems.FamilyOf(item));
+        Take(kit.Plain, plain!, 1f, item is { } it ? PaintedItems.FamilyOf(it) : PaintedItems.Family.Plain);
 
         // Rest on the ground, centered; held upright things hang from their top.
         var min = Vector3.Inf;
@@ -133,7 +138,8 @@ public static class ItemModels
                 max = max.Max(v);
             }
         var center = (min + max) / 2f;
-        var shift = !held ? new Vector3(-center.X, -min.Y, -center.Z)
+        var shift = keepOrigin ? Vector3.Zero
+            : !held ? new Vector3(-center.X, -min.Y, -center.Z)
             : upright ? new Vector3(-center.X, -max.Y, -center.Z)
             : Vector3.Zero;
 
@@ -188,9 +194,15 @@ public static class ItemModels
     // in the air.
     public static Item? BowItem, ArrowItem;
 
+    // The rabbit snare (model-33, for Animals' animals-34): SnareItem points their item id
+    // at the bundled snare (two pegs, the noose coiled flat) for the ground, hand and
+    // inventory. SnareSet and SnareSprung are the snare pegged out on a run.
+    public static Item? SnareItem;
+
     static (Action<Kit>? Build, bool Upright) Recipe(Item item) =>
         BowItem.HasValue && item == BowItem.Value ? (Bow, false)
         : ArrowItem.HasValue && item == ArrowItem.Value ? (Arrow, false)
+        : SnareItem.HasValue && item == SnareItem.Value ? (SnareBundle, true)
         : KnownRecipe(item);
 
     static (Action<Kit>? Build, bool Upright) KnownRecipe(Item item) => item switch
@@ -1020,5 +1032,103 @@ public static class ItemModels
         }
         result.Add(points[^1]);
         return result.ToArray();
+    }
+
+    // --- The rabbit snare (model-33). Real scale: hazel pegs about 20 cm long and 1.6 cm
+    // thick, a noose of twisted cord about 12 cm across. Set across a run, the two pegs
+    // stand 16 cm apart with a crossbar lashed between their tops; the noose hangs from
+    // its middle with its bottom a hand's width above the grass, facing along Z.
+    static Mesh? snareSet, snareSprung, snareBundled;
+    public static Mesh SnareSet => snareSet ??= Assemble(k => Snare(k, false), true, false, 0, null, keepOrigin: true);
+    public static Mesh SnareSprung => snareSprung ??= Assemble(k => Snare(k, true), true, false, 0, null, keepOrigin: true);
+    // The bundled snare on its own (what SnareItem draws on the ground), for views and icons.
+    public static Mesh SnareBundled => snareBundled ??= Assemble(SnareBundle, true, false, 0, null);
+
+    // Both keep their own origin: the ground under the middle of the run, the pegs' feet at y = 0.
+    // Where the noose sits on the set snare, in the mesh's own space.
+    public static readonly Vector3 SnareNoose = new(0, 0.1f, 0);
+    // Where the drawn noose holds the catch's neck on the sprung snare.
+    public static readonly Vector3 SnareNeck = new(0, 0.06f, 0.13f);
+
+    static void SnarePeg(Kit k, Vector3 foot, Vector3 top, float lean)
+    {
+        var mid = (foot + top) / 2f + new Vector3(lean, 0, lean * 0.4f);
+        k.Wood.Paint(BarkLight).Tube(new[] { foot, mid, top }, 0.008f, 6, 0.007f);
+        // A pale cut at the top where the peg was trimmed.
+        k.Wood.Paint(Whittled).Ellipsoid(top + new Vector3(0, 0.001f, 0), new Vector3(0.0072f, 0.002f, 0.0072f), 6, 2);
+    }
+
+    static void Snare(Kit k, bool sprung)
+    {
+        // Two pegs driven into the ground, a crossbar lashed across their tops.
+        var l = new Vector3(-0.08f, 0, 0.004f);
+        var r = new Vector3(0.08f, 0, -0.003f);
+        SnarePeg(k, l, l + new Vector3(0.006f, 0.2f, 0), 0.003f);
+        SnarePeg(k, r, r + new Vector3(-0.004f, 0.19f, 0.002f), -0.002f);
+        var barL = l + new Vector3(0.004f, 0.175f, 0.01f);
+        var barR = r + new Vector3(-0.003f, 0.168f, 0.011f);
+        k.Wood.Paint(BarkLight, 0.95f).Tube(new[] { barL + new Vector3(-0.02f, 0, 0), (barL + barR) / 2f + new Vector3(0, 0.002f, 0), barR + new Vector3(0.02f, 0, 0) }, 0.006f, 5, 0.005f);
+        foreach (var end in new[] { barL, barR })
+            k.Plant.Paint(Cord, 0.92f).Tube(MeshKit.Circle(end + new Vector3(0, -0.006f, -0.006f), Vector3.Right, 0.011f, 24, 3f, 0.012f), 0.0026f, 4);
+        // The noose hangs from the middle of the bar.
+        var hang = (barL + barR) / 2f + new Vector3(0, -0.006f, 0);
+        if (!sprung)
+        {
+            var loop = SnareNoose;
+            float rad = 0.06f;
+            var knot = loop + new Vector3(0, rad, 0);
+            k.Plant.Paint(Cord).Tube(new[] { hang, (hang + knot) / 2f + new Vector3(0.002f, 0, 0), knot }, 0.0024f, 4);
+            // Not a perfect ring: a little narrower at the knot and sagging at the bottom.
+            var ring = MeshKit.Circle(loop, Vector3.Back, rad, 40, 1f, 0f, Mathf.Pi / 2f);
+            for (int i = 0; i < ring.Length; i++)
+            {
+                var d = ring[i] - loop;
+                float up = d.Y / rad;
+                ring[i] = loop + new Vector3(d.X * (0.94f - 0.1f * up), d.Y * 1.04f - 0.006f * (1f - up * up), d.Z + 0.006f * Mathf.Sin(i * 0.5f));
+            }
+            k.Plant.Paint(Cord).Tube(ring, 0.0024f, 4);
+            k.Plant.Paint(Cord, 0.9f).Ellipsoid(knot, new Vector3(0.006f, 0.008f, 0.006f), 6, 3);
+        }
+        else
+        {
+            // Pulled tight round the catch's neck, the cord drawn taut out from the bar to
+            // where the rabbit lies just clear of the pegs.
+            var neck = SnareNeck;
+            k.Plant.Paint(Cord).Tube(new[] { hang, hang + (neck + new Vector3(0, 0.022f, 0) - hang) * 0.5f + new Vector3(0, -0.006f, 0), neck + new Vector3(0, 0.022f, 0) }, 0.0026f, 4);
+            k.Plant.Paint(Cord).Tube(MeshKit.Circle(neck, Vector3.Back, 0.022f, 24, 1f), 0.0026f, 4);
+            k.Plant.Paint(Cord, 0.9f).Ellipsoid(neck + new Vector3(0, 0.022f, 0), new Vector3(0.006f, 0.007f, 0.006f), 6, 3);
+        }
+    }
+
+    // The snare bundled to carry: the two pegs side by side with the crossbar, the cord
+    // wound round them and the noose laid flat beside.
+    static void SnareBundle(Kit k)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            float z = -0.011f + i * 0.011f, len = i == 1 ? 0.2f : 0.19f - i * 0.005f;
+            k.Wood.Paint(BarkLight, 0.95f + i * 0.03f).Tube(new[] { new Vector3(-len / 2f, 0.008f + (i == 1 ? 0.008f : 0f), z), new Vector3(len / 2f, 0.008f + (i == 1 ? 0.008f : 0f), z + 0.002f) }, i == 1 ? 0.006f : 0.008f, 6, i == 1 ? 0.005f : 0.007f);
+            k.Wood.Paint(Whittled).Ellipsoid(new Vector3(len / 2f + 0.001f, 0.008f + (i == 1 ? 0.008f : 0f), z + 0.002f), new Vector3(0.002f, 0.0068f, 0.0068f), 6, 2);
+        }
+        k.Plant.Paint(Cord).Tube(MeshKit.Circle(new Vector3(-0.04f, 0.01f, 0), Vector3.Right, 0.019f, 32, 3f, 0.02f), 0.0026f, 4);
+        k.Plant.Paint(Cord).Tube(new[] { new Vector3(-0.02f, 0.01f, 0.018f), new Vector3(0.0f, 0.004f, 0.04f), new Vector3(0.01f, 0.003f, 0.05f) }, 0.0026f, 4);
+        k.Plant.Paint(Cord).Tube(MeshKit.Circle(new Vector3(0.03f, 0.003f, 0.095f), Vector3.Up, 0.05f, 40, 1f, 0f, -Mathf.Pi * 0.65f), 0.0026f, 4);
+        k.Plant.Paint(Cord, 0.9f).Ellipsoid(new Vector3(0.012f, 0.004f, 0.048f), new Vector3(0.006f, 0.005f, 0.006f), 6, 3);
+    }
+
+    // A sprung snare with its catch: the rabbit (RabbitFigure) lying on its side in front of
+    // the pegs, its neck in the drawn noose, head toward the snare and body along +Z. fur is the rabbit's own coat
+    // material, as Animals gives a live rabbit.
+    public static Node3D SnareSprungWith(Material fur)
+    {
+        var root = new Node3D();
+        root.AddChild(new MeshInstance3D { Mesh = SnareSprung });
+        var rabbit = RabbitFigure.Create(fur);
+        // Facing -Z (head through the noose), rolled onto its right side.
+        var basis = new Basis(Vector3.Up, Mathf.Pi) * new Basis(Vector3.Back, Mathf.Pi / 2f);
+        var neck = RabbitFigure.HeadAt + new Vector3(0, -0.02f, -0.045f);
+        rabbit.Transform = new Transform3D(basis, SnareNeck - basis * neck);
+        root.AddChild(rabbit);
+        return root;
     }
 }

@@ -192,6 +192,52 @@ namespace LifeGame.Shared
                     },
                 },
             },
+                // A wooden chest (building-22): a lidded box of split boards, twice a basket's room. Claim-only like the
+                // rest of the made things; any kind with stacks opens like the basket (BuildingStorage.cs).
+            new StructureDef
+            {
+                // 24: its StructureKind position, after Crafting's devices 21 to 23 (a SpacetimeDB enum takes no explicit values).
+                Kind = 24,
+                Shape = new StructureShape
+                {
+                    Name = "Wooden chest",
+                    Model = "Chest",
+                    Category = "Storage",
+                    Round = true, Radius = 0.45f, Solid = true,
+                    Clearance = 0.9f,
+                    StoreStacks = ChestStacks,
+                    Stages = new[] { "Frame", "Boards and lid" },
+                    // Wooden chest: Frame, Boards and lid
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Log, 3u), (Item.Cordage, 1u) },
+                        new[] { (Item.Log, 3u), (Item.Cordage, 1u) },
+                    },
+                },
+            },
+                // A straw bed (building-23): a pole frame and a straw tick, wide enough for two. A sturdier rest spot than
+                // the woven mat and nothing more (resting is just a pose, Justin): same waking-place and lie-down rules,
+                // by data (RestSpots.cs). Claim-only.
+            new StructureDef
+            {
+                // 25: its StructureKind position, after Chest = 24 (a SpacetimeDB enum takes no explicit values).
+                Kind = 25,
+                Shape = new StructureShape
+                {
+                    Name = "Straw bed",
+                    Model = "Bed",
+                    Category = "Shelter",
+                    HalfWidth = 0.65f, HalfDepth = 1.0f,
+                    Clearance = 1.4f,
+                    Stages = new[] { "Frame", "Straw tick" },
+                    // Straw bed: Frame, Straw tick (more than the mat's 8 fiber, D-075)
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stick, 8u), (Item.Cordage, 2u) },
+                        new[] { (Item.Fiber, 12u) },
+                    },
+                },
+            },
         };
     }
 }

@@ -10,6 +10,7 @@ namespace LifeGame;
 // and then, and lifts its head with a snort every so often. Quiet and close; the animals' daily
 // rhythm (dawn and dusk grazing) decides when, from the animal's state. Reads the public animal
 // table in its own subscription, so it adds nothing to Atmosphere.
+[AudioSounds]
 static class DeerGrazing
 {
     const float CrunchHearing = 10f;   // metres

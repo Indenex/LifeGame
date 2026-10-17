@@ -9,6 +9,7 @@ namespace LifeGame;
 // as the wick burns, only audible close by (cosy, not a chore). The wick catching and the flame
 // going out each make a soft sound. Knows the lamps from the public lamp table: lit while
 // BurnsUntil is in the future.
+[AudioSounds]
 static class LampSounds
 {
     const float Hearing = 9f;   // metres

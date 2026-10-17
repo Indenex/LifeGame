@@ -94,8 +94,11 @@ public static partial class Module
             ctx.Db.InventoryItem.Id.Update(again with { Quality = mendedQuality, Wear = mendedWear });
         else
         {
+            // The tool leaves the bag and comes back mended: what was in hand stays in hand.
+            var inHand = ctx.Db.PlayerEquip.Owner.Find(Me(ctx));
             RemoveFromStack(ctx, again, 1);
             AddToInventory(ctx, Me(ctx), (Item)item, 1, mendedQuality, mendedWear, again.Maker);
+            if (inHand is { } hand && hand.Item == item && ctx.Db.PlayerEquip.Owner.Find(Me(ctx)) == null) ctx.Db.PlayerEquip.Insert(hand);
         }
         PerformedProcess(ctx, player.PlayerId, Skills.Repair, pos.X, pos.Z);
     }

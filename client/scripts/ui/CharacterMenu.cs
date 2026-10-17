@@ -287,14 +287,23 @@ public partial class CharacterMenu : CanvasLayer
         var (nameText, nameSize) = FitName(c.Name, card.Inner - 20);
         var name = Text(nameText, nameSize, 800);
         name.HorizontalAlignment = HorizontalAlignment.Center;
-        name.CustomMinimumSize = new Vector2(card.Inner, 0);
+        name.VerticalAlignment = VerticalAlignment.Center;
+        // Every card keeps room for two lines of name, measured from the font itself (ui-61): two
+        // line heights at the largest two-line size plus the label's line spacing, so a long name
+        // never pushes the badges past the card's edge and the cards stay one height. The name's
+        // font is kept as measured (the warm re-inking would swap it for a different weight).
+        float twoLines = Rounded(800).GetHeight(19) * 2 + name.GetThemeConstant("line_spacing") + 4;
+        name.CustomMinimumSize = new Vector2(card.Inner, twoLines);
+        WarmLook.KeepColours(name);
         column.AddChild(name);
-        var badges = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = Control.MouseFilterEnum.Ignore };
-        badges.AddThemeConstantOverride("separation", 6);
+        // The badges wrap inside the card rather than widen it (ui-62: "Played 2 days ago" did).
+        var badges = card.Wrap();
         // The race badge shows once #471's rows reach the character list.
         if (c.Race.Length > 0) badges.AddChild(Badge(c.Race, Grounds[index % Grounds.Length].Darkened(0.08f)));
         badges.AddChild(Badge(Played(c.LastPlayed), new Color(Ink, 0.08f)));
         column.AddChild(badges);
+        // A little paper under the badges, so they never sit on the card's edge.
+        column.AddChild(new Control { CustomMinimumSize = new Vector2(0, 6), MouseFilter = Control.MouseFilterEnum.Ignore });
 
         // Tipped a little, like photos pinned to a board; the chosen one sits straight and close.
         card.RotationDegrees = picked ? 0f : (index % 2 == 0 ? -2.5f : 2f);

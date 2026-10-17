@@ -168,6 +168,22 @@ if (Wants("stone-hearth"))
         new() { [Item.Stone] = 5, [Item.Stick] = 2, [Item.Fiber] = 2 },
         new() { [Item.Stone] = 3 }));
 
+if (Wants("bed"))
+    RestOnBed(BuildTogether(StructureKind.Bed,
+        new() { [Item.Stick] = 8, [Item.Fiber] = 8 },
+        new() { [Item.Fiber] = 12 },
+        prepareA: () => { for (int i = 0; i < 2; i++) a.Craft("cord.twist", Pump); }));
+
+// Not in "both": a chest takes six logs, which means axes and chopping (minutes). Opens like the basket.
+if (Wants("chest"))
+{
+    StoreInBasket(BuildTogether(StructureKind.Chest,
+        new() { [Item.Stone] = 2, [Item.Stick] = 4, [Item.Fiber] = 6 },
+        new() { [Item.Stone] = 2, [Item.Stick] = 3, [Item.Fiber] = 6 },
+        prepareA: () => { ChopLogs(a, 3); a.Craft("cord.twist", Pump); },
+        prepareB: () => { ChopLogs(b, 3); b.Craft("cord.twist", Pump); }));
+}
+
 // Not in "both": sun-dried bricks take minutes to dry, so this runs on its own (brick-house).
 if (Wants("brick-house"))
 {
@@ -751,6 +767,23 @@ void UnstuckInHut(ulong hut)
 }
 
 // A puts sticks in the basket; B takes one out.
+// The straw bed is a rest spot by data (RestSpots.cs): the owner chooses it as a waking place, and both players
+// lie down on it side by side (survival-27 rules, no rest bonus).
+void RestOnBed(ulong bed)
+{
+    Console.WriteLine("--- Straw bed");
+    var s = a.Conn.Db.Structure.Id.Find(bed)!;
+    a.WalkTo(s.X + 0.3f, s.Z, 0.3f, Pump);
+    b.WalkTo(s.X - 0.3f, s.Z, 0.3f, Pump);
+    var spot = RestSpots.OfStructure((int)StructureKind.Bed);
+    Check(spot != null, "the straw bed is a rest spot");
+    a.Conn.Reducers.SetRespawn(spot!.Id, bed);
+    WaitFor(() => a.Conn.Db.MyRespawnPoint.Iter().Any(p => p.Spot == spot.Id && p.StructureId == bed), 10, "A chose the bed as a waking place");
+    a.Conn.Reducers.LieOnRestSpot(spot.Id, bed);
+    b.Conn.Reducers.LieOnRestSpot(spot.Id, bed);
+    WaitFor(() => a.Conn.Db.PlayerRest.Iter().Count(r => r.SpotId == bed) == 2, 10, "both lie on the bed, side by side");
+}
+
 void StoreInBasket(ulong basket)
 {
     Console.WriteLine("--- Storing");
@@ -1173,6 +1206,11 @@ sealed class Bot
             if (!axeEquipped) { Conn.Reducers.EquipSlot(9); axeEquipped = true; }
         }
         uint before = CountOf(def.Makes);
+        if (def.Minigame != Minigame.None)
+        {
+            Conn.Reducers.BeginMinigame(processId);
+            System.Threading.Thread.Sleep((int)((MinigamePlay.MinSeconds(def.Minigame) + 0.3f) * 1000));
+        }
         Conn.Reducers.StartCraft(processId, score);
         var until = DateTime.UtcNow.AddSeconds(def.Seconds * 1.2f + 5);
         bool seen = false;

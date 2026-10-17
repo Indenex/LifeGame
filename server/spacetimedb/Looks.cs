@@ -20,6 +20,7 @@ public static partial class Module
     public static void SetLook(ReducerContext ctx, byte skin, byte hair, byte cut, byte beard)
     {
         var player = RequirePlayer(ctx);
+        RequirePace(ctx, player.PlayerId, Pace.ChangeLook, 0.5, "One moment before you change how you look again");
         if (!LifeGame.Shared.Looks.Valid(skin, hair, cut, beard))
             throw new System.Exception("That look is not one of the choices.");
         SaveLook(ctx, new PlayerLook { PlayerId = player.PlayerId, Skin = skin, Hair = hair, Cut = cut, Beard = beard, Race = LifeGame.Shared.Looks.Bramble });
@@ -30,6 +31,7 @@ public static partial class Module
     public static void SetRaceLook(ReducerContext ctx, byte race, byte a, byte b, byte c, byte d)
     {
         var player = RequirePlayer(ctx);
+        RequirePace(ctx, player.PlayerId, Pace.ChangeLook, 0.5, "One moment before you change how you look again");
         if (!LifeGame.Shared.Looks.Valid(race, a, b, c, d))
             throw new System.Exception("That look is not one of the choices.");
         SaveLook(ctx, new PlayerLook { PlayerId = player.PlayerId, Skin = a, Hair = b, Cut = c, Beard = d, Race = race });

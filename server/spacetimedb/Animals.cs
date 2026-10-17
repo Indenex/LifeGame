@@ -247,22 +247,40 @@ public static partial class Module
         // Snow on the ground (seasons, D-135): flocks bunch up, wander less and graze less.
         float huddle = Math.Clamp(SnowCover(ctx), 0f, 1f);
 
-        foreach (var flock in ctx.Db.Flock.Iter().ToList())
+        // Nothing in the tick builds or lights anything, so fires, kilns and structures can be read once
+        // per chunk and shared by every animal that asks (StructuresNear, BurningFiresNear).
+        AnimalTickScope = true;
+        try
         {
-            var members = ctx.Db.AnimalMind.FlockId.Filter(flock.FlockId)
-                .Select(m => ctx.Db.Animal.Id.Find(m.AnimalId) is { } body ? new FlockMember { Body = body, Mind = m } : (FlockMember?)null)
-                .Where(m => m != null)
-                .Select(m => m!.Value)
-                .OrderBy(m => m.Body.Id)
-                .ToList();
-            if (FlockRegrow(ctx, flock, members, now)) continue;
-            if (members.Count == 0) continue;
+            foreach (var flock in ctx.Db.Flock.Iter().ToList())
+            {
+                var members = ctx.Db.AnimalMind.FlockId.Filter(flock.FlockId)
+                    .Select(m => ctx.Db.Animal.Id.Find(m.AnimalId) is { } body ? new FlockMember { Body = body, Mind = m } : (FlockMember?)null)
+                    .Where(m => m != null)
+                    .Select(m => m!.Value)
+                    .OrderBy(m => m.Body.Id)
+                    .ToList();
+                if (FlockRegrow(ctx, flock, members, now)) continue;
+                if (members.Count == 0) continue;
 
-            float cx = members.Average(m => m.Body.X), cz = members.Average(m => m.Body.Z);
-            bool awake = watchers.Any(w => AnimalDist(w.X, w.Z, cx, cz) < FlockWakeRange);
-            if (awake) AnimalThinkFlock(ctx, flock, members, watchers, huddle, now);
+                float cx = members.Average(m => m.Body.X), cz = members.Average(m => m.Body.Z);
+                bool awake = watchers.Any(w => AnimalDist(w.X, w.Z, cx, cz) < FlockWakeRange);
+                if (awake) AnimalThinkFlock(ctx, flock, members, watchers, huddle, now);
+            }
+            TrapTick(ctx, now);
+        }
+        finally
+        {
+            AnimalTickScope = false;
+            AnimalScopedStructures.Clear();
+            AnimalScopedFires.Clear();
         }
     }
+
+    // True only while AnimalTick runs; the per-chunk lookups below are kept for that one tick.
+    static bool AnimalTickScope;
+    static readonly System.Collections.Generic.Dictionary<(int, int), List<Structure>> AnimalScopedStructures = new();
+    static readonly System.Collections.Generic.Dictionary<(int, int), List<(float X, float Z, float Wall)>> AnimalScopedFires = new();
 
     // Reads where online players are now, works out how fast they are moving, and
     // remembers this tick's positions for the next one.

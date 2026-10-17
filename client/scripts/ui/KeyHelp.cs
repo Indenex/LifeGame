@@ -10,7 +10,7 @@ public partial class KeyHelp : CanvasLayer
     // Cached names: a string here would build a new StringName every frame.
     static readonly StringName NKeyHelp = "key_help";
 
-    readonly GridContainer grid = new() { Columns = 2, MouseFilter = Control.MouseFilterEnum.Ignore };
+    readonly GridContainer grid = new() { Columns = 4, MouseFilter = Control.MouseFilterEnum.Ignore };
     Control root = null!;
     float alpha;
     bool open;
@@ -84,26 +84,30 @@ public partial class KeyHelp : CanvasLayer
             grid.RemoveChild(child);
             child.QueueFree();
         }
+        var rows = new System.Collections.Generic.List<(string Keys, string Help)>();
         foreach (var b in Controls.World)
-        {
-            if (b.Help == null || Controls.KeysFor(b) is not { } keys) continue;
-            var key = new Label { Text = keys, HorizontalAlignment = HorizontalAlignment.Right };
-            Hud.Soft(key, 17, 1f);
-            var what = new Label { Text = b.Help };
-            Hud.Soft(what, 17, 0.8f);
-            grid.AddChild(key);
-            grid.AddChild(what);
-        }
+            if (b.Help != null && Controls.KeysFor(b) is { } keys) rows.Add((keys, b.Help));
         // Rows other lanes add, such as admin chat commands.
-        foreach (var (keys, help) in Extra?.Invoke() ?? System.Array.Empty<(string, string)>())
+        rows.AddRange(Extra?.Invoke() ?? System.Array.Empty<(string, string)>());
+        // Two halves side by side (ui-67): one long column ran down over the hotbar at 720p.
+        // The grid fills across, so each line holds row r of the left half and of the right.
+        int half = (rows.Count + 1) / 2;
+        for (int r = 0; r < half; r++)
         {
-            var key = new Label { Text = keys, HorizontalAlignment = HorizontalAlignment.Right };
-            Hud.Soft(key, 17, 1f);
-            var what = new Label { Text = help };
-            Hud.Soft(what, 17, 0.8f);
-            grid.AddChild(key);
-            grid.AddChild(what);
+            AddRow(rows[r]);
+            if (r + half < rows.Count) AddRow(rows[r + half]);
+            else { grid.AddChild(new Control()); grid.AddChild(new Control()); }
         }
+    }
+
+    void AddRow((string Keys, string Help) row)
+    {
+        var key = new Label { Text = row.Keys, HorizontalAlignment = HorizontalAlignment.Right };
+        Hud.Soft(key, 17, 1f);
+        var what = new Label { Text = row.Help };
+        Hud.Soft(what, 17, 0.8f);
+        grid.AddChild(key);
+        grid.AddChild(what);
     }
 
     public static System.Func<System.Collections.Generic.IEnumerable<(string Keys, string Help)>>? Extra;

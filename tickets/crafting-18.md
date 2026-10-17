@@ -1,7 +1,7 @@
 # crafting-18: CraftCheck finds ground for its fires
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-check-fire-spot
 PR: #203
 
@@ -15,4 +15,4 @@ Main Build 653 (run https://github.com/Indenex/LifeGame/actions/runs/38953557618
 - (none)
 
 ## Next step
-Wait for CI; send the PM and Integration the green sha.
+None. Merged to main; kept for history.

@@ -18,6 +18,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void NameClaim(ReducerContext ctx, string name)
     {
+        MeterCall(ctx);
         var claim = RequireOwnStandingClaim(ctx);
         name = Social.CleanClaimName(name);
         bool exists = ctx.Db.ClaimName.ClaimId.Find(claim.Id) != null;

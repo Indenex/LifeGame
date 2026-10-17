@@ -80,6 +80,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void MarkTaughtSeen(ReducerContext ctx)
     {
+        MeterCall(ctx);
         foreach (var row in ctx.Db.Taught.Teacher.Filter(Me(ctx)).Where(t => !t.Seen).ToList())
             ctx.Db.Taught.Id.Update(row with { Seen = true });
     }

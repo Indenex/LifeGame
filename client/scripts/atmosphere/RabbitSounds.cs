@@ -10,6 +10,7 @@ namespace LifeGame;
 // small squeak when one is hurt, and quiet rustling while one grazes close by. Keys on the
 // voice id (AnimalDef.Voice), not the model, and has no bleat. Reads the public animal table and
 // the AnimalHit event in its own subscription.
+[AudioSounds]
 static class RabbitSounds
 {
     const float ThumpHearing = 30f;      // metres

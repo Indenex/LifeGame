@@ -48,6 +48,7 @@ public static partial class Module
     // After a player's position changes: a job whose target they have left behind stops.
     static void CheckJobReach(ReducerContext ctx, Player player, float x, float z)
     {
+        CheckDeviceReach(ctx, player, x, z);
         if (ctx.Db.CraftJob.Owner.Find(player.Identity) is not { } job) return;
         float dx = job.X - x, dz = job.Z - z;
         if (MathF.Sqrt(dx * dx + dz * dz) > JobLeash) CancelJob(ctx, player.Identity);
@@ -59,5 +60,26 @@ public static partial class Module
         if (ctx.Db.CraftJob.Owner.Find(Me(ctx)) is not { } job) return;
         if (Processes.Find(job.ProcessId) is not { Outcome: Outcome.Chop } def) return;
         if (EquippedTool(ctx, def.NeedsTool) is null) CancelJob(ctx, Me(ctx));
+    }
+
+    // A worked (attended) device round holds only while the worker stays: when they walk out of reach
+    // of the device the rest of the round goes back to the unattended pace and score (crafting-36).
+    static void CheckDeviceReach(ReducerContext ctx, Player player, float x, float z)
+    {
+        foreach (var row in ctx.Db.DeviceJob.Iter().Where(j => j.Attended && j.WorkerId == player.PlayerId).ToList())
+        {
+            var job = row;
+            if (ctx.Db.Structure.Id.Find(job.StructureId) is not { } device) continue;
+            if (Dist(device.X, device.Z, x, z) - StationRadius(device) <= Structures.WorkReach + 0.5f) continue;
+            long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
+            long left = Math.Max(0, job.RoundEnd.MicrosecondsSinceUnixEpoch - now);
+            job.Attended = false;
+            job.WorkerId = 0;
+            job.Score = 0f;
+            job.RoundEnd = new Timestamp(now + (long)(left * (Devices.UnattendedTime / Devices.AttendedTime)));
+            job.Token += 1;
+            ctx.Db.DeviceJob.StructureId.Update(job);
+            ctx.Db.DeviceTimer.Insert(new DeviceTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(job.RoundEnd), StructureId = job.StructureId, Token = job.Token });
+        }
     }
 }

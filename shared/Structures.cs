@@ -163,6 +163,8 @@ namespace LifeGame.Shared
         public const int DoorSticks = 4, DoorFiber = 2;
         // Stacks a storage basket holds.
         public const int BasketStacks = 12;
+        // A wooden chest holds twice a basket (start low, grow slowly, D-075); one raisable constant (D-197).
+        public const int ChestStacks = 24;
         // Stacks a storage jar holds (ceramics-6, D-093): 4 for a poor jar up to 8 for
         // a fine one. The first 15% of quality gives 40% of the gain, so an early,
         // better-made jar is quickly worth it; then it climbs slowly (D-075).
@@ -232,6 +234,10 @@ namespace LifeGame.Shared
             // Claim marker (claims-9): one stage, reported as claim.mark for the journal.
             _ when Shape(kind).Model == "ClaimMarker" => Social.MarkProcess,
             _ when Shape(kind).Model == "Basket" => WeaveProcess,
+            // Wooden chest: the frame and the boards and lid are all carpentry, which the journal files as framing.
+            _ when Shape(kind).Model == "Chest" => FrameProcess,
+            // Straw bed: the frame is framing, the straw tick is weaving.
+            _ when Shape(kind).Model == "Bed" => stage == 0 ? FrameProcess : WeaveProcess,
             // Hen coop: the frame is framing, the wattle walls wattle work, the thatch roofing.
             _ when Shape(kind).Model == "Coop" => stage switch { 0 => FrameProcess, 1 => WattleProcess, _ => RoofProcess },
             // Brick and tiled houses: footings and rafters are framing, walls are daub work, the roof is roofing.

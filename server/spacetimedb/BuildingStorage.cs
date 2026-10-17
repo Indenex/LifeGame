@@ -45,6 +45,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void HangDoor(ReducerContext ctx, ulong structureId)
     {
+        MeterCall(ctx);
         var (s, player) = RequireFinishedInReach(ctx, structureId);
         if (!Structures.HasDoorway((int)s.Kind))
             throw new Exception("That has no doorway");
@@ -68,6 +69,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void ToggleDoor(ReducerContext ctx, ulong structureId)
     {
+        MeterCall(ctx);
         var (s, _) = RequireFinishedInReach(ctx, structureId);
         var door = ctx.Db.StructureDoor.StructureId.Find(structureId) ?? throw new Exception("There's no door");
         if (door.Locked && !CanLock(ctx, s, door))
@@ -88,6 +90,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void ToggleLock(ReducerContext ctx, ulong structureId)
     {
+        MeterCall(ctx);
         var (s, _) = RequireFinishedInReach(ctx, structureId);
         var door = ctx.Db.StructureDoor.StructureId.Find(structureId) ?? throw new Exception("There's no door");
         if (!CanLock(ctx, s, door))
@@ -112,6 +115,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void BasketPut(ReducerContext ctx, ulong structureId, ushort item, byte quality, uint count)
     {
+        MeterCall(ctx);
         var (s, _) = RequireFinishedInReach(ctx, structureId);
         if (!Structures.IsStore((int)s.Kind))
             throw new Exception("You can't store things in that");
@@ -140,6 +144,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void BasketTake(ReducerContext ctx, ulong basketItemId, uint count)
     {
+        MeterCall(ctx);
         var row = ctx.Db.BasketItem.Id.Find(basketItemId) ?? throw new Exception("That's gone");
         var (s, _) = RequireFinishedInReach(ctx, row.StructureId);
         CheckClaimAccess(ctx, s.X, s.Z);

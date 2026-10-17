@@ -1,7 +1,7 @@
 # crafting-3: Bow drill
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-bow-drill
 PR: #30
 
@@ -17,4 +17,4 @@ The bow drill from the design doc's tier-2 chain. "String a bow drill" (lash.bow
 - (none; PM approved the defaults)
 
 ## Next step
-Wait for the PM to merge PR #30, then pick crafting-4.
+None. Merged to main; kept for history.
