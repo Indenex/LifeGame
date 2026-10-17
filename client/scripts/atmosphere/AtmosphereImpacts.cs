@@ -28,16 +28,21 @@ public partial class Atmosphere
 
     double connectedAt = -1;
     DbConnection? impactConn;
+    bool impactsHooked;
     float? argImpacts;
     float impactClock;
     int impactStep;
 
     void ReadyImpacts() => argImpacts = ArgFloat("impacts");
 
-    // Avatar.Impact's handler (subscribed once anim-7 is on main). Figures face +Z;
+    // Avatar.Impact's handler (anim-7). Figures face +Z;
     // at is the right hand's tool point; item is the tool (0 for bare hands).
-    void OnAvatarImpact(Node3D avatar, WorkMotion motion, Vector3 at, bool thrown, ushort item) =>
+    void OnAvatarImpact(Avatar avatar, WorkMotion motion, Vector3 at, bool thrown, ushort item)
+    {
+        // The event is static; a freed atmosphere (a closed preview) just ignores it.
+        if (!IsInstanceValid(this) || !IsInstanceValid(avatar)) return;
         OnToolContact(motion, at, avatar.GlobalBasis.Z, thrown);
+    }
 
     // Only for --impacts: take turns at a chop, a dig and a tree coming down.
     void UpdateImpacts(float dt)
@@ -70,6 +75,9 @@ public partial class Atmosphere
     {
         impactConn = conn;
         connectedAt = Time.GetTicksMsec() / 1000.0;
+        // Once only, even if the connection is made again.
+        if (!impactsHooked) Avatar.Impact += OnAvatarImpact;
+        impactsHooked = true;
         conn.Db.ChoppedTree.OnUpdate += (_, before, after) => { if (!before.Felled && after.Felled) TreeFell(after); };
         // A tree felled since we connected arrives as a new row; the ones felled
         // before are just the world as it is.
