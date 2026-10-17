@@ -78,4 +78,29 @@ public static partial class Module
         var (rx, rz) = Structures.ToWorld(b.X, b.Z, b.Yaw, shape.Roost.X + along, shape.Roost.Z);
         return new RoostPoint(ex, ez, rx, rz, b);
     }
+
+    // Deer (animals-21): through the middle of the day they lie down where they are and get up again
+    // afterwards, staggered, so a hunter learns when to look for them grazing (dawn, dusk).
+    const float BedFrom = 0.42f, BedTo = 0.62f;
+
+    // Returns true while the animal is bedded down (or has just settled) and the usual decisions should be skipped.
+    static bool MiddayBed(ReducerContext ctx, ref Animal body, ref AnimalMind mind, long now)
+    {
+        float t = TimeOfDay(ctx);
+        bool bedding = body.State == AnimalState.Roost;
+        bool midday = t >= BedFrom && t <= BedTo;
+        if (!midday)
+        {
+            if (!bedding) return false;
+            body.State = AnimalState.Idle;
+            mind.StateUntil = now + AnimalMicros(1f, 20f, ctx);
+            return true;
+        }
+        if (bedding) return true;
+        // Only a calm animal that isn't mid-walk settles.
+        if (mind.Nervous > 0.1f || body.State is AnimalState.Walk or AnimalState.Run) return false;
+        body.State = AnimalState.Roost;
+        mind.StateUntil = now;
+        return true;
+    }
 }

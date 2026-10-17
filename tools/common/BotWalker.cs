@@ -127,7 +127,7 @@ public sealed class BotWalker
             {
                 // The server has moved on from where we last measured: that is progress.
                 if (MathF.Abs(s.X - markX) + MathF.Abs(s.Z - markZ) >= StallMetres) { markX = s.X; markZ = s.Z; progress.Restart(); }
-                else if (progress.Elapsed.TotalSeconds > StallSeconds) return false;
+                else if (progress.Elapsed.TotalSeconds > (strict ? StallSeconds * 2.5 : StallSeconds)) return false; // strict has no recovery, so give a slow runner time
             }
             float step = MathF.Min(near < 0.5f ? d : d - near * 0.9f, 0.5f);
             // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it has

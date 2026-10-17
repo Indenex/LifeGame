@@ -9,7 +9,7 @@ using System;
 namespace LifeGame.Shared
 {
     // Stable ids: append only, never renumber.
-    public enum FeatureId : byte { GiantOak = 1, Outcrop = 2, Ford = 3 }
+    public enum FeatureId : byte { GiantOak = 1, Outcrop = 2, Ford = 3, FallenGiant = 4 }
 
     // Where a feature stands: on dry land, or in a stream's shallows.
     public enum FeatureGround : byte { Dry, Stream }
@@ -37,6 +37,7 @@ namespace LifeGame.Shared
         {
             new(FeatureId.GiantOak, "giant oak", FeatureGround.Dry, FeatureBlock.Trunk, 64, 0u, 7f, Landmarks.OakFits, "landmark.giant_tree"),
             new(FeatureId.Outcrop, "rock outcrop", FeatureGround.Dry, FeatureBlock.Stones, Landmarks.OutcropSquare, 1u, 8f, Landmarks.OutcropFits, "landmark.outcrop"),
+            new(FeatureId.FallenGiant, "fallen giant", FeatureGround.Dry, FeatureBlock.Stones, Landmarks.FallenGiantSquare, 2u, 9f, Landmarks.FallenGiantFits, "landmark.fallen_giant"),
             new(FeatureId.Ford, "ford", FeatureGround.Stream, FeatureBlock.None, 0, 0u, 0f, Landmarks.FordFits, "landmark.ford"),
         };
 
