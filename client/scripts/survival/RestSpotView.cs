@@ -115,6 +115,15 @@ public partial class RestSpotView : CanvasLayer
         Close();
     }
 
+    // Lie down on the mat (survival-27, Justin's pick): just a pose everyone sees; walking off
+    // or StandUp ends it. The server checks the same things as SetRespawn.
+    void LieDown()
+    {
+        if (conn != null && MyMat() is { } mat && RestSpots.OfItem(Item.SleepingMat) is { } spot)
+            conn.Reducers.LieOnRestSpot(spot.Id, mat.StructureId);
+        Close();
+    }
+
     void RollUp()
     {
         conn?.Reducers.RollUpMat();
@@ -132,11 +141,13 @@ public partial class RestSpotView : CanvasLayer
         body.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         setButton = Ui.MainButton("Wake here", Set);
         var notNow = ControlsPage.TextButton("Not now", Close);
+        var lieButton = ControlsPage.TextButton("Lie down", LieDown);
         rollButton = ControlsPage.TextButton("Roll up the mat", RollUp);
         var buttons = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         buttons.AddThemeConstantOverride("separation", 18);
         buttons.AddChild(setButton);
         buttons.AddChild(notNow);
+        buttons.AddChild(lieButton);
         buttons.AddChild(rollButton);
         hint = Hud.Text("", 13);
         hint.Modulate = new Color(1, 1, 1, 0.55f);
