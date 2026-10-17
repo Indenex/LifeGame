@@ -3,8 +3,10 @@ using SpacetimeDB;
 public static partial class Module
 {
     // A client that is killed or loses power may never trigger ClientDisconnected, which
-    // leaves its player "Online" for ever. Clients send Heartbeat every HeartbeatSeconds;
-    // the 30 s tick marks anyone silent for StaleSeconds offline, as a disconnect would.
+    // leaves its player "Online" for ever. The game client sends Heartbeat every 20 s; the
+    // 30 s tick marks anyone who started heartbeating and then went silent for StaleSeconds
+    // offline, as a disconnect would. A connection that never heartbeats (the check bots,
+    // which sit idle for long stretches) is never swept: only the real client opts in.
     const int StaleSeconds = 75;
 
     [SpacetimeDB.Table(Accessor = "PlayerSeen")]
@@ -14,6 +16,8 @@ public static partial class Module
         public uint PlayerId;
         public Timestamp At;
     }
+
+    static void ForgetSeen(ReducerContext ctx, uint playerId) => ctx.Db.PlayerSeen.PlayerId.Delete(playerId);
 
     static void MarkSeen(ReducerContext ctx, uint playerId)
     {
@@ -41,11 +45,7 @@ public static partial class Module
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         foreach (var player in ctx.Db.Player.Iter().Where(p => p.Online).ToList())
         {
-            if (ctx.Db.PlayerSeen.PlayerId.Find(player.PlayerId) is not { } seen)
-            {
-                MarkSeen(ctx, player.PlayerId); // online before this existed: grace period
-                continue;
-            }
+            if (ctx.Db.PlayerSeen.PlayerId.Find(player.PlayerId) is not { } seen) continue;
             if (now - seen.At.MicrosecondsSinceUnixEpoch < StaleSeconds * 1_000_000L) continue;
             ctx.Db.Player.Identity.Update(player with { Online = false });
             SurvivalDisconnected(ctx, player);

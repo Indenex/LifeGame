@@ -53,6 +53,7 @@ public partial class Main : Node3D
     readonly EquipmentPanel equipment = new();
     readonly StationPanel station = new();
     readonly BuildMenu buildMenu = new();
+    readonly Placing placing = new();
     readonly LookPicker lookPicker = new();
     bool spawned;
     Vector3 velocity;
@@ -86,15 +87,28 @@ public partial class Main : Node3D
         AddChild(journal);
         view.AddChild(journal.Notes);
         AddChild(crafting);
+        // Setting crafted things down (ui-16): from the bag, a hotbar key or the after-craft prompt.
+        placing.Terrain = terrain;
+        placing.Me = me;
+        placing.CameraRig = cameraRig;
+        placing.View = view;
+        placing.Note = hud.Note;
+        placing.OverBar = at => hud.Hotbar.RowRect.HasPoint(at);
+        HotbarBar.Placeable = item => Items.IsKnown((ushort)item) && Items.Def(item).Placeable;
+        hud.Hotbar.PlaceRequested += placing.StartItem;
+        AddChild(placing);
         AddChild(woodcutting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
+        atmosphere.SeeThrough = building.SeeThroughOf;
+        atmosphere.OtherFigures = () => others.Values;
         AddChild(building);
         // The picture build menu (ui-20): B opens it; a tile starts House building's ghost.
         // Added after building, so it sees B first; while the ghost is up, B is building's.
         buildMenu.Place = building.StartPlacing;
-        buildMenu.Blocked = () => building.Placing || crafting.CapturesInput || Panels.Open() || survival.Mourning || social.Typing;
+        buildMenu.NeedsClaim = building.NeedsClaimHere;
+        buildMenu.Blocked = () => building.Placing || placing.Active || crafting.CapturesInput || Panels.Open() || survival.Mourning || social.Typing;
         AddChild(buildMenu);
         survival.Setup(view, terrain, me, hud);
         survival.AvatarOf = id => others.GetValueOrDefault(id);
@@ -102,9 +116,9 @@ public partial class Main : Node3D
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
-        useKey.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
+        useKey.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || Panels.Side() || survival.Mourning;
         // The hotbar's number keys (ui-19) rest while something else has the keys.
-        hud.Hotbar.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning || social.Typing;
+        hud.Hotbar.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || Panels.Side() || survival.Mourning || social.Typing;
         hud.Hotbar.Note = hud.Note;
         // The bag in the I panel (ui-18): drags go to the hotbar, the worn slots or the ground.
         hud.Hotbar.ShowOverPanels = () => equipment.IsOpen;
@@ -151,7 +165,7 @@ public partial class Main : Node3D
             || buildMenu.IsOpen
             || lookPicker.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
-        herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || survival.Mourning;
+        herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
@@ -382,6 +396,7 @@ public partial class Main : Node3D
         admin.Attach(conn);
         equipment.Attach(new ServerEquipLink(conn));
         hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
+        placing.Attach(new ServerPlaceLink(conn, crafting, terrain.HeightAt));
         equipment.Bag.Link = new ServerBagLink(conn);
         buildMenu.Carried = item => conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
         crafting.Attach(conn);
@@ -547,7 +562,7 @@ public partial class Main : Node3D
     void AddItem(WorldItem item)
     {
         if (items.Has(item.Id)) return;
-        float yaw = Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
+        float yaw = item.Placed ? item.Yaw : Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
         var at = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
         items.Add(item.Id, (Item)item.Item, new Transform3D(new Basis(Vector3.Up, yaw), at));
     }
@@ -613,12 +628,13 @@ public partial class Main : Node3D
         var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
         if (flying) { Fly(dt, input); return; }
         bool sneak = Input.IsActionPressed(NSneak);
-        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * survival.MoveSpeed(sneak, input != Vector2.Zero, WalkSpeed, dt);
+        float wading = Wading.SpeedFactor(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z)));
+        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * survival.MoveSpeed(sneak, input != Vector2.Zero, WalkSpeed, dt) * wading;
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
         // Jump (bugfix-25): a hop keeps its takeoff direction, and the server tells the others.
-        if (!social.Typing && Input.IsActionJustPressed(NJump) && jump.CanStart(sneak) && survival.TrySpendStamina(Stamina.JumpCost))
+        if (!social.Typing && Input.IsActionJustPressed(NJump) && jump.CanStart(sneak) && !Wading.Floating(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z))) && survival.TrySpendStamina(Stamina.JumpCost))
         {
             jump.Start(velocity);
             conn?.Reducers.Jump();
@@ -629,13 +645,11 @@ public partial class Main : Node3D
 
         var pos = building.Collide(me.Position, me.Position + velocity * dt, jump.AirHeight);
         pos = terrain.CollideVegetation(pos, jump.AirHeight);
-        // Deep water is not walkable yet, but a step that climbs is always allowed,
-        // so nobody gets trapped in a flooded hole they dug.
+        // Water is walkable (bugfix-32): feet follow the bed, or float over deep water.
         float next = terrain.HeightAt(pos.X, pos.Z);
-        if (next < Look.WaterLevel - 0.3f && next < terrain.HeightAt(me.Position.X, me.Position.Z))
-            pos = me.Position;
+        float feet = Wading.FeetY(next);
         // Ease up and down slopes instead of popping between heights; in the air the feet follow the arc.
-        pos.Y = jump.Airborne ? next + jump.AirHeight : Mathf.Lerp(me.Position.Y, next, 1f - Mathf.Exp(-14f * dt));
+        pos.Y = jump.Airborne ? feet + jump.AirHeight : Mathf.Lerp(me.Position.Y, feet, 1f - Mathf.Exp(-14f * dt));
         me.Position = pos;
         me.SetJump(jump.Airborne, jump.Rising, jump.Landing);
         if (landed) Sfx.Land(jump.Landing, atmosphere.GroundAt(pos));
@@ -729,7 +743,8 @@ public partial class Main : Node3D
         return null;
     }
 
-    // One identity per install, so you keep your character between sessions.
+    // One identity per install, so you keep your character between sessions. It lives in the
+    // Godot user folder (outside the launcher's game folder), so reinstalling the game keeps it.
     static string TokenPath => Arg("profile") is { } p ? $"user://token_{p}.txt" : "user://token.txt";
 
     static string? LoadToken()
@@ -742,6 +757,13 @@ public partial class Main : Node3D
 
     static void SaveToken(string token)
     {
+        // A different token from the one on disk (server wiped, key changed) keeps the old one as
+        // a .bak, so a character is never lost for good by an overwrite.
+        if (LoadToken() is { } old && old != token)
+        {
+            using var bak = FileAccess.Open(TokenPath + ".bak", FileAccess.ModeFlags.Write);
+            bak.StoreString(old);
+        }
         using var file = FileAccess.Open(TokenPath, FileAccess.ModeFlags.Write);
         file.StoreString(token);
     }

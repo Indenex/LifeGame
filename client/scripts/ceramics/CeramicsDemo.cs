@@ -71,8 +71,8 @@ public partial class CeramicsDemo : Node3D
         {
             // Like a real building, clear the grass and trees on the cells it stands on (Terrain.Cleared).
             var centre = anchor.Position + new Vector3(0, 0, -2.2f);
-            int x0 = Mathf.FloorToInt(centre.X - 4f), x1 = Mathf.CeilToInt(centre.X + 2f);
-            int z0 = Mathf.FloorToInt(centre.Z - 5f), z1 = Mathf.CeilToInt(centre.Z + 2f);
+            int x0 = Mathf.FloorToInt(centre.X - 4f), x1 = Mathf.CeilToInt(centre.X + 3f);
+            int z0 = Mathf.FloorToInt(centre.Z - 5f), z1 = Mathf.CeilToInt(centre.Z + 4.5f);
             var before = terrain.Cleared;
             terrain.Cleared = (cx, cz) => (cx >= x0 && cx <= x1 && cz >= z0 && cz <= z1) || before?.Invoke(cx, cz) == true;
             for (int cx = x0; cx <= x1; cx++)

@@ -22,6 +22,7 @@ public enum StructureKind
     PottersBench,
     LogCabin,
     RepairTable,
+    TiledHouse,
     ClayTrough,
 }
 
@@ -125,6 +126,7 @@ public static partial class Module
 
         if (Structures.IsIndoor(k) && HomeAround(ctx, x, z, Structures.HearthWallGap) is null)
             throw new Exception("A hearth goes inside a finished hut or house");
+        CheckClaimOnly(ctx, k, x, z);
         CheckClaimAccess(ctx, x, z);
         CheckStructureSite(ctx, kind, x, z);
         CheckStationSite(ctx, kind, x, z);
@@ -149,6 +151,15 @@ public static partial class Module
             PlacedAt = ctx.Timestamp,
         });
         TouchStructure(ctx, placed.Id);
+    }
+
+    // Only basic survival buildings may stand outside a claim (building-13, Justin): anything else
+    // has to be inside a claim the builder belongs to, so cities grow where players cooperate.
+    static void CheckClaimOnly(ReducerContext ctx, int kind, float x, float z)
+    {
+        if (Structures.IsWild(kind)) return;
+        if (ClaimAt(ctx, x, z) is not { } claim || !HasClaimRights(ctx, claim, ctx.Sender))
+            throw new Exception($"A {Structures.Shape(kind).Name.ToLowerInvariant()} has to stand inside your claim");
     }
 
     // Adds one carried item the current stage still needs. Anyone in reach can help.

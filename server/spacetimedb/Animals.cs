@@ -33,6 +33,9 @@ public static partial class Module
     const float FlockWakeRange = (World.ViewRadiusChunks + 1) * World.ChunkSize * World.CellSize;
 
     // How each species moves, senses and what it drops lives in shared/Animals.cs (AnimalDefs).
+    // Water this deep (m) makes a moving player splash, and how scary the splash is up close (D-075: gentle).
+    const float WadeNoiseDepth = 0.05f, WadeSplashFear = 0.5f;
+
     static AnimalDef Traits(AnimalSpecies species) => AnimalDefs.Get((byte)species);
 
     // Anyone moving slower than this, sneakers included, never frightens a sheep.
@@ -207,6 +210,8 @@ public static partial class Module
         public float X, Z, Vx, Vz, Speed, StillSeconds;
         public uint PlayerId;
         public bool Sneaking;
+        // Standing in water (wading or afloat): moving there splashes.
+        public bool InWater;
     }
 
     struct FlockMember
@@ -258,7 +263,7 @@ public static partial class Module
             }
             if (ctx.Db.PlayerPos.PlayerId.Find(player.PlayerId) is not { } pos) continue;
 
-            var w = new AnimalWatcher { X = pos.X, Z = pos.Z, PlayerId = player.PlayerId, Sneaking = ctx.Db.PlayerSneaking.PlayerId.Find(player.PlayerId) != null };
+            var w = new AnimalWatcher { X = pos.X, Z = pos.Z, PlayerId = player.PlayerId, Sneaking = ctx.Db.PlayerSneaking.PlayerId.Find(player.PlayerId) != null, InWater = Wading.Depth(World.BaseHeight(World.CellOf(pos.X), World.CellOf(pos.Z))) > WadeNoiseDepth };
             if (ctx.Db.AnimalPlayerSeen.PlayerId.Find(player.PlayerId) is { } seen)
             {
                 // Positions arrive in 100 ms batches, so a single sample is jittery;
@@ -357,6 +362,9 @@ public static partial class Module
             float threat = Math.Clamp((closing - t.CalmSpeed) / 2f, 0f, 1f) * near;
             // Brushing past at full walk startles; a sneaking player can move among them.
             if (d < 2f && w.Speed > t.CalmSpeed) threat = MathF.Max(threat, 0.6f);
+            // Splashing through water carries: a player moving in it spooks animals out to their
+            // notice range, sneaking or not (standing still in the water is silent).
+            if (w.InWater && w.Speed > 0.3f) threat = MathF.Max(threat, WadeSplashFear * near);
             if (d < t.Wary && w.Speed > 0.3f) threat = MathF.Max(threat, 0.6f * (1f - d / t.Wary) + 0.2f);
             if (threat > 0f)
             {

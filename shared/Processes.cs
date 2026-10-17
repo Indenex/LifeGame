@@ -218,6 +218,19 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.Fiber, 8) },
                 Seconds = Base(2, 2f), Makes = Item.SleepingMat,
             },
+            // Animals' bow and arrows (animals-15). Powers are on the items (shared/Items.cs).
+            new ProcessDef
+            {
+                Id = "lash.bow", Name = "String a bow", Doing = "Bending and stringing a bow", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick, 3), new Ingredient(Item.Cordage, 2) }, NeedsTool = ItemTags.Cutting,
+                Seconds = Base(2, 1.5f), Makes = Item.Bow,
+            },
+            new ProcessDef
+            {
+                Id = "carve.arrows", Name = "Make arrows", Doing = "Shaving and fletching arrows", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick, 2), new Ingredient(Item.Fiber, 2) }, NeedsTool = ItemTags.Cutting,
+                Seconds = Base(2, 1f), Makes = Item.Arrow, MakesCount = 3,
+            },
             new ProcessDef
             {
                 Id = "lash.bow_drill", Name = "String a bow drill", Doing = "Stringing a bow drill", Tier = 2,
