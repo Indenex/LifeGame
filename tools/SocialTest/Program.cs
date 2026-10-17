@@ -243,6 +243,27 @@ Pump(() => b.Conn.Db.WorldItem.Iter().Any(i => Social.InClaim(claim.X, claim.Z, 
 var stone = b.Conn.Db.WorldItem.Iter().First(i => Social.InClaim(claim.X, claim.Z, i.X, i.Z) && i.Item == (ushort)Item.Stone);
 Walk(b, stone.X, stone.Z);
 ExpectError(b, () => b.Conn.Reducers.PickUp(stone.Id), "claimed", "B cannot pick up inside A's claim");
+// claims-29: what you drop is yours to pick back up, even inside someone else's claim.
+var bOwn = b.Conn.Db.MyInventory.Iter().Where(i => i.Count > 0 && !i.OnBelt).Take(1).ToList();
+if (bOwn.Count == 0) Console.WriteLine("  (B carries nothing; own-drop pick-up not checked)");
+else
+{
+    var own = bOwn[0];
+    uint ownBefore = b.Count((Item)own.Item);
+    var seen = b.Conn.Db.WorldItem.Iter().Select(i => i.Id).ToHashSet();
+    b.LastError = null;
+    b.Conn.Reducers.Drop(own.Item, own.Quality);
+    Pump(() => b.Conn.Db.WorldItem.Iter().Any(i => !seen.Contains(i.Id) && i.Item == own.Item) || b.LastError != null, 5, "B's own drop visible");
+    var dropped = b.Conn.Db.WorldItem.Iter().Where(i => !seen.Contains(i.Id) && i.Item == own.Item).Take(1).ToList();
+    Check(dropped.Count == 1, $"B drops a thing inside A's claim ({b.LastError ?? "ok"})");
+    if (dropped.Count == 1)
+    {
+        b.LastError = null;
+        b.Conn.Reducers.PickUp(dropped[0].Id);
+        Pump(() => b.Count((Item)own.Item) == ownBefore || b.LastError != null, 5, "pick own back up");
+        Check(b.LastError == null && b.Count((Item)own.Item) == ownBefore, $"B picks up what B dropped inside A's claim ({b.LastError ?? "ok"})");
+    }
+}
 ExpectError(b, () => b.Conn.Reducers.TendClaim(claim.Id), "Only the owner", "B cannot tend A's marker");
 
 // The owner can still dig at home, and working the land tends the claim (claims-5).

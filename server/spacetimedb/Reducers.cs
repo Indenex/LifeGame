@@ -212,10 +212,12 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var item = ctx.Db.WorldItem.Id.Find(itemId) ?? throw new Exception("That item is gone");
         RequireReach(RequirePos(ctx, player), item.X, item.Z);
-        RequireClaimAccess(ctx, item.X, item.Z);
+        // What you dropped (or lost when you died) is yours to pick up on any land (claims-29).
+        if (!DroppedBy(ctx, itemId, player.PlayerId)) RequireClaimAccess(ctx, item.X, item.Z);
         PickUpGuard(ctx, item);
 
         ctx.Db.WorldItem.Id.Delete(itemId);
+        ForgetDropper(ctx, itemId);
         AddToInventory(ctx, Me(ctx), (Item)item.Item, 1, item.Quality, item.Wear, item.Maker);
         PerformedProcess(ctx, player.PlayerId, Skills.Forage, item.X, item.Z);
         NoteAct(ctx, player.PlayerId, WorkMotion.PickUp, (Item)item.Item);

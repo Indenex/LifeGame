@@ -339,7 +339,7 @@ public static partial class Module
                 float angle = (float)(ctx.Rng.NextDouble() * Math.PI * 2);
                 float r = 0.3f + (float)ctx.Rng.NextDouble() * 1.2f;
                 float x = pos.X + MathF.Cos(angle) * r, z = pos.Z + MathF.Sin(angle) * r;
-                ctx.Db.WorldItem.Insert(new WorldItem
+                var lost = ctx.Db.WorldItem.Insert(new WorldItem
                 {
                     Id = 0,
                     Item = stack.Item,
@@ -351,6 +351,7 @@ public static partial class Module
                     ChunkX = World.ChunkOf(x),
                     ChunkZ = World.ChunkOf(z),
                 });
+                OnDeathDropped(ctx, player, lost);
             }
             ctx.Db.InventoryItem.Id.Delete(stack.Id);
         }

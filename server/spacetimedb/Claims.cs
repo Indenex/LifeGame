@@ -459,6 +459,7 @@ public static partial class Module
         foreach (var claim in ctx.Db.Claim.Iter().ToList())
             if (!IsStanding(ctx, claim))
                 RemoveClaim(ctx, claim);
+        ForgetGoneDroppers(ctx);
     }
 
     // --- Helpers -----------------------------------------------------------
