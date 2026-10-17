@@ -3,7 +3,7 @@
 client-as-puppet
 client-movie 12
 client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=4.5,1.6,35,0.8
-frames 300
+frames 60
 give 10 1 60
 walkto bush
 frames +24
@@ -20,7 +20,7 @@ keyup f
 mark dig-end
 frames +24
 sql UPDATE player_pos SET x = 13.0, z = -2.0, chunk_x = 0, chunk_z = -1
-frames +120
+frames +48
 face 90
 frames +12
 mark tree-start

@@ -4,7 +4,7 @@ client-as-puppet
 client-movie 12
 client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.2 --debug-position=13,-2 --render-cam=4.5,1.8,35,1.6
 sql UPDATE player_pos SET x = 13.0, z = -2.0, chunk_x = 0, chunk_z = -1
-frames 300
+frames 60
 give 10 1 60
 give 5 4 50
 frames +12

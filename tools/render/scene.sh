@@ -69,7 +69,7 @@ movie_dir=$work/movie-$sha
 if [ "$movie_fps" != 0 ]; then
   # Every frame is a fixed 1/fps of game time, so the game's own physics rate is
   # kept (lib.sh's 20 Hz override would make walking stutter in the clip).
-  printf '[autoload]\n\nRenderCam="*res://render_cam.gd"\n' > "$tree/client/override.cfg"
+  printf '[autoload]\n\nRenderCam="*res://render_cam.gd"\n\n[display]\n\nwindow/size/viewport_width=%s\nwindow/size/viewport_height=%s\nwindow/size/window_width_override=%s\nwindow/size/window_height_override=%s\n' "${size%x*}" "${size#*x}" "${size%x*}" "${size#*x}" > "$tree/client/override.cfg"
   rm -rf "$movie_dir"; mkdir -p "$movie_dir"
   engine_opts=(--write-movie "$movie_dir/frame.png" --fixed-fps "$movie_fps")
 fi
