@@ -3,7 +3,7 @@ Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
 Status: in_review
 Branch: claude/painted-13-ghosts (stacked on painted-12, #642)
-PR: (opening)
+PR: #661
 
 ## Goal
 Environment's env-25 (#587) changed how Look's ghosts fade: `depth_prepass_alpha`, so overlapping faded surfaces don't stack, and `STRUCTURE_GHOST` for buildings' own fade rules. Painted props, structures and trees fade the same way.
