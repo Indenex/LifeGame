@@ -57,8 +57,10 @@ public static class Controls
         // Building reads Shift inside its door offer, so this follows the Use key.
         new("bar_door", None, "Bar or unbar a hut door", Fixed: true, KeyText: "Shift {use}"),
         // The player menu (ui-35) and the name note (ui-72) read the right mouse button themselves;
-        // this row only puts them in the F1 list (ui-74), so players can find Trade and groups.
-        new("player_menu", None, "Trade, whisper or invite someone (rest on them to see who they are)", Fixed: true, KeyText: "{click} a player"),
+        // this row only puts them in the F1 list (ui-74), so players can find Trade and groups. Its
+        // hint waits until someone first comes near (ui-75).
+        new("player_menu", None, "Trade, whisper or invite someone (rest on them to see who they are)",
+            "{key} to trade, whisper, or invite them to your town or group", OnRequest: true, Fixed: true, KeyText: "{click} a player"),
         // anim-12: sit down, press again to lie down; walking gets you up (Animation's Avatar).
         // ui-48 (D-323): hold for the emote wheel, let go on one; a tap leaves it open to click.
         new("emote", new[] { Key.Q }, "Wave, cheer, dance or bow (hold, point, let go)", "Hold {key} for a wave, a cheer, a dance or a bow", OnRequest: true, Name: "Emotes (hold)"),
