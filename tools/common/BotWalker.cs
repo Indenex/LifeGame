@@ -16,6 +16,9 @@ using SpacetimeDB.Types;
 public sealed class BotWalker
 {
     // No progress of this far in this long counts as a stall.
+    // Metres per 100 ms pump: 4 m/s at most, under the 4.2 m/s walking pace (Stamina.cs), so a server that caps
+    // anything faster than a walk (stamina, D-182) never trims the bots.
+    public const float WalkMetresPerSecond = 4f, StepMetres = WalkMetresPerSecond * 0.1f;
     public const float StallMetres = 0.3f;
     public const double StallSeconds = 3.0;
 
@@ -129,7 +132,7 @@ public sealed class BotWalker
                 if (MathF.Abs(s.X - markX) + MathF.Abs(s.Z - markZ) >= StallMetres) { markX = s.X; markZ = s.Z; progress.Restart(); }
                 else if (progress.Elapsed.TotalSeconds > (strict ? StallSeconds * 2.5 : StallSeconds)) return false; // strict has no recovery, so give a slow runner time
             }
-            float step = MathF.Min(near < 0.5f ? d : d - near * 0.9f, 0.5f);
+            float step = MathF.Min(near < 0.5f ? d : d - near * 0.9f, StepMetres);
             // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it has
             // caught up, and keep reporting where we are, as a real client does (bugfix-24).
             if (seen is { } held && MathF.Abs(held.X - x) + MathF.Abs(held.Z - z) >= 1.5f)
