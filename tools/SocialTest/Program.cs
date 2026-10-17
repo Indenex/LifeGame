@@ -431,7 +431,8 @@ Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id) || a.LastError !
 Check(!a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id), $"the owner can take down a member's building ({a.LastError ?? "ok"})");
 
 // --- Fighting (claims-3). The grace was set to 0 at the top.
-float Hp(Tester t, uint id) => t.Conn.Db.PlayerHealth.PlayerId.Find(id)?.Health ?? -1f;
+// Health is private; a player reads their own through my_health.
+float Hp(Tester t) => t.Conn.Db.MyHealth.Iter().FirstOrDefault()?.Health ?? -1f;
 // Not on claimed land with fighting off. Tend first: CI gives claims only 30 s.
 Walk(a, claim.X + 1.5f, claim.Z);
 long tendedBefore = a.MyClaim()?.ExpiresAt.MicrosecondsSinceUnixEpoch ?? 0;
@@ -453,11 +454,11 @@ bool ServerInReach() =>
     b.Conn.Db.PlayerPos.PlayerId.Find(b.PlayerId) is { } pb && b.Conn.Db.PlayerPos.PlayerId.Find(a.PlayerId) is { } pa
     && new Vector(pb.X - pa.X, pb.Z - pa.Z).Length <= Social.StrikeReach;
 Wait(ServerInReach, 5);
-float full = Hp(b, a.PlayerId);
+float full = Hp(a);
 b.LastError = null;
 b.Conn.Reducers.StrikePlayer(a.PlayerId);
-Pump(() => Hp(b, a.PlayerId) < full || b.LastError != null, 5, "strike lands");
-Check(Hp(b, a.PlayerId) < full, $"a strike in the wild lands ({full:F1} -> {Hp(b, a.PlayerId):F1}, {b.LastError ?? "ok"})");
+Pump(() => Hp(a) < full || b.LastError != null, 5, "strike lands");
+Check(Hp(a) < full, $"a strike in the wild lands ({full:F1} -> {Hp(a):F1}, {b.LastError ?? "ok"})");
 ExpectError(b, () => b.Conn.Reducers.StrikePlayer(a.PlayerId), "Too soon", "strikes have a short cooldown");
 // Strike until A falls: A's things drop and A wakes elsewhere.
 uint carried = (uint)a.Conn.Db.MyInventory.Iter().Sum(i => i.Count);
@@ -473,13 +474,13 @@ for (int i = 0; i < 40 && !StruckDown(); i++)
 }
 Pump(StruckDown, 5, "struck down");
 Check(true, "a player can be struck down in the wild, and nearby players hear of it");
-Check(b.Conn.Db.PlayerHealth.PlayerId.Find(b.PlayerId)?.MarkedUntil.MicrosecondsSinceUnixEpoch > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000,
+Check(b.Conn.Db.PlayerStanding.PlayerId.Find(b.PlayerId)?.MarkedUntil.MicrosecondsSinceUnixEpoch > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000,
     "whoever struck them down is marked for a while");
 Pump(() => a.Conn.Db.MyInventory.Iter().Sum(i => i.Count) == 0, 5, "drop on death");
 Check(carried == 0 || a.Conn.Db.MyInventory.Iter().Sum(i => i.Count) == 0, $"being struck down drops what you carry ({carried} things)");
 var woke = a.Conn.Db.PlayerPos.PlayerId.Find(a.PlayerId)!;
 Check(MathF.Abs(woke.X - wx) + MathF.Abs(woke.Z - wz) > 5, "the fallen player wakes somewhere else");
-Check(Hp(b, a.PlayerId) >= Social.MaxHealth, "and wakes with full health");
+Check(Hp(a) >= Social.MaxHealth, "and wakes with full health");
 a.X = woke.X; a.Z = woke.Z;
 
 if (decay)
@@ -803,7 +804,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_characters", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_group", "SELECT * FROM my_group_invites",
+                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_characters", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_standing", "SELECT * FROM my_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_group", "SELECT * FROM my_group_invites",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))

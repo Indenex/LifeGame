@@ -241,6 +241,7 @@ public static partial class Module
         if (ctx.Db.PlayerLook.PlayerId.Find(id) != null) ctx.Db.PlayerLook.PlayerId.Delete(id);
         if (ctx.Db.PlayerMark.PlayerId.Find(id) != null) ctx.Db.PlayerMark.PlayerId.Delete(id);
         if (ctx.Db.PlayerHealth.PlayerId.Find(id) != null) ctx.Db.PlayerHealth.PlayerId.Delete(id);
+        if (ctx.Db.PlayerStanding.PlayerId.Find(id) != null) ctx.Db.PlayerStanding.PlayerId.Delete(id);
         if (ctx.Db.PlayerJump.PlayerId.Find(id) != null) ctx.Db.PlayerJump.PlayerId.Delete(id);
         if (ctx.Db.PlayerSneaking.PlayerId.Find(id) != null) ctx.Db.PlayerSneaking.PlayerId.Delete(id);
         if (ctx.Db.PlayerSeen.PlayerId.Find(id) != null) ctx.Db.PlayerSeen.PlayerId.Delete(id);

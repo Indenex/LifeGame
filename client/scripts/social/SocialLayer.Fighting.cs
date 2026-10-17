@@ -60,7 +60,7 @@ void fragment() {
             float d = to.Length();
             if (d > bestD || d < 0.01f || to / d is var dir && dir.Dot(facing) < 0.4f) continue;
             if (!FightingAllowedAt(p.X, p.Z)) continue;
-            if (conn.Db.PlayerHealth.PlayerId.Find(p.PlayerId) is { } h && h.GraceUntil.MicrosecondsSinceUnixEpoch > now) continue;
+            if (conn.Db.PlayerStanding.PlayerId.Find(p.PlayerId) is { } h && h.GraceUntil.MicrosecondsSinceUnixEpoch > now) continue;
             if (conn.Db.Player.PlayerId.Find(p.PlayerId) is not { Online: true }) continue;
             best = p;
             bestD = d;
@@ -75,7 +75,7 @@ void fragment() {
 
     float MyHealth()
     {
-        if (conn?.Db.PlayerHealth.PlayerId.Find(myId) is not { } h) return Social.MaxHealth;
+        if (conn?.Db.MyHealth.Iter().FirstOrDefault() is not { } h) return Social.MaxHealth;
         return Social.HealthAt(h.Health, h.AsOf.MicrosecondsSinceUnixEpoch, h.LastHitAt.MicrosecondsSinceUnixEpoch, NowMicros, h.Fed);
     }
 
@@ -104,7 +104,7 @@ void fragment() {
         foreach (var p in conn.Db.PlayerPos.Iter())
         {
             if (p.PlayerId == myId || avatarOf(p.PlayerId) is not Avatar avatar) continue;
-            bool marked = conn.Db.PlayerHealth.PlayerId.Find(p.PlayerId) is { } h && h.MarkedUntil.MicrosecondsSinceUnixEpoch > now;
+            bool marked = conn.Db.PlayerStanding.PlayerId.Find(p.PlayerId) is { } h && h.MarkedUntil.MicrosecondsSinceUnixEpoch > now;
             avatar.SetNameTint(marked ? MarkedName : Look.Cream);
         }
     }

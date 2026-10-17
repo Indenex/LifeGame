@@ -8,7 +8,10 @@ using SpacetimeDB;
 // Being struck down is the same death as hunger or cold (Survival's KillPlayer).
 public static partial class Module
 {
-    [SpacetimeDB.Table(Accessor = "PlayerHealth", Public = true)]
+    // Private (bugfix-53, hidden values): other players' health, fed state and strike timing are not
+    // theirs to see. A player reads their own row through my_health, and the two facts everyone sees
+    // (a newcomer's grace, a killer's red name) are copied to PlayerStanding.
+    [SpacetimeDB.Table(Accessor = "PlayerHealth")]
     public partial struct PlayerHealth
     {
         [PrimaryKey]
@@ -24,6 +27,40 @@ public static partial class Module
         // After striking someone down, a player's name shows red to others until
         // then (D-053).
         public Timestamp MarkedUntil;
+    }
+
+    // What every client may know about another player's fighting: a newcomer can't be struck until
+    // GraceUntil, and a killer's name shows red until MarkedUntil (D-053).
+    [SpacetimeDB.Table(Accessor = "PlayerStanding", Public = true)]
+    public partial struct PlayerStanding
+    {
+        [PrimaryKey]
+        public uint PlayerId;
+        public Timestamp GraceUntil;
+        public Timestamp MarkedUntil;
+    }
+
+    // The caller's own health row.
+    [SpacetimeDB.View(Accessor = "MyHealth", Public = true)]
+    public static List<PlayerHealth> MyHealth(ViewContext ctx) =>
+        ctx.Db.Player.Identity.Find(Me(ctx)) is { } p && ctx.Db.PlayerHealth.PlayerId.Find(p.PlayerId) is { } h
+            ? new List<PlayerHealth> { h }
+            : new List<PlayerHealth>();
+
+    // Saves a health row and keeps PlayerStanding in step with it.
+    static PlayerHealth SaveHealth(ReducerContext ctx, PlayerHealth h)
+    {
+        var saved = ctx.Db.PlayerHealth.PlayerId.Find(h.PlayerId) is null
+            ? ctx.Db.PlayerHealth.Insert(h)
+            : ctx.Db.PlayerHealth.PlayerId.Update(h);
+        var standing = new PlayerStanding { PlayerId = h.PlayerId, GraceUntil = h.GraceUntil, MarkedUntil = h.MarkedUntil };
+        if (ctx.Db.PlayerStanding.PlayerId.Find(h.PlayerId) is { } old)
+        {
+            if (old.GraceUntil != standing.GraceUntil || old.MarkedUntil != standing.MarkedUntil)
+                ctx.Db.PlayerStanding.PlayerId.Update(standing);
+        }
+        else ctx.Db.PlayerStanding.Insert(standing);
+        return saved;
     }
 
     // Tells nearby clients a strike landed, so the struck player flinches.
@@ -64,8 +101,10 @@ public static partial class Module
     // existed before fighting came in gets a short grace once, like a newcomer.
     static PlayerHealth EnsureHealth(ReducerContext ctx, uint playerId)
     {
-        if (ctx.Db.PlayerHealth.PlayerId.Find(playerId) is { } h) return h;
-        return ctx.Db.PlayerHealth.Insert(new PlayerHealth
+        if (ctx.Db.PlayerHealth.PlayerId.Find(playerId) is { } h)
+            // A row from before PlayerStanding existed gets its public part now.
+            return ctx.Db.PlayerStanding.PlayerId.Find(playerId) is null ? SaveHealth(ctx, h) : h;
+        return SaveHealth(ctx, new PlayerHealth
         {
             PlayerId = playerId,
             Health = Social.MaxHealth,
@@ -118,7 +157,7 @@ public static partial class Module
         // Striking ends your own newcomer grace.
         mine = HealthNow(ctx, mine, IsFed(ctx, attacker)) with { LastStrikeAt = ctx.Timestamp };
         if (mine.GraceUntil.MicrosecondsSinceUnixEpoch > now) mine = mine with { GraceUntil = ctx.Timestamp };
-        ctx.Db.PlayerHealth.PlayerId.Update(mine);
+        SaveHealth(ctx, mine);
 
         bool Has(Item item) => ctx.Db.InventoryItem.Owner.Filter(attacker.Identity).Any(s => s.Item == (ushort)item && s.Count > 0);
         float damage = Social.StrikeDamage(Has(Item.Spear), Has(Item.HandAxe), Has(Item.Flake));
@@ -131,13 +170,13 @@ public static partial class Module
 
         if (!killed)
         {
-            ctx.Db.PlayerHealth.PlayerId.Update(theirs with { Health = left, LastHitAt = ctx.Timestamp });
+            SaveHealth(ctx, theirs with { Health = left, LastHitAt = ctx.Timestamp });
             return;
         }
 
-        ctx.Db.PlayerHealth.PlayerId.Update(theirs with { Health = Social.MaxHealth, LastHitAt = new Timestamp(0) });
+        SaveHealth(ctx, theirs with { Health = Social.MaxHealth, LastHitAt = new Timestamp(0) });
         if (ctx.Db.PlayerHealth.PlayerId.Find(attacker.PlayerId) is { } killer)
-            ctx.Db.PlayerHealth.PlayerId.Update(killer with { MarkedUntil = ctx.Timestamp + new TimeDuration(Social.KillerMarkMicros) });
+            SaveHealth(ctx, killer with { MarkedUntil = ctx.Timestamp + new TimeDuration(Social.KillerMarkMicros) });
         // Survival's death screen reads "You were struck down" for this cause.
         KillPlayer(ctx, victim, "slain");
         SayNearby(ctx, b.X, b.Z, $"{victim.Name} was struck down by {attacker.Name}");
