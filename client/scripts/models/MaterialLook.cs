@@ -157,6 +157,10 @@ public static class MaterialLook
         var stretch = m.GetShaderParameter("detail_stretch").VariantType == Godot.Variant.Type.Vector3 ? m.GetShaderParameter("detail_stretch").AsVector3() : Vector3.One;
         float bump = m.GetShaderParameter("bump").VariantType == Godot.Variant.Type.Float ? (float)m.GetShaderParameter("bump") : 0f;
         if (stretch.Y < 0.9f) return Pattern.Wood;
+        // Modeling's own item and station families (ItemModels, StationMeshes).
+        if (Mathf.IsEqualApprox(scale, 7f) || Mathf.IsEqualApprox(scale, 8f)) return Pattern.Wood;
+        if (Mathf.IsEqualApprox(scale, 4f) || Mathf.IsEqualApprox(scale, 5f)) return Pattern.Stone;
+        if (Mathf.IsEqualApprox(scale, 9f)) return Pattern.Straw;
         if (Mathf.IsEqualApprox(scale, 1.6f)) return albedo.R > albedo.G * 1.08f ? Pattern.Straw : Pattern.Leaves;
         if (Mathf.IsEqualApprox(scale, 1f) && bump > 1f) return Pattern.Stone;
         return Pattern.Plain;

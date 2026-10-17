@@ -45,6 +45,8 @@ public partial class Showcase : Node3D
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
+            // --look=D repaints any view in the painted prototype (model-4).
+            if (args.GetValueOrDefault("look", "") == "D" && view is not ("materials" or "painted")) Repaint(this);
             return;
         }
 
@@ -725,6 +727,25 @@ public partial class Showcase : Node3D
             camera.LookAtFromPosition(new Vector3(0, 1.75f, 2.2f), new Vector3(0, 1.55f, 0), Vector3.Up);
         else
             camera.LookAtFromPosition(new Vector3(0, 2.2f, 5.2f), new Vector3(0, 1.0f, -0.8f), Vector3.Up);
+    }
+
+    // Swaps every painted-shader material under node for its variant D counterpart,
+    // keeping the colour each one carries.
+    static void Repaint(Node node)
+    {
+        foreach (var child in node.GetChildren())
+        {
+            if (child is MeshInstance3D mi && mi.Mesh != null)
+            {
+                if (mi.MaterialOverride is ShaderMaterial m)
+                    mi.MaterialOverride = MaterialLook.For(MaterialLook.Classify(m, out var c), MaterialLook.Variant.D, c);
+                else
+                    for (int i = 0; i < mi.Mesh.GetSurfaceCount(); i++)
+                        if ((mi.GetSurfaceOverrideMaterial(i) ?? mi.Mesh.SurfaceGetMaterial(i)) is ShaderMaterial sm)
+                            mi.SetSurfaceOverrideMaterial(i, MaterialLook.For(MaterialLook.Classify(sm, out var c2), MaterialLook.Variant.D, c2));
+            }
+            Repaint(child);
+        }
     }
 
     // The cold hearth: the stone ring with ash and burnt stubs.
