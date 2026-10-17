@@ -19,9 +19,10 @@ What's in `client/scripts/atmosphere/AtmosphereLens.cs`:
 
 ## Progress log
 - 2026-10-17 07:35: built; the client compiles with 0 errors. Shaders aren't compiled in CI, so Render's stills are the first real test.
+- 2026-10-17 07:32: rim_tint made relative to the light colour for Modeling's #620 (day = their honey (1,0.86,0.66), a = 1).
 
 ## Open questions / blockers
-- Modeling's rim shader needs `global uniform vec4 rim_tint;`, with its rim colour × rim_tint.rgb and strength × rim_tint.a. Asked via the PM.
+- Modeling's rim (PR #620, Painted.Rim) reads `global uniform vec4 rim_tint;`: colour = LIGHT_COLOR * rim_tint.rgb, strength = RimStrength * rim_tint.a. #612 must merge first.
 
 ## Next step
 Wait for CI on #612 and Render B's before/after stills (requested 07:37), then tune.

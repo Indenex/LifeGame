@@ -14,9 +14,12 @@ namespace LifeGame;
 // Options toggles both (graphics soft_glow / vignette); --soft-glow=0 and
 // --vignette=0 turn them off for comparison.
 //
-// The rim light on characters (Modeling) takes its tint from the global rim_tint,
-// set here by time of day: creamy by day, peach at golden hour, rose at dusk, a
-// cool blue at night. rgb is the colour, a the strength (0 to 1).
+// Modeling's soft rim light (Painted.Rim, D-313 #1) multiplies the light colour by
+// the global rim_tint, set here by time of day. The sun already warms toward dusk,
+// so the tint is relative to it: Modeling's honey by day, a touch pinker at golden
+// hour, rose just before sunset, and cooler under the moon. rgb is the colour, a
+// scales Painted.RimStrength (1 by day, up to about 1.3 backlit at golden hour,
+// less at night and under cloud).
 public partial class Atmosphere
 {
     public static bool SoftGlow = true, Vignette = true;
@@ -104,12 +107,12 @@ public partial class Atmosphere
         vignetteMat!.SetShaderParameter(NTint, tint);
         vignetteMat.SetShaderParameter(NLeakAmount, strength);
 
-        // Rim light tint for Modeling's character rim.
-        var rim = new Color(1f, 0.95f, 0.86f)
-            .Lerp(new Color(1f, 0.74f, 0.52f), golden * clear)
-            .Lerp(new Color(0.96f, 0.64f, 0.72f), golden * clear * (1f - Mathf.SmoothStep(0f, 0.08f, sunHeight)))
-            .Lerp(new Color(0.58f, 0.68f, 1f), night);
-        rim.A = Mathf.Lerp(0.6f, 1f, golden * clear) * (1f - 0.35f * night) * (1f - 0.4f * overcast);
+        // Rim tint, on top of the light colour, for Modeling's rim light.
+        var rim = new Color(1f, 0.86f, 0.66f)
+            .Lerp(new Color(1f, 0.80f, 0.72f), golden * clear)
+            .Lerp(new Color(1f, 0.72f, 0.82f), golden * clear * (1f - Mathf.SmoothStep(0f, 0.08f, sunHeight)))
+            .Lerp(new Color(0.78f, 0.86f, 1f), night);
+        rim.A = (1f + 0.3f * golden * clear) * (1f - 0.3f * night) * (1f - 0.5f * overcast);
         RenderingServer.GlobalShaderParameterSet(NRimTint, rim);
     }
 
