@@ -1288,3 +1288,41 @@ Owner: Claims.
 
 Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, tilt-shift, paper grain, sparkles and emotes, footprint puffs, floating +1, photo mode.
 **Who:** Justin, picking the extras (relayed by the PM; no direct quote).
+
+## D-316 — 2026-10-17 — "Smart priority" for main builds over PR runs
+**Decision:** "Smart priority": the Main priority workflow pauses PR runs only while a main Build or Release is actually waiting for a runner, and never cancels a PR run already more than about 4 minutes in. This refines D-301.
+**Who:** Justin, choosing "Smart priority" (relayed by the PM; no direct quote).
+
+## D-317 — 2026-10-17 — Soft rim light defaults to 0.5
+**Decision:** The soft rim light (D-315 #1) defaults to `Painted.RimStrength` 0.5: a thin glow mostly visible when backlit, tinted by Atmosphere's `rim_tint` by time of day (#620).
+**Who:** Justin: "Do 0.5".
+
+## D-318 — 2026-10-17 — Pebble's shell replaced by the Art R&D Blender-pipeline shell
+**Decision:** Pebble's shell is replaced by the Art R&D Blender-pipeline shell (v4 cute: big friendly plates, chunky soft rim, caramel, honey and sage-olive colours), #623. It is the first asset authored in Blender headless with a script-painted texture. The pipeline is in `docs/art-pipeline.md`.
+**Who:** Justin: "Yes" (to the PM's proposal).
+
+## D-319 — 2026-10-17 — Painted surfaces must be smooth and clean
+**Decision:** Painted surfaces must be smooth and clean: soft broad gradients and soft light bands, with no small brush dabs, crevice speckle or noise. This refines D-274 and D-313. Modeling is changing the shared painted shader centrally, with a before/after for Justin before merging.
+**Who:** Justin: "The textures of those is awful, the weird pitted look is not cutesy."
+
+## D-320 — 2026-10-17 — Merge queue with batches replaces PR-pausing priority
+**Decision:** "Merge queue + batches". Green PRs go into GitHub's merge queue and are tested together in batches every ~10 to 15 minutes, then land and release as one. No PR runs are paused or cancelled any more. This supersedes D-301 and D-316. Ticket integration-16.
+**Who:** Justin, choosing "Merge queue + batches" (relayed by the PM; no direct quote).
+
+## D-321 — 2026-10-17 — Hotbar look: "Paper buttons"
+**Decision:** The hotbar is "Paper buttons": cream paper discs with a soft brown rim and shadow, the key number in brown Nunito, and a butter-gold ring on the item in hand (ui-45).
+**Who:** Justin, choosing "Paper buttons" (relayed by the PM; no direct quote).
+
+## D-322 — 2026-10-17 — Sitting and lying down are just a pose
+**Decision:** Sitting and lying down are "Just a pose", with no gameplay effect.
+**Who:** Justin, choosing "Just a pose" (relayed by the PM; no direct quote).
+
+## D-323 — 2026-10-17 — Autopilot while Justin sleeps
+**Decision:** While Justin sleeps, the PM decides open design questions on the recommended option and records each as a PM-default decision marked "PM default while Justin asleep; revisit". The PM keeps merging green PRs. Look choices (D-154) that are already prototyped wait for his morning review rather than being finalised.
+**Who:** Justin (2026-10-17, about 08:00): "I'm going to sleep. Can you handle things automatically until then? No questions?"
+
+PM defaults taken under this decision (each: PM default while Justin asleep; revisit):
+1. Animation's next item is emotes: wave, cheer, a little dance and a bow, on a key or wheel, shown to everyone through PlayerAct. UX adds the wheel. Not chosen: chibi swimming polish, two-arm heavy carry. (PM default while Justin asleep; revisit)
+2. UX ui-47 adds a "Waking up..." paper veil with a bobbing sun while the game connects. It fades over 0.6 s and is built under D-313 and the Cutesy page. (PM default while Justin asleep; revisit)
+3. Shadow quality defaults to Medium: 4096, 4 cascades, 50 m, about today's cost. The other levels, Low and High, are in Options. High would be crisper but costs about 60% more shadow draw calls. (PM default while Justin asleep; revisit)
+4. Butterflies (env-30, #656) are slightly larger than life, about a 34 cm wingspan, so they read at the default zoom. The alternatives were life-size at 18 cm (barely visible) and storybook at 50 cm. Ambient life gets an Options setting: Off, Some or Full, default Full. (PM default while Justin asleep; revisit)
