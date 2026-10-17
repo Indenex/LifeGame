@@ -170,7 +170,7 @@ public partial class JournalPanel : Control
             Value = points,
             ShowPercentage = false,
             CustomMinimumSize = new Vector2(0, 6),
-            TooltipText = spec.Blurb,
+            TooltipText = spec.Blurb + "\n\n" + Progression.Describe(spec.Id, rank),
         };
         bar.AddThemeStyleboxOverride("background", Box(new Color(1, 1, 1, 0.08f), 3, 0));
         bar.AddThemeStyleboxOverride("fill", Box(spec.Basic ? new Color(0.58f, 0.68f, 0.40f) : Accent, 3, 0));
