@@ -21,5 +21,7 @@ namespace LifeGame.Shared
         Strike, Shoot, Dig, Shear, Butcher, Feed, Flinch,
         // Emotes (anim-16, shared/Emotes.cs): played once on request, seen by everyone.
         Wave, Cheer, Dance, Bow,
+        // More emotes (anim-19).
+        Clap, Shrug, Point,
     }
 }

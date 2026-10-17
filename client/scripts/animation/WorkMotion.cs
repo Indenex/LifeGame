@@ -228,6 +228,9 @@ public static class WorkMotions
         WorkMotion.Cheer => 1.6f,
         WorkMotion.Dance => 3.2f,
         WorkMotion.Bow => 1.8f,
+        WorkMotion.Clap => 1.8f,
+        WorkMotion.Shrug => 1.4f,
+        WorkMotion.Point => 1.6f,
         _ => 0f,
     };
 
@@ -279,7 +282,8 @@ public static class WorkMotions
     // knee dip), so it plays over walking; the others stop when you walk off.
     // Strikes, shots, feeding a fire and flinching are upper-body too.
     public static bool ActUsesLegs(WorkMotion m) =>
-        m is not (WorkMotion.PickUp or WorkMotion.Strike or WorkMotion.Shoot or WorkMotion.Feed or WorkMotion.Flinch or WorkMotion.Wave);
+        m is not (WorkMotion.PickUp or WorkMotion.Strike or WorkMotion.Shoot or WorkMotion.Feed or WorkMotion.Flinch or WorkMotion.Wave
+            or WorkMotion.Clap or WorkMotion.Shrug or WorkMotion.Point);
 
     // Which hand holds the action's item: a bow is held in the left.
     public static bool ActItemInLeft(WorkMotion m) => m == WorkMotion.Shoot;
@@ -428,6 +432,38 @@ public static class WorkMotions
                 p[Joint.Neck].X = 0.2f * down;
                 Arm(p, false, -0.9f * down, 0.45f * down, -1.9f * down);
                 Arm(p, true, 0.25f * down, 0.05f, -0.1f);
+                break;
+            }
+            case WorkMotion.Clap:
+            {
+                // Hands come together in front of the chest and clap five times.
+                float up = Mathf.SmoothStep(0f, 1f, Mathf.Min(t / 0.25f, (1.8f - t) / 0.3f));
+                float clap = 0.5f + 0.5f * Mathf.Cos(t * Mathf.Tau * 3.2f);
+                Arm(p, true, -1.0f * up, (-0.32f + 0.18f * clap) * up, -1.5f * up);
+                Arm(p, false, -1.0f * up, (0.32f - 0.18f * clap) * up, -1.5f * up);
+                p[Joint.Neck].X = -0.08f * up;
+                break;
+            }
+            case WorkMotion.Shrug:
+            {
+                // Shoulders up, palms turned out, head tipped to one side.
+                float up = Mathf.Sin(Mathf.Clamp(t / 1.4f, 0f, 1f) * Mathf.Pi);
+                Arm(p, true, -0.35f * up, 0.35f * up, -1.4f * up);
+                Arm(p, false, -0.35f * up, -0.35f * up, -1.4f * up);
+                p[Joint.HandL] = new Vector3(0, -0.6f * up, 0.4f * up);
+                p[Joint.HandR] = new Vector3(0, 0.6f * up, -0.4f * up);
+                p[Joint.Neck].Z = 0.18f * up;
+                p[Joint.Spine].X = -0.05f * up;
+                break;
+            }
+            case WorkMotion.Point:
+            {
+                // The right arm points straight out ahead, a little up, the head following.
+                float up = Mathf.SmoothStep(0f, 1f, Mathf.Min(t / 0.25f, (1.6f - t) / 0.35f));
+                Arm(p, false, -1.55f * up, 0.05f * up, -0.05f);
+                p[Joint.HandR].X = -0.2f * up;
+                p[Joint.Spine].Y = 0.12f * up;
+                p[Joint.Neck].Y = -0.08f * up;
                 break;
             }
             case WorkMotion.Flinch:

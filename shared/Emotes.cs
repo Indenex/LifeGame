@@ -21,6 +21,9 @@ namespace LifeGame.Shared
             new EmoteDef { Motion = WorkMotion.Cheer, Name = "Cheer" },
             new EmoteDef { Motion = WorkMotion.Dance, Name = "Dance" },
             new EmoteDef { Motion = WorkMotion.Bow, Name = "Bow" },
+            new EmoteDef { Motion = WorkMotion.Clap, Name = "Clap" },
+            new EmoteDef { Motion = WorkMotion.Shrug, Name = "Shrug" },
+            new EmoteDef { Motion = WorkMotion.Point, Name = "Point" },
         };
 
         static readonly HashSet<WorkMotion> motions = All.Select(e => e.Motion).ToHashSet();

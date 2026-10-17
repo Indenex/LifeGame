@@ -1,7 +1,7 @@
 # anim-18: Carrying heavy things in both arms
 Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
-Status: in_review
+Status: done
 Branch: claude/anim-18 (from main)
 PR: #692
 
