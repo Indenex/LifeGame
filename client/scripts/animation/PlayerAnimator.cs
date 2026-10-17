@@ -24,6 +24,9 @@ public sealed class PlayerAnimator
     // still rising, and the knee-bend kick left over from the last landing.
     bool airborne, rising;
     float air, rise, landKick;
+    // Jump wind-up prototype: the dip before take-off (0 to 1), and seconds since the
+    // feet left the ground, for the push-off.
+    float windUp, sinceTakeoff = 99f;
 
     // A quick action (WorkMotions.IsAct): drink, eat, pluck, pick up. Plays once over
     // whatever else is going on, fading in and out.
@@ -176,8 +179,10 @@ public sealed class PlayerAnimator
         }
     }
 
-    public void Jump(bool airborne, bool rising, float landing)
+    public void Jump(bool airborne, bool rising, float landing, float windUp = 0f)
     {
+        if (airborne && !this.airborne) sinceTakeoff = 0f;
+        this.windUp = windUp;
         this.airborne = airborne;
         this.rising = rising;
         if (landing > landKick) landKick = Mathf.Clamp(landing, 0f, 1f);
@@ -297,6 +302,13 @@ public sealed class PlayerAnimator
         landKick *= Mathf.Exp(-7f * dt);
         if (air > 0.005f) Air(pose, air, rise);
         if (landKick > 0.01f) Crouch(pose, landKick * 0.7f);
+        // Wind-up: knees dip and arms swing back, deepest just before take-off. Then
+        // the push-off: for a moment after leaving the ground the legs straighten and
+        // the toes point before the tuck.
+        if (windUp > 0f) WindUpPose(pose, Mathf.Sin(windUp * Mathf.Pi * 0.5f));
+        sinceTakeoff += dt;
+        float push = airborne ? 1f - Mathf.SmoothStep(0f, 1f, sinceTakeoff / PushSeconds) : 0f;
+        if (push > 0.005f) PushOff(pose, push);
 
         // Lean into turns; the head stays level.
         pose[Joint.Hips].Z -= turnLean;
@@ -693,6 +705,26 @@ public sealed class PlayerAnimator
 
     // In the air: legs stop striding, tuck up on the way up and reach for the ground on
     // the way down; arms lift on take-off and spread for balance as the body falls.
+    const float PushSeconds = 0.16f;
+
+    void WindUpPose(Pose p, float w)
+    {
+        Crouch(p, 0.55f * w);
+        p[Joint.Spine].X += 0.2f * w;
+        p[Joint.ShoulderL].X += 0.6f * w;
+        p[Joint.ShoulderR].X += 0.6f * w;
+    }
+
+    static void PushOff(Pose p, float w)
+    {
+        foreach (var j in LegJoints)
+            p[j] = p[j].Lerp(Vector3.Zero, w);
+        p[Joint.FootL].X += 0.45f * w;
+        p[Joint.FootR].X += 0.45f * w;
+        p[Joint.ShoulderL].X -= 0.5f * w;
+        p[Joint.ShoulderR].X -= 0.5f * w;
+    }
+
     static readonly Joint[] LegJoints = { Joint.HipL, Joint.HipR, Joint.KneeL, Joint.KneeR, Joint.FootL, Joint.FootR };
 
     static void Air(Pose p, float a, float up)

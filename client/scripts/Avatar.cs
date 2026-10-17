@@ -130,9 +130,9 @@ public partial class Avatar : Node3D
     // Jump state from movement (bugfix-25): in the air or not, still rising, and how hard
     // the last landing was (0 to 1, set on the frame you land). The avatar's height is
     // moved by whoever moves it; this only poses the body.
-    public void SetJump(bool airborne, bool rising, float landing)
+    public void SetJump(bool airborne, bool rising, float landing, float windUp = 0f)
     {
-        animator.Jump(airborne, rising, landing);
+        animator.Jump(airborne, rising, landing, windUp);
         // A squishy landing (#17): the body squashes down and springs back, keeping
         // its volume; taking off stretches it a little.
         if (landing > 0.01f) Squish(-0.16f * Mathf.Clamp(landing, 0.3f, 1f));

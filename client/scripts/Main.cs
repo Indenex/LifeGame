@@ -836,7 +836,7 @@ public partial class Main : Node3D
         // Ease up and down slopes instead of popping between heights; in the air the feet follow the arc.
         pos.Y = jump.Airborne ? feet + jump.AirHeight : Mathf.Lerp(me.Position.Y, feet, 1f - Mathf.Exp(-14f * dt));
         me.Position = pos;
-        me.SetJump(jump.Airborne, jump.Rising, jump.Landing);
+        me.SetJump(jump.Airborne, jump.Rising, jump.Landing, jump.WindUp);
         if (landed) Sfx.Land(jump.Landing, atmosphere.GroundAt(pos));
 
         if (velocity.LengthSquared() > 0.05f)
