@@ -204,11 +204,11 @@ public partial class Terrain : Node3D
                 float h = TileHeight(x, z);
                 heights[i, j] = h;
                 normals[i, j] = NormalAt(x, z);
-                colors[i, j] = TileColor(x, z, h);
+                colors[i, j] = UnderGrass(x, z, h, TileColor(x, z, h));
                 // A cell whose clearing just changed carries its old color and when it
                 // changed, and the ground shader blends from one to the other.
                 changes[i, j] = ClearChange(x, z) is { } c
-                    ? TileColor(x, z, h, cleared: !c.Cleared) with { A = c.At }
+                    ? UnderGrass(x, z, h, TileColor(x, z, h, cleared: !c.Cleared)) with { A = c.At }
                     : new Color(0, 0, 0, 0);
             }
 
@@ -276,6 +276,26 @@ public partial class Terrain : Node3D
         if (cleared ?? IsCleared(x, z)) color = color.Lerp(Look.Earth, 0.6f);
 
         return color.Lightened((Hash01(x, z, 7) - 0.5f) * 0.08f);
+    }
+
+    // How strongly the ground under the grass leans toward the tufts' own olive
+    // (env-18), so the odd cell without a tuft doesn't show as a lighter square.
+    const float UnderGrassMatch = 0.7f;
+
+    // The ground's color where grass grows, toward the tufts' muted olive in proportion
+    // to how much grass the cell is likely to carry: full in the open meadow, fading
+    // under the trees, on trails and wet ground. Mirrors Look's grass shader (stylised).
+    Color UnderGrass(int x, int z, float top, Color color)
+    {
+        if (top < Look.WaterLevel + 0.2f || World.ClayScore(x, z) >= 0.7f || Depth(x, z) > 0) return color;
+        float cover = Mathf.Clamp(0.93f - 0.5f * Forest.Density(x, z) - 0.5f * Forest.Wetland(x, z) - 0.6f * Landmarks.Trail(x, z), 0f, 1f);
+        var lin = color.SrgbToLinear();
+        float lum = lin.R * 0.3f + lin.G * 0.59f + lin.B * 0.11f;
+        var olive = new Color(
+            Mathf.Lerp(lin.R, lum * 1.1f, 0.3f),
+            Mathf.Lerp(lin.G, lum * 1.05f, 0.3f),
+            Mathf.Lerp(lin.B, lum * 0.55f, 0.3f)) * 0.9f;
+        return lin.Lerp(olive with { A = lin.A }, cover * UnderGrassMatch).LinearToSrgb();
     }
 
     static readonly Color LeafLitter = Look.Earth.Lerp(Look.LeafWarm, 0.25f);
