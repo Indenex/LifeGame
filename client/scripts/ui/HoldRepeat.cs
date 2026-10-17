@@ -15,6 +15,24 @@ public sealed class HoldRepeat
     // Walking this far from where the hold began stops it.
     const float MoveAway = 1.5f;
 
+    // Every hold in the game (Use, dig, pick up), so Active can say whether any is repeating.
+    static readonly System.Collections.Generic.List<HoldRepeat> all = new();
+    public HoldRepeat() => all.Add(this);
+
+    // True while a held key is armed to repeat (key down past the delay and not stopped): the HUD
+    // cue for "holding" reads this (UX).
+    public static bool Active
+    {
+        get
+        {
+            foreach (var h in all)
+                if (h.Armed) return true;
+            return false;
+        }
+    }
+
+    bool Armed => held >= Delay && !stopped;
+
     float held;
     ulong lastActionMsec;
     bool stopped;
