@@ -237,9 +237,9 @@ public static class ItemModels
         Item.RawChicken => (k => Drumstick(k, new Color(0.9f, 0.72f, 0.64f), new Color(0.96f, 0.86f, 0.76f)), true),
         Item.CookedChicken => (k => Drumstick(k, new Color(0.66f, 0.4f, 0.17f), new Color(0.8f, 0.56f, 0.26f)), true),
         Item.BurntChicken => (k => Drumstick(k, new Color(0.11f, 0.09f, 0.07f), new Color(0.2f, 0.15f, 0.11f)), true),
-        // Boiled and burnt eggs (crafting-24), by number until the items reach main.
-        (Item)212 => (k => Egg(k, new Color(0.97f, 0.96f, 0.92f), false), true),
-        (Item)213 => (k => Egg(k, new Color(0.13f, 0.11f, 0.09f), true), true),
+        // Boiled and burnt eggs (crafting-24).
+        Item.BoiledEgg => (k => Egg(k, new Color(0.97f, 0.96f, 0.92f), false), true),
+        Item.BurntEgg => (k => Egg(k, new Color(0.13f, 0.11f, 0.09f), true), true),
         // Spade (Crafting's crafting-shovel), by number until the item reaches main.
         (Item)18 => (Spade, false),
         // Waterskins (survival-20).
