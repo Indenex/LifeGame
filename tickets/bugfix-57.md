@@ -2,8 +2,8 @@
 Lane: Bug fixes
 Owner: Bug fixes thread
 Status: in_progress
-Branch: local commit on main 5064a254; patch in /mnt/project-files/bugfix/bugfix-57/. Goes on claude/bugfix-rnwmoa after #830 and bugfix-56, or a branch the PM names.
-PR: (none yet)
+Branch: claude/bugfix-rnwmoa-9
+PR: (opening)
 
 ## Goal
 Part of audit item 7 (tickets/bugfix-53.md). Other clients no longer receive a stage-in-progress's summed material quality, item count or helper list. `StructureProgress.Quality` stays public: the client draws store stacks and trough litres from it (BuildingSystem.Use.cs, CeramicsView.Troughs.cs, ClayCheck).

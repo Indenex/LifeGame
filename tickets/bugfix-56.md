@@ -2,8 +2,8 @@
 Lane: Bug fixes
 Owner: Bug fixes thread
 Status: in_progress
-Branch: local commit stacked on claude/bugfix-rnwmoa (#830); patch in /mnt/project-files/bugfix/bugfix-56/. Needs its own branch or #830 merged first.
-PR: (none yet)
+Branch: claude/bugfix-rnwmoa-9
+PR: (opening)
 
 ## Goal
 Part of audit item 7 (tickets/bugfix-53.md). Other clients no longer read the quality of clay drying or firing in the open. The maker's mark stays public.
