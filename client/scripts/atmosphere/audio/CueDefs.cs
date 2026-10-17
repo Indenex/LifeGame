@@ -327,15 +327,24 @@ public static class CueDefs
         new CueLayer(Src.Noise, 0.85f, 0.015f, 0.3125f, 2000f, 6000f, 0.002f),
     });
 
-    // Tree crash: a rush of branches and leaves, the heavy thud of the trunk and the crackle and
-    // rustle settling after.
-    public static readonly CueDef TreeCrash = new("tool.treecrash", 2.2f, new[]
+    // Tree rush: the crown swinging down through the air, leaves and branches hissing louder
+    // until it lands (Environment's TreeFall, 1.6 s from the first tip to the impact).
+    public static readonly CueDef TreeRush = new("tool.treerush", 1.6f, new[]
     {
-        new CueLayer(Src.Noise, 0f, 0.5f, 0.09f, 800f, 5000f, 0.5f),
-        new CueLayer(Src.Tone, 0.9f, 0.25f, 0.18f, 70f, 40f, 0.01f),
-        new CueLayer(Src.Noise, 0.9f, 0.3f, 0.2025f, 60f, 900f, 0.01f),
-        new CueLayer(Src.Noise, 0.9f, 0.15f, 0.0675f, 1500f, 6000f, 0.005f),
-        new CueLayer(Src.Noise, 1.1f, 0.5f, 0.045f, 1000f, 4000f, 0.1f),
+        new CueLayer(Src.Noise, 0.5f, 0.6f, 0.2f, 800f, 5000f, 0.9f),
+        new CueLayer(Src.Noise, 0.8f, 0.5f, 0.13f, 300f, 2500f, 0.6f),
+    });
+
+    // Tree impact: the heavy thud of the trunk, the crackle of branches breaking, a small second
+    // thud as it bounces (about 0.17 s later) and the leaves settling after.
+    public static readonly CueDef TreeImpact = new("tool.treeimpact", 1.8f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.25f, 0.18f, 70f, 40f, 0.01f),
+        new CueLayer(Src.Noise, 0f, 0.3f, 0.2f, 60f, 900f, 0.01f),
+        new CueLayer(Src.Noise, 0f, 0.15f, 0.07f, 1500f, 6000f, 0.005f),
+        new CueLayer(Src.Tone, 0.17f, 0.12f, 0.07f, 65f, 40f, 0.01f),
+        new CueLayer(Src.Noise, 0.17f, 0.12f, 0.08f, 60f, 700f, 0.01f),
+        new CueLayer(Src.Noise, 0.3f, 0.5f, 0.045f, 1000f, 4000f, 0.1f),
     }, Send: 0.3f);
 
     // Dig with a stick: the point goes in (Animation's Impact, stick in the ground), then a little

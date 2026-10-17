@@ -214,7 +214,8 @@ foreach (var scene in scenes)
             if (At(2.2)) mix.Play(CueDefs.ChopThunk);
             if (At(3.4)) mix.Play(CueDefs.ChopThunk);
             if (At(5)) mix.Play(CueDefs.TreeCreak);
-            if (At(5.95)) mix.Play(CueDefs.TreeCrash);
+            if (At(5)) mix.Play(CueDefs.TreeRush);
+            if (At(6.6)) mix.Play(CueDefs.TreeImpact);
             if (At(10)) mix.Play(CueDefs.DigStick);
             if (At(11.5)) mix.Play(CueDefs.DigSpade);
             if (At(12.5)) mix.Play(CueDefs.DirtThrow);
