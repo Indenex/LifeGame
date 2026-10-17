@@ -157,6 +157,9 @@ public static class NatureKit
                 for (int i = 0; i + 2 < indices.Length; i += 3)
                     if (vertices[indices[i]].Y >= cut && vertices[indices[i + 1]].Y >= cut && vertices[indices[i + 2]].Y >= cut)
                         kept.AddRange(new[] { indices[i], indices[i + 1], indices[i + 2] });
+                // Close the sawn end of the trunk: a disc where its triangles crossed the cut.
+                if (source.SurfaceGetMaterial(s) is ShaderMaterial bark && (float)bark.GetShaderParameter("cutout") == 0f)
+                    CapCut(arrays, vertices, indices, kept, cut);
                 if (kept.Count == 0) continue;
                 arrays[(int)Godot.Mesh.ArrayType.Index] = kept.ToArray();
                 felled.AddSurfaceFromArrays(Godot.Mesh.PrimitiveType.Triangles, arrays);
@@ -165,6 +168,63 @@ public static class NatureKit
             FelledMeshes[mesh] = felled;
             return felled;
         }
+    }
+
+    // Adds a flat disc at height cut over the trunk's cross-section there, from the edges of
+    // the triangles that cross it, appending its vertices to arrays and its triangles to kept.
+    static void CapCut(Godot.Collections.Array arrays, Vector3[] vertices, int[] indices, List<int> kept, float cut)
+    {
+        var rim = new List<Vector3>();
+        for (int i = 0; i + 2 < indices.Length; i += 3)
+            for (int e = 0; e < 3; e++)
+            {
+                Vector3 a = vertices[indices[i + e]], b = vertices[indices[i + (e + 1) % 3]];
+                if ((a.Y < cut) == (b.Y < cut)) continue;
+                rim.Add(a.Lerp(b, (cut - a.Y) / (b.Y - a.Y)));
+            }
+        if (rim.Count < 3) return;
+        // The main trunk: the crossing points nearest the middle (branches don't reach this low).
+        var centre = Vector3.Zero;
+        foreach (var p in rim) centre += p;
+        centre /= rim.Count;
+        float radius = 0f;
+        foreach (var p in rim) radius += new Vector2(p.X - centre.X, p.Z - centre.Z).Length();
+        radius /= rim.Count;
+        if (radius <= 0f) return;
+        const int Sides = 10;
+        int first = vertices.Length;
+        var points = new List<Vector3>(vertices) { centre };
+        for (int k = 0; k < Sides; k++)
+        {
+            float a = k * Mathf.Tau / Sides;
+            points.Add(centre + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * radius * 1.02f);
+        }
+        for (int k = 0; k < Sides; k++)
+            kept.AddRange(new[] { first, first + 1 + (k + 1) % Sides, first + 1 + k });
+        // The other arrays grow to match: the disc faces down, with the bark texture's middle.
+        int added = points.Count - vertices.Length;
+        arrays[(int)Godot.Mesh.ArrayType.Vertex] = points.ToArray();
+        void Grow<T>(Godot.Mesh.ArrayType type, T value, System.Func<Variant, T[]> read, System.Func<T[], Variant> write)
+        {
+            var old = arrays[(int)type];
+            if (old.VariantType == Variant.Type.Nil) return;
+            var list = new List<T>(read(old));
+            for (int n = 0; n < added; n++) list.Add(value);
+            arrays[(int)type] = write(list.ToArray());
+        }
+        Grow(Godot.Mesh.ArrayType.Normal, Vector3.Down, v => v.AsVector3Array(), a => a);
+        Grow(Godot.Mesh.ArrayType.TexUV, new Vector2(0.5f, 0.5f), v => v.AsVector2Array(), a => a);
+        Grow(Godot.Mesh.ArrayType.Color, Colors.White, v => v.AsColorArray(), a => a);
+        Grow(Godot.Mesh.ArrayType.Tangent, 0f, v => v.AsFloat32Array(), a => a);
+        if (arrays[(int)Godot.Mesh.ArrayType.Tangent].VariantType != Variant.Type.Nil)
+        {
+            // Tangents are four floats a vertex: pad the rest of each new one.
+            var t = new List<float>(arrays[(int)Godot.Mesh.ArrayType.Tangent].AsFloat32Array());
+            t.RemoveRange(t.Count - added, added);
+            for (int n = 0; n < added; n++) t.AddRange(new[] { 1f, 0f, 0f, 1f });
+            arrays[(int)Godot.Mesh.ArrayType.Tangent] = t.ToArray();
+        }
+        Grow(Godot.Mesh.ArrayType.TexUV2, Vector2.Zero, v => v.AsVector2Array(), a => a);
     }
 
     // Whether a chunk batch's mesh is one of the kit trees (TreeFall draws it falling).
