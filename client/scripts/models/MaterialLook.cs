@@ -327,17 +327,19 @@ public static class MaterialLook
             }
             case Pattern.Wood:
             {
-                // Planks, as in the artist's wood tiles: a dark seam under each
-                // plank, a lit top edge, an end joint here and there, and a few
-                // grain strokes.
-                float row = Mathf.Floor(v * 3f);
-                float f = Mathf.PosMod(v * 3f, 1f);
-                if (f < 0.07f) return 0f;
-                if (f > 0.86f) return 1f;
-                float joint = MeshKit.Hash((int)row, 84);
-                if (Mathf.Abs(Mathf.PosMod(u - joint, 1f) - 0.5f) > 0.485f) return 0f;
-                float grain = Mathf.PosMod(f * 3f + Noise(u * 3, v * 3, 3, 1) * 0.8f, 1f);
-                return grain < 0.1f ? 0f : 0.5f;
+                // Logs and posts, as the artist paints them: long grain strokes
+                // along the wood, dark cracks, a lit stroke here and there, and a
+                // knot now and then.
+                float lane = Mathf.Floor(v * 7f);
+                float f = Mathf.PosMod(v * 7f + Noise(u * 2, v * 7, 2, 1) * 0.5f, 1f);
+                float run = Mathf.PosMod(u * 1.5f + MeshKit.Hash((int)lane, 87), 1f);
+                if (f < 0.12f && run < 0.75f) return 0f;
+                if (f > 0.82f && run > 0.3f) return 1f;
+                var knot = new Vector2(MeshKit.Hash(3, 88), MeshKit.Hash(4, 88));
+                float k = new Vector2(Mathf.PosMod(u - knot.X + 0.5f, 1f) - 0.5f, Mathf.PosMod(v - knot.Y + 0.5f, 1f) - 0.5f).Length();
+                if (k < 0.04f) return 0f;
+                if (k < 0.06f) return 1f;
+                return 0.5f;
             }
             case Pattern.Grass:
             {
