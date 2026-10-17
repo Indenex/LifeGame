@@ -44,6 +44,21 @@ void WaitFor(Func<bool> done, int seconds, string what)
 
 WaitFor(() => bots.All(x => x.Ready), 30, "both players connected");
 
+// Building size and doorways (building-14), checked on the shared numbers both sides use.
+foreach (var kind in new[] { StructureKind.ClayHut, StructureKind.BrickHouse, StructureKind.LogCabin })
+{
+    int k = (int)kind;
+    var shape = Structures.Shape(k);
+    Check(MathF.Abs(shape.Scale - 1.25f) < 0.001f, $"{shape.Name} is built 1.25x");
+    // Walking in along the middle of the doorway crosses no wall when the door is open; a side wall does.
+    float wall = kind == StructureKind.ClayHut ? Structures.HutWallRadiusFor(k) : Structures.HouseWallZFor(k);
+    Check(!Structures.StepCrossesWalls(k, 0, 0, 0f, false, 0, wall + 0.5f, 0, wall - 0.5f), $"{shape.Name}: the open doorway lets you in");
+    Check(Structures.StepCrossesWalls(k, 0, 0, 0f, true, 0, wall + 0.5f, 0, wall - 0.5f), $"{shape.Name}: a shut door keeps you out");
+    float side = kind == StructureKind.ClayHut ? Structures.HutWallRadiusFor(k) : Structures.HouseWallXFor(k);
+    Check(Structures.StepCrossesWalls(k, 0, 0, 0f, false, -side - 0.5f, 0, -side + 0.5f, 0), $"{shape.Name}: the side wall holds");
+    Check(shape.DoorwayZ >= wall - 0.2f, $"{shape.Name}: the door sits in the front wall");
+}
+
 if (which is "lean-to" or "both")
     BuildTogether(StructureKind.LeanTo,
         new() { [Item.Stick] = 5, [Item.Fiber] = 6 },

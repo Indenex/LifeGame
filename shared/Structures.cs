@@ -8,6 +8,11 @@ namespace LifeGame.Shared
     public sealed class StructureShape
     {
         public string Name = "";
+        // Building size relative to the design size the model and the numbers below are written in
+        // (building-14, Justin: houses felt too small). Applied once when the shapes are made, so
+        // every footprint, clearance and doorway number is already the real, scaled size; the model
+        // is drawn at the design size and scaled by this at the view. 1 for everything but homes.
+        public float Scale = 1f;
         // Footprint in the structure's own frame: +Z is the open front or door.
         public bool Round;
         public float HalfWidth, HalfDepth, Radius;
@@ -45,11 +50,12 @@ namespace LifeGame.Shared
     public static class Structures
     {
         // Indexed by StructureKind; append new kinds at the end, in the same order.
-        public static readonly StructureShape[] Shapes =
+        public static readonly StructureShape[] Shapes = Scaled(new StructureShape[]
         {
             new StructureShape
             {
                 Name = "Lean-to",
+                Scale = 1.25f,
                 HalfWidth = 1.5f, HalfDepth = 1.25f,
                 Clearance = 1.9f,
                 RainCover = 0.6f, Warmth = 0.2f,
@@ -58,6 +64,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Clay hut",
+                Scale = 1.25f,
                 Round = true, Radius = 1.9f,
                 Clearance = 2.2f,
                 RainCover = 0.9f, Warmth = 0.4f, ShutWarmth = 0.5f,
@@ -98,6 +105,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Mud-brick house",
+                Scale = 1.25f,
                 HalfWidth = 2.4f, HalfDepth = 2.0f,
                 Clearance = 3.2f,
                 RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
@@ -192,6 +200,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Log cabin",
+                Scale = 1.25f,
                 HalfWidth = 2.4f, HalfDepth = 2.0f,
                 Clearance = 3.2f,
                 RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
@@ -201,7 +210,26 @@ namespace LifeGame.Shared
                 SmokeY = 3.3f,
                 Stages = new[] { "Sill", "Log walls", "Rafters", "Thatch" },
             },
-        };
+        });
+
+        // Multiplies each shape's lengths by its Scale, once, so nothing else has to know about it.
+        static StructureShape[] Scaled(StructureShape[] shapes)
+        {
+            foreach (var shape in shapes)
+            {
+                float k = shape.Scale;
+                if (k == 1f) continue;
+                shape.HalfWidth *= k;
+                shape.HalfDepth *= k;
+                shape.Radius *= k;
+                shape.Clearance *= k;
+                shape.DoorwayZ *= k;
+                shape.SmokeY *= k;
+            }
+            return shapes;
+        }
+
+        public static float ScaleOf(int kind) => Shape(kind).Scale;
 
         // What each stage takes, by kind and stage, indexed like Shapes. Fiber stands in
         // for thatch; the hut's walls are daub (clean clay mixed with fiber, from Ceramics).
@@ -342,6 +370,12 @@ namespace LifeGame.Shared
 
         public static bool IsRoom(int kind) => Shape(kind).Room;
 
+        // The real (scaled) wall numbers of a hut or a room-shaped home.
+        public static float HouseWallXFor(int kind) => HouseWallX * ScaleOf(kind);
+        public static float HouseWallZFor(int kind) => HouseWallZ * ScaleOf(kind);
+        public static float HutWallRadiusFor(int kind) => HutWallRadius * ScaleOf(kind);
+        public static float HouseDoorHalfWidthFor(int kind) => HouseDoorHalfWidth * ScaleOf(kind);
+
         // Whether a finished building of this kind takes a door, and where its doorway is.
         public static bool HasDoorway(int kind) => Shape(kind).DoorwayZ > 0;
         public static bool IsStore(int kind) => Shape(kind).StoreStacks > 0;
@@ -454,7 +488,7 @@ namespace LifeGame.Shared
             var (bx, bz) = ToLocal(sx, sz, yaw, toX, toZ);
             if (kind == 1)
             {
-                float r2 = HutWallRadius * HutWallRadius;
+                float wall = HutWallRadiusFor(kind), r2 = wall * wall;
                 if (ax * ax + az * az < r2 == bx * bx + bz * bz < r2) return false;
                 // Through the doorway: the crossing is within the doorway's angle around +Z.
                 float mx = (ax + bx) * 0.5f, mz = (az + bz) * 0.5f;
@@ -462,11 +496,12 @@ namespace LifeGame.Shared
             }
             if (Shape(kind).Room)
             {
-                bool inA = MathF.Abs(ax) < HouseWallX && MathF.Abs(az) < HouseWallZ;
-                bool inB = MathF.Abs(bx) < HouseWallX && MathF.Abs(bz) < HouseWallZ;
+                float wx = HouseWallXFor(kind), wz = HouseWallZFor(kind);
+                bool inA = MathF.Abs(ax) < wx && MathF.Abs(az) < wz;
+                bool inB = MathF.Abs(bx) < wx && MathF.Abs(bz) < wz;
                 if (inA == inB) return false;
                 float mx = (ax + bx) * 0.5f, mz = (az + bz) * 0.5f;
-                return doorShut || mz < 0f || MathF.Abs(mx) > HouseDoorHalfWidth;
+                return doorShut || mz < 0f || MathF.Abs(mx) > HouseDoorHalfWidthFor(kind);
             }
             return false;
         }
