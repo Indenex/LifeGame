@@ -482,11 +482,11 @@ namespace LifeGame.Shared
         public const float Spacing = 1.5f;
 
         // 0 to 1: how warm a spot is from one burning fire.
-        public static float WarmthFrom(float fireX, float fireZ, float x, float z)
+        public static float WarmthFrom(float fireX, float fireZ, float x, float z, float radius = WarmthRadius)
         {
             float dx = x - fireX, dz = z - fireZ;
             float d = MathF.Sqrt(dx * dx + dz * dz);
-            return Math.Clamp(1f - d / WarmthRadius, 0f, 1f);
+            return Math.Clamp(1f - d / radius, 0f, 1f);
         }
     }
 

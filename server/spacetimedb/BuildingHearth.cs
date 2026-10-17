@@ -23,7 +23,7 @@ public static partial class Module
     static IEnumerable<Structure> HearthsNear(ReducerContext ctx, float x, float z, float reach)
     {
         foreach (var s in StructuresNear(ctx, x, z))
-            if (s.Complete && Structures.IsIndoor((int)s.Kind) && Dist(s.X, s.Z, x, z) <= reach)
+            if (s.Complete && Structures.IsHearth((int)s.Kind) && Dist(s.X, s.Z, x, z) <= reach)
                 yield return s;
     }
 
@@ -53,6 +53,13 @@ public static partial class Module
             scale = MathF.Max(scale, Structures.HearthFuelScale);
             return;
         }
+    }
+
+    // A fire on a finished hearth with a wider reach (the stone-ringed hearth) warms out to that far.
+    static partial void FireHeatRadiusHook(ReducerContext ctx, float x, float z, ref float radius)
+    {
+        foreach (var h in HearthsNear(ctx, x, z, Structures.HearthRadius))
+            radius = MathF.Max(radius, Structures.Shape((int)h.Kind).HeatRadius);
     }
 
     // A fire burning on a finished hearth inside this hut's walls.

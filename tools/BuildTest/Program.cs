@@ -3,7 +3,7 @@
 // reconnect. Runs against a local server with the module freshly published.
 // Exits non-zero if anything fails.
 //
-// Usage: dotnet run -- [lean-to|clay-hut|basket|fence|brick-house|log-cabin|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
+// Usage: dotnet run -- [lean-to|clay-hut|basket|fence|stone-hearth|brick-house|log-cabin|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
 // brick-house and log-cabin run on their own: bricks take minutes to dry, and twenty logs take a while to chop.
 using System.Diagnostics;
 using LifeGame.Shared;
@@ -61,6 +61,16 @@ WaitFor(() => bots.All(x => x.Ready), 30, "both players connected");
     Check(Structures.StageProcess((int)StructureKind.TiledHouse, 1) == Structures.DaubProcess && Structures.StageProcess((int)StructureKind.TiledHouse, 3) == Structures.RoofProcess, "its walls are daub work and its roof is roofing");
 }
 
+// The stone-ringed hearth (D-286): wild like the campfire, a hearth, and a fire on it warms out to 8 m.
+{
+    var ring = Structures.Shape((int)StructureKind.StoneHearth);
+    Check(ring.Wild && ring.Hearth && !ring.Indoor, "the stone-ringed hearth stands outdoors, anywhere");
+    Check(MathF.Abs(ring.HeatRadius - 8f) < 0.001f && ring.HeatRadius > Fires.WarmthRadius, "a fire on it warms out to 8 m, past the campfire's 5 m");
+    Check(Fires.WarmthFrom(0, 0, 6f, 0, ring.HeatRadius) > 0f && Fires.WarmthFrom(0, 0, 6f, 0) == 0f, "6 m away is warm by the hearth and cold by a plain fire");
+    Check(Fires.WarmthFrom(0, 0, 2f, 0) == Fires.WarmthFrom(0, 0, 2f, 0, Fires.WarmthRadius), "a plain fire warms as before");
+    Check(Structures.StageProcess((int)StructureKind.StoneHearth, 1) == Structures.FrameProcess, "its stones are laid like a frame");
+}
+
 // Building size and doorways (building-14), checked on the shared numbers both sides use.
 foreach (var kind in new[] { StructureKind.ClayHut, StructureKind.BrickHouse, StructureKind.LogCabin, StructureKind.TiledHouse })
 {
@@ -116,6 +126,11 @@ if (Wants("fence"))
         new() { [Item.Stick] = 3 },
         new() { [Item.Stick] = 2, [Item.Fiber] = 2 }));
 }
+
+if (which is "stone-hearth" or "both")
+    WarmByStoneHearth(BuildTogether(StructureKind.StoneHearth,
+        new() { [Item.Stone] = 5, [Item.Stick] = 2, [Item.Fiber] = 2 },
+        new() { [Item.Stone] = 3 }));
 
 // Not in "both": sun-dried bricks take minutes to dry, so this runs on its own (brick-house).
 if (Wants("brick-house"))
@@ -388,6 +403,28 @@ void UseGate(ulong gate)
 }
 
 // A raised hearth goes inside the finished hut, not outside it. A lays the stones, B the daub.
+// A fire lit on the stone-ringed hearth warms a player 6.5 m away but not 9.5 m (D-286).
+void WarmByStoneHearth(ulong id)
+{
+    var hearth = a.Conn.Db.Structure.Id.Find(id)!;
+    a.Craft("gather.tinder", Pump);
+    int fires = a.Conn.Db.Fire.Count;
+    a.Craft("fire.hand_drill", Pump);
+    WaitFor(() => a.Conn.Db.Fire.Count > fires, 10, "lit a fire beside the stone-ringed hearth");
+    var fire = a.Conn.Db.Fire.Iter().OrderByDescending(f => f.LitAt.MicrosecondsSinceUnixEpoch).First();
+    Check(MathF.Abs(fire.X - hearth.X) < 0.01f && MathF.Abs(fire.Z - hearth.Z) < 0.01f, "the fire sits on the stone-ringed hearth");
+    foreach (var (distance, warm) in new[] { (9.5f, false), (6.5f, true) })
+    {
+        b.WalkTo(hearth.X + distance, hearth.Z, 0.5f, Pump);
+        var seen = b.Conn.Db.PlayerPos.PlayerId.Find(b.MyId)!;
+        float away = MathF.Sqrt((seen.X - hearth.X) * (seen.X - hearth.X) + (seen.Z - hearth.Z) * (seen.Z - hearth.Z));
+        if (MathF.Abs(away - distance) > 1.5f) { Console.WriteLine($"  (b stands {away:F1} m away, not {distance} m: terrain in the way)"); continue; }
+        Pump(2500);
+        foreach (var v in b.Conn.Db.MyVitals.Iter()) Console.WriteLine($"  vitals: near={v.NearHeat} rate={v.WarmthRate:F3} at {away:F1} m");
+        WaitFor(() => b.Conn.Db.MyVitals.Iter().Any(v => v.NearHeat == warm), 8, warm ? $"{away:F1} m from the stone-ringed hearth is warm" : $"{away:F1} m from it is not");
+    }
+}
+
 void BuildHearth(ulong hut)
 {
     Console.WriteLine("--- Raised hearth");
@@ -578,6 +615,7 @@ sealed class Bot
                         "SELECT * FROM clay_piece",
                         "SELECT * FROM my_inventory",
                         "SELECT * FROM my_craft_job",
+                        "SELECT * FROM my_vitals",
                         "SELECT * FROM claim",
                         "SELECT * FROM claim_member",
                     });

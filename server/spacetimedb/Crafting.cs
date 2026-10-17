@@ -295,7 +295,11 @@ public static partial class Module
             for (int dz = -1; dz <= 1; dz++)
                 foreach (var fire in ctx.Db.Fire.ByChunk.Filter((cx + dx, cz + dz)))
                     if (fire.FuelUntil.MicrosecondsSinceUnixEpoch > now)
-                        warmth = Math.Max(warmth, Fires.WarmthFrom(fire.X, fire.Z, x, z));
+                    {
+                        float radius = Fires.WarmthRadius;
+                        FireHeatRadiusHook(ctx, fire.X, fire.Z, ref radius);
+                        warmth = Math.Max(warmth, Fires.WarmthFrom(fire.X, fire.Z, x, z, radius));
+                    }
         return warmth;
     }
 

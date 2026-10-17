@@ -42,6 +42,10 @@ namespace LifeGame.Shared
         public bool Fence, Gate;
         // Built inside a finished hut or house (a raised hearth), so it sits within their clearance.
         public bool Indoor;
+        // A fire lit within reach goes onto it and its fuel burns longer (the raised and stone-ringed hearths).
+        public bool Hearth;
+        // How far a fire on this hearth warms, in meters; 0 means the plain fire's Fires.WarmthRadius.
+        public float HeatRadius;
         // Ceramics' updraft kiln and storage jar: found by shape, never by enum number (docs/CONTENT.md).
         public bool Kiln, Jar;
         // A round walled hut: walls on a circle of HutWallRadius with a doorway on +Z (the clay hut).
@@ -263,6 +267,7 @@ namespace LifeGame.Shared
                 Round = true, Radius = HearthRadius, Solid = true,
                 Clearance = 0.6f,
                 Indoor = true,
+                Hearth = true,
                 Stages = new[] { "Stone ring", "Clay surround" },
                 // Raised hearth: Stone ring, Clay surround
                 Costs = new (Item Item, uint Count)[][]
@@ -379,6 +384,28 @@ namespace LifeGame.Shared
                     new[] { (Item.RoofTile, 12u) },
                 },
             },
+            // A stone-ringed hearth (D-286, Justin): an outdoor hearth builders can work beside through winter
+            // nights. A fire lit on it warms out to 8 m instead of the campfire's 5 m, and burns longer like the
+            // raised hearth. Wild like the campfire; modest stone cost.
+            new StructureShape
+            {
+                Name = "Stone-ringed hearth",
+                Model = "StoneHearth",
+                Wild = true,
+                Category = "Fire",
+                Scale = 1.2f,
+                Round = true, Radius = HearthRadius, Solid = true,
+                Clearance = 0.7f,
+                Hearth = true,
+                HeatRadius = 8f,
+                Stages = new[] { "Ring stones", "Kerb" },
+                // Stone-ringed hearth: Ring stones, Kerb
+                Costs = new (Item Item, uint Count)[][]
+                {
+                    new[] { (Item.Stone, 5u) },
+                    new[] { (Item.Stone, 3u) },
+                },
+            },
         });
 
         // Multiplies each shape's lengths by its Scale, once, so nothing else has to know about it.
@@ -484,6 +511,7 @@ namespace LifeGame.Shared
 
         public static bool IsFence(int kind) => Shape(kind).Fence;
         public static bool IsIndoor(int kind) => Shape(kind).Indoor;
+        public static bool IsHearth(int kind) => Shape(kind).Hearth;
         // Huts and houses (the kinds with a doorway): where indoor things like a hearth may go.
         public static bool IsHome(int kind) => HasDoorway(kind);
         public static bool IsGate(int kind) => Shape(kind).Gate;
@@ -503,6 +531,8 @@ namespace LifeGame.Shared
             // Fences: posts are framing; rails are wattle work; a gate's hurdle is door work.
             // Hearth: laying the stone ring is framing; the clay surround is daub work.
             _ when IsIndoor(kind) => stage == 0 ? FrameProcess : DaubProcess,
+            // A stone-ringed hearth: ring and kerb are both stone laid up like a frame.
+            _ when Shape(kind).Hearth => FrameProcess,
             _ when IsFence(kind) => stage == 0 ? FrameProcess : IsGate(kind) ? DoorProcess : WattleProcess,
             // Each crafting station reports its own id, so the journal knows it is built.
             _ when Shape(kind).Station != StationKind.None => StationInfo.BuildProcess(Shape(kind).Station),

@@ -59,7 +59,7 @@ public static partial class StructureModel
             LifeGame.Shared.StationKind.PottersBench => StationMeshes.PottersBench(),
             LifeGame.Shared.StationKind.Spindle => StationMeshes.Distaff(),
             LifeGame.Shared.StationKind.DryingRack => StationMeshes.DryingRack(),
-            _ => LifeGame.Shared.Structures.Shape(kind).Model switch { "ClayHut" => ClayHut(), "ClaimMarker" => ClaimMarkerModel.Pieces(), "Kiln" => KilnModel.Pieces(), "Basket" => Basket(), "Jar" => JarModel.Pieces(), "LeanTo" => LeanTo(), _ when LifeGame.Shared.Structures.Shape(kind).BrickWalls => BrickHouse(kind), _ when LifeGame.Shared.Structures.IsIndoor(kind) => Hearth(), _ when LifeGame.Shared.Structures.IsRoom(kind) => LogCabin(), _ when LifeGame.Shared.Structures.IsFence(kind) => Fence(LifeGame.Shared.Structures.IsGate(kind)), _ => LeanTo() },
+            _ => LifeGame.Shared.Structures.Shape(kind).Model switch { "ClayHut" => ClayHut(), "ClaimMarker" => ClaimMarkerModel.Pieces(), "Kiln" => KilnModel.Pieces(), "Basket" => Basket(), "Jar" => JarModel.Pieces(), "LeanTo" => LeanTo(), "StoneHearth" => Hearth(), _ when LifeGame.Shared.Structures.Shape(kind).BrickWalls => BrickHouse(kind), _ when LifeGame.Shared.Structures.IsIndoor(kind) => Hearth(), _ when LifeGame.Shared.Structures.IsRoom(kind) => LogCabin(), _ when LifeGame.Shared.Structures.IsFence(kind) => Fence(LifeGame.Shared.Structures.IsGate(kind)), _ => LeanTo() },
         };
         // A lean-to is all roof: its sloped thatch is the wall between the camera and the player, so
         // the near slope fades and the far slope stays rather than the whole thing clearing.

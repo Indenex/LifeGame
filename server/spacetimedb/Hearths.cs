@@ -31,6 +31,8 @@ public static partial class Module
     // fuel there burns longer (scale > 1). Building implements both.
     static partial void BuiltHearthSpotHook(ReducerContext ctx, float x, float z, ref (float X, float Z)? spot);
     static partial void FireFuelScaleHook(ReducerContext ctx, float x, float z, ref float scale);
+    // A fire on a stone-ringed hearth warms further than a plain one (D-286): Building raises the radius.
+    static partial void FireHeatRadiusHook(ReducerContext ctx, float x, float z, ref float radius);
     // Before a fire is checked for burning out, a hearth fire may top up its fuel (D-149).
     static partial void FireTopUpHook(ReducerContext ctx, Fire fire, ref Timestamp fuelUntil);
 
