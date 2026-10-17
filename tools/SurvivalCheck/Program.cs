@@ -235,6 +235,20 @@ conn.Reducers.Ran();
 Pump(() => Endurance() > e1, 5, "Endurance to rise after moving on");
 Ok("a report after moving on trains Endurance again");
 
+// --- Waking after a death with no waking place: the rim of the starting area, under open sky ---
+// A fresh world has no felled trees, so the shared tree rule says where trees stand.
+long diedBefore = V().DiedAt.MicrosecondsSinceUnixEpoch;
+conn.Reducers.AdminDie();
+Pump(() => V().DiedAt.MicrosecondsSinceUnixEpoch != diedBefore, 10, "the bot to die and wake");
+if (V().WakeKind != RestSpots.WokeAtEdge) Fail($"with no waking place the bot should wake at the edge, woke as {V().WakeKind}");
+var woke = conn.Db.PlayerPos.PlayerId.Find(myId)!;
+int wcx = World.CellOf(woke.X), wcz = World.CellOf(woke.Z), near = 0;
+for (int dx = -Needs.WakeOpenRadius; dx <= Needs.WakeOpenRadius; dx++)
+    for (int dz = -Needs.WakeOpenRadius; dz <= Needs.WakeOpenRadius; dz++)
+        if (dx * dx + dz * dz <= Needs.WakeOpenRadius * Needs.WakeOpenRadius && Trees.GrowsAt(wcx + dx, wcz + dz)) near++;
+if (near > 0) Fail($"woke at ({woke.X:F1}, {woke.Z:F1}) with {near} trees within {Needs.WakeOpenRadius} m");
+Ok($"woke in the open at ({woke.X:F1}, {woke.Z:F1}), no tree within {Needs.WakeOpenRadius} m");
+
 Console.WriteLine("Survival check passed");
 conn.Disconnect();
 return 0;

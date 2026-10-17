@@ -114,6 +114,10 @@ namespace LifeGame.Shared
         // Below this a need is worth warning about.
         public const float Low = 0.25f;
 
+        // After dying you wake where no tree stands within this many cells, if such
+        // a spot exists near the edge of the starting area (D-081: death is mild).
+        public const int WakeOpenRadius = 4;
+
         // What eating one of an item gives: (food, water). Zero for anything inedible.
         public static (float food, float water) Nourishment(Item item) =>
             Foods.Find(item) is { } f ? (f.Food, f.Water) : (0f, 0f);

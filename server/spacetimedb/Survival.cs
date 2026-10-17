@@ -395,18 +395,50 @@ public static partial class Module
         Log.Info($"{player.Name} died of {cause}");
     }
 
-    // A dry spot on the rim of the seeded area, at a random bearing.
+    // Where a player wakes after dying: near the rim of the seeded area at a random
+    // bearing, on dry ground in the open, so they wake under sky rather than deep in
+    // the trees. Tries 4 rings x 24 bearings; the first spot with no standing tree
+    // within Needs.WakeOpenRadius wins, else the least crowded.
     static (float, float) WildernessEdge(ReducerContext ctx)
     {
-        float rim = World.SpawnRadiusChunks * World.ChunkSize * World.CellSize - 6f;
+        float edge = World.SpawnRadiusChunks * World.ChunkSize * World.CellSize - 6f;
         float start = (float)(ctx.Rng.NextDouble() * Math.PI * 2);
-        for (int i = 0; i < 24; i++)
+        (float, float)? best = null;
+        float bestCrowding = float.MaxValue;
+        for (int ring = 0; ring < 4; ring++)
         {
-            float angle = start + i * MathF.PI * 2f / 24f;
-            float x = MathF.Cos(angle) * rim, z = MathF.Sin(angle) * rim;
-            if (IsDry(x, z)) return (x, z);
+            float rim = edge - ring * 4f;
+            for (int i = 0; i < 24; i++)
+            {
+                float angle = start + i * MathF.PI * 2f / 24f;
+                float x = MathF.Cos(angle) * rim, z = MathF.Sin(angle) * rim;
+                if (!IsDry(x, z)) continue;
+                float crowding = TreeCrowding(ctx, x, z, Needs.WakeOpenRadius);
+                if (crowding == 0f) return (x, z);
+                if (crowding < bestCrowding)
+                {
+                    bestCrowding = crowding;
+                    best = (x, z);
+                }
+            }
         }
-        return FindDry(0, 0);
+        return best ?? FindDry(0, 0);
+    }
+
+    // How crowded by standing trees a spot is: trees within radius cells, nearer
+    // ones counting more. 0 means open sky. Felled trees don't count.
+    static float TreeCrowding(ReducerContext ctx, float wx, float wz, int radius)
+    {
+        int cx = World.CellOf(wx), cz = World.CellOf(wz);
+        float sum = 0f;
+        for (int dx = -radius; dx <= radius; dx++)
+            for (int dz = -radius; dz <= radius; dz++)
+            {
+                float d = MathF.Sqrt(dx * dx + dz * dz);
+                if (d > radius || !Trees.GrowsAt(cx + dx, cz + dz) || !TreeStands(ctx, cx + dx, cz + dz)) continue;
+                sum += 1f + (radius - d);
+            }
+        return sum;
     }
 
     // --- Needs math --------------------------------------------------------
