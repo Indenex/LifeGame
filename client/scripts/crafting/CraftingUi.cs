@@ -285,6 +285,8 @@ public partial class CraftingUi : CanvasLayer
         reopenAfterMinigame = panel.Visible;
         panel.Visible = false;
         AddChild(minigame.Root);
+        // Tell the server a minigame opened: the time it takes is what makes the score believable (CraftScore.cs).
+        conn.Reducers.BeginMinigame(def.Id);
         MinigameSound(def, true);
     }
 

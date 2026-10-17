@@ -111,6 +111,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void AnswerTrade(ReducerContext ctx, ulong tradeId, bool accept)
     {
+        MeterCall(ctx);
         if (ctx.Db.Trade.Id.Find(tradeId) is not { } trade || trade.B != Me(ctx) || trade.State != Social.TradeAsked)
             throw new Exception("That trade is gone");
         if (accept) ctx.Db.Trade.Id.Update(trade with { State = Social.TradeOpen, StartedAt = ctx.Timestamp });
@@ -121,6 +122,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void SetTradeItem(ReducerContext ctx, ulong tradeId, ushort item, byte quality, uint count)
     {
+        MeterCall(ctx);
         var trade = RequireOpenTrade(ctx, tradeId);
         byte side = trade.A == Me(ctx) ? Social.SideA : Social.SideB;
         uint held = CarriedCount(ctx, Me(ctx), (Item)item, quality);
@@ -152,6 +154,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void AcceptTrade(ReducerContext ctx, ulong tradeId, uint version, bool accept)
     {
+        MeterCall(ctx);
         var trade = RequireOpenTrade(ctx, tradeId);
         if (!accept)
         {
@@ -189,6 +192,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void CancelTrade(ReducerContext ctx, ulong tradeId)
     {
+        MeterCall(ctx);
         if (ctx.Db.Trade.Id.Find(tradeId) is { } trade && (trade.A == Me(ctx) || trade.B == Me(ctx)))
             EndTrade(ctx, trade, "cancelled");
     }

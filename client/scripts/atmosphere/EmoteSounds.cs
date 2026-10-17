@@ -9,6 +9,7 @@ namespace LifeGame;
 // gesture, timed to Animation's poses (client/scripts/animation/WorkMotion.cs, anim-16): a swish
 // of cloth as the arm goes up and down, claps at the top of each cheer hop, a tap of the foot on
 // each dance beat, a rustle at each end of a bow. No voices. Everyone nearby hears it.
+[AudioSounds]
 static class EmoteSounds
 {
     const float Hearing = 22f;   // metres

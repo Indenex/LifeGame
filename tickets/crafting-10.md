@@ -1,7 +1,7 @@
 # crafting-10: Crafting panel stays open after a craft
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-panel-stays
 PR: #72
 
@@ -17,4 +17,4 @@ Playtest finding: the panel closed after every craft, so cleaning 6 clay meant p
 - UX may register the panel with `Panels` in #46; this change only touches `Begin`/`EndMinigame`, so the two should merge cleanly.
 
 ## Next step
-Wait for CI; the PM merges.
+None. Merged to main; kept for history.

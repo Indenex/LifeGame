@@ -28,6 +28,7 @@ public static partial class Module
             || (Rocks.LiesAt(cx, cz) && ctx.Db.TerrainEdit.CellKey.Find(World.CellKey(cx, cz)) is null))
             throw new Exception("Something is in the way");
 
+        RequireRoomForItem(ctx, World.ChunkOf(x), World.ChunkOf(z));
         RemoveFromStack(ctx, stack, 1);
         var placed = ctx.Db.WorldItem.Insert(new WorldItem
         {

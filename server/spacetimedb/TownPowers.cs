@@ -68,6 +68,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void BanFromTown(ReducerContext ctx, uint playerId, int days)
     {
+        MeterCall(ctx);
         var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
         if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Ban)) throw new Exception("Only the town's Marshal can ban someone");
         if (days <= 0) days = Towns.BanDaysDefault;
@@ -88,6 +89,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void LiftTownBan(ReducerContext ctx, uint playerId)
     {
+        MeterCall(ctx);
         var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
         if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Ban)) throw new Exception("Only the town's Marshal can lift a ban");
         var ban = ctx.Db.TownBan.ByTown.Filter(mine.TownId).FirstOrDefault(b => b.BannedId == playerId);
@@ -101,6 +103,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void WriteTownLog(ReducerContext ctx, string text)
     {
+        MeterCall(ctx);
         var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
         if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Log)) throw new Exception("Only the town's Scribe can write in its log");
         text = Social.StripControl(text).Trim();

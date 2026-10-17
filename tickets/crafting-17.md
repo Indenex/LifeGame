@@ -1,7 +1,7 @@
 # crafting-17: Hook for hearth fires that feed themselves (D-149)
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-hearth-topup
 PR: #194
 
@@ -15,4 +15,4 @@ D-148/D-149: a fire on a raised hearth feeds itself from storage nearby, so it n
 - (none)
 
 ## Next step
-Wait for CI, then send the PM the green sha and tell House building (session_01RrKHUxWRH973Ndnxsad9nv).
+None. Merged to main; kept for history.

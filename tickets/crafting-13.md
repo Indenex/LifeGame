@@ -1,7 +1,7 @@
 # crafting-13: Crafting numbers against D-075 (start low, grow slowly)
 Lane: Crafting
 Owner: Crafting thread
-Status: in_progress
+Status: done
 Branch: crafting-numbers
 PR: #125
 
@@ -47,4 +47,4 @@ Fires (D-090) are separate: 20 min at lighting, and the cap grows from 20 to 40 
 - Q3 answered: D-089. Q1 dropped and Q4 kept as is (PM, 2026-10-16 17:43: D-086 mastery stays about 6 h, D-081 fun first with some realism). Q2 became D-092 (craft-time formula): proposal below, waiting on Justin in the PM's next batch; until then the current numbers stay.
 
 ## Next step
-When the PM relays the answers, wait for CI on the D-089 PR; apply Q2 (Seconds in shared/Processes.cs) when the PM relays Justin's answer.
+None. Merged to main; kept for history.

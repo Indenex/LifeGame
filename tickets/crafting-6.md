@@ -1,7 +1,7 @@
 # crafting-6: Fire fuel readout
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-fire-fuel
 PR: (see STATUS)
 
@@ -15,4 +15,4 @@ From the crafting-5 playtest: a new player can't tell how long their fire will l
 - (none)
 
 ## Next step
-Wait for CI and the PM's merge queue. Then, once UX #46 is on main, switch crafting key text to Controls.KeyFor (UX's request).
+None. Merged to main; kept for history.

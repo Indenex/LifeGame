@@ -294,6 +294,36 @@ Check(conn.Db.WorldClock.Iter().Any() && conn.Db.SeasonClock.Iter().Any(), "the 
     Check(Obstacles.PushOut(ground, 0.4f, to.X, to.Z, 0f) == (to.X, to.Z), $"unstuck left us clear of trunks and boulders ({to.X:F1}, {to.Z:F1})");
 }
 
+// A client that hammers a reducer is slowed down (bugfix-50, audit item 9): the bucket holds a burst
+// and refills at a steady rate, refused calls cost nothing, and play carries on afterwards.
+{
+    int slowed = 0;
+    void OnError(ReducerEventContext _, Exception e) { if (e.Message.Contains("Slow down")) slowed++; }
+    conn.OnUnhandledReducerError += OnError;
+    for (int i = 0; i < 300; i++) conn.Reducers.SetSneaking(i % 2 == 0);
+    Pump(2500);
+    conn.OnUnhandledReducerError -= OnError;
+    Check(slowed >= 100, $"hammering a reducer 300 times was slowed down ({slowed} refused)");
+    Pump(3000);
+    conn.Reducers.SetSneaking(false);
+    WaitFor(() => conn.Db.PlayerSneaking.PlayerId.Find(myId) == null, 10, "and play carries on once the bucket has refilled");
+}
+
+// Heavy reducers are paced on top of the bucket (bugfix-51): a second name change straight after the
+// first is refused with a friendly message, and goes through once a moment has passed.
+{
+    var refused = new List<string>();
+    void OnError(ReducerEventContext _, Exception e) { if (e.Message.Contains("One moment")) refused.Add(e.Message); }
+    conn.OnUnhandledReducerError += OnError;
+    conn.Reducers.SetName("Pacer");
+    conn.Reducers.SetName("Pacertwo");
+    Pump(1500);
+    conn.OnUnhandledReducerError -= OnError;
+    Check(refused.Count == 1, $"a second name change straight away was paced ({refused.Count} refused)");
+    conn.Reducers.SetName("Pacerthree");
+    WaitFor(() => conn.Db.Player.PlayerId.Find(myId) is { } me && me.Name == "Pacerthree", 10, "and a name change after a moment goes through");
+}
+
 Console.WriteLine($"All spawn checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 conn.Disconnect();
 return 0;

@@ -140,6 +140,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void SetTownTerm(ReducerContext ctx, long seconds)
     {
+        MeterCall(ctx);
         var config = ctx.Db.ClaimConfig.Id.Find(0) ?? throw new Exception("Claims are not set up");
         if (config.Admin != Me(ctx)) throw new Exception("Only the server admin can change this");
         if (seconds < 0) throw new Exception("Seconds cannot be negative");
@@ -285,6 +286,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void DeclineTown(ReducerContext ctx, ulong townId)
     {
+        MeterCall(ctx);
         foreach (var invite in ctx.Db.TownInvite.ByTownInvitee.Filter((townId, Me(ctx))).ToList())
             ctx.Db.TownInvite.Id.Delete(invite.Id);
     }
@@ -292,6 +294,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void LeaveTown(ReducerContext ctx)
     {
+        MeterCall(ctx);
         var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
         DropSigner(ctx, mine);
     }
@@ -300,6 +303,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void RemoveFromTown(ReducerContext ctx, uint playerId)
     {
+        MeterCall(ctx);
         var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
         if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Remove))
             throw new Exception("Only the town's Mayor can remove a claim from the roster");
@@ -332,6 +336,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void RenameTown(ReducerContext ctx, string name)
     {
+        MeterCall(ctx);
         var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
         if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Rename)) throw new Exception("Only the Mayor can rename the town");
         name = Social.CleanClaimName(name);
@@ -385,6 +390,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void ProposeTownMerge(ReducerContext ctx, ulong otherTownId)
     {
+        MeterCall(ctx);
         var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
         if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Merge)) throw new Exception("Only the Mayor can propose a merge");
         if (otherTownId == mine.TownId) throw new Exception("That is your own town");
@@ -403,6 +409,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void VoteTownMerge(ReducerContext ctx, ulong mergeId, bool yes)
     {
+        MeterCall(ctx);
         var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("Only signers vote");
         var merge = ctx.Db.TownMerge.Id.Find(mergeId) ?? throw new Exception("That proposal is gone");
         if (mine.TownId != merge.FromTownId && mine.TownId != merge.ToTownId) throw new Exception("That is not your town's to vote on");
@@ -462,6 +469,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void VoteTownOffice(ReducerContext ctx, byte office, uint candidatePlayerId)
     {
+        MeterCall(ctx);
         if (Towns.Get(office) == null) throw new Exception("There is no such office");
         var me = SignerOf(ctx, Me(ctx)) ?? throw new Exception("Only signers vote");
         // An office nobody holds yet gets a vacant seat on its first vote, so its term can end.

@@ -1,7 +1,7 @@
 # crafting-19: Durability for hand tools and worn equipment (proposal first)
 Lane: Crafting
 Owner: Crafting thread (handed to a new Sonnet session per D-159, 2026-10-16 20:20)
-Status: in_progress
+Status: done
 Branch: crafting-durability
 PR: (none yet)
 
@@ -53,4 +53,4 @@ Local setup that worked: dotnet 8 SDK (dotnet-install.sh into ~/.dotnet, with th
 - To tell Journal: the Things to try line for repair, e.g. 'A tool gone soft in the hand is made good again at a table with a length of cord.'
 
 ## Next step
-When #160 merges: git merge origin/main into crafting-durability, renumber RepairTable after the other station kinds, run tools/gen-bindings.sh, build server and client, rerun tools/CraftCheck and tools/upgrade-check.sh origin/main, push, open the PR and send the PM the green sha.
+None. Merged to main; kept for history.

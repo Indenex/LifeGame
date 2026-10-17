@@ -168,6 +168,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void CreateCharacter(ReducerContext ctx, string name, byte race, byte a, byte b, byte c, byte d)
     {
+        MeterCall(ctx);
         RequireAtMenu(ctx);
         BackfillCharacter(ctx, ctx.Sender);
         if (ctx.Db.Character.Login.Filter(ctx.Sender).Count() >= Characters.MaxPerLogin)
@@ -186,6 +187,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void SelectCharacter(ReducerContext ctx, Identity key)
     {
+        MeterCall(ctx);
         RequireAtMenu(ctx);
         BackfillCharacter(ctx, ctx.Sender);
         var row = ctx.Db.Character.Key.Find(key);
@@ -199,6 +201,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void ReturnToMenu(ReducerContext ctx)
     {
+        MeterCall(ctx);
         if (ActivePlayer(ctx, ctx.Sender) is { } p) LeaveWorld(ctx, p);
     }
 
@@ -208,6 +211,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void DeleteCharacter(ReducerContext ctx, Identity key, string typedName)
     {
+        MeterCall(ctx);
         RequireAtMenu(ctx);
         BackfillCharacter(ctx, ctx.Sender);
         var row = ctx.Db.Character.Key.Find(key);
@@ -241,6 +245,7 @@ public static partial class Module
         if (ctx.Db.PlayerLook.PlayerId.Find(id) != null) ctx.Db.PlayerLook.PlayerId.Delete(id);
         if (ctx.Db.PlayerMark.PlayerId.Find(id) != null) ctx.Db.PlayerMark.PlayerId.Delete(id);
         if (ctx.Db.PlayerHealth.PlayerId.Find(id) != null) ctx.Db.PlayerHealth.PlayerId.Delete(id);
+        if (ctx.Db.PlayerStanding.PlayerId.Find(id) != null) ctx.Db.PlayerStanding.PlayerId.Delete(id);
         if (ctx.Db.PlayerJump.PlayerId.Find(id) != null) ctx.Db.PlayerJump.PlayerId.Delete(id);
         if (ctx.Db.PlayerSneaking.PlayerId.Find(id) != null) ctx.Db.PlayerSneaking.PlayerId.Delete(id);
         if (ctx.Db.PlayerSeen.PlayerId.Find(id) != null) ctx.Db.PlayerSeen.PlayerId.Delete(id);

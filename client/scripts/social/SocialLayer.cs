@@ -133,7 +133,7 @@ public partial class SocialLayer : Node
         if (claimSub == null)
             claimSub = conn.SubscriptionBuilder()
                 .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
-                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_chat", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM my_town_invites", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_group", "SELECT * FROM my_group_invites" });
+                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_standing", "SELECT * FROM my_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_chat", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM my_town_invites", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_group", "SELECT * FROM my_group_invites" });
     }
 
     public Func<bool> HideChip = () => false;
@@ -372,6 +372,11 @@ public partial class SocialLayer : Node
 
     // Whether you own or belong to the claim over this point. Main gives this to Building for door bars.
     public bool HasRightsAt(float x, float z) => ClaimAt(x, z) is { } c && HasRights(c);
+
+    // claims-25: true when no standing claim covers this point, or you own it or are a member the owner
+    // added (not just a townmate), as the server's IsOwnerOrMember. The claim's goods (eggs, leather) are
+    // theirs alone. Only for hiding prompts: the server still decides, and a ban is not mirrored here.
+    public bool ClaimGoodsOpenAt(float x, float z) => ClaimAt(x, z) is not { } c || IsOwnerOrMember(c);
 
     // Whether a standing claim covers this point; claim fences stop non-members even mid-jump (bugfix-25).
     public bool ClaimStandingAt(float x, float z) => ClaimAt(x, z) != null;

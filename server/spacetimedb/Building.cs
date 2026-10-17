@@ -35,6 +35,8 @@ public enum StructureKind
     TemperingTrough,
     // House building: a wooden chest, after Crafting's devices (24; the enum position is the kind number).
     Chest,
+    // House building: a straw bed (25), a rest spot by data (RestSpots.cs).
+    Bed,
 }
 
 // One material a structure's current stage still needs.
@@ -122,6 +124,7 @@ public static partial class Module
         if (!Structures.Exists(k))
             throw new Exception("Unknown structure");
         var player = RequirePlayer(ctx);
+        RequirePace(ctx, player.PlayerId, Pace.PlaceStructure, 0.4, "One moment, you are laying out too quickly");
         var pos = RequirePos(ctx, player);
         float dx = x - pos.X, dz = z - pos.Z;
         if (dx * dx + dz * dz > Structures.PlaceRange * Structures.PlaceRange)
@@ -237,6 +240,8 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void Dismantle(ReducerContext ctx, ulong structureId)
     {
+        var caller = RequirePlayer(ctx);
+        RequirePace(ctx, caller.PlayerId, Pace.Dismantle, 0.3, "One moment, you are taking things down too quickly");
         var s = ctx.Db.Structure.Id.Find(structureId) ?? throw new Exception("That building is gone");
         bool allowed = s.Owner == Me(ctx);
         if (!allowed) CanClearStructure(ctx, s, ref allowed);
@@ -349,8 +354,18 @@ public static partial class Module
         int cx = World.ChunkOf(x), cz = World.ChunkOf(z);
         for (int i = cx - 1; i <= cx + 1; i++)
             for (int j = cz - 1; j <= cz + 1; j++)
-                foreach (var s in ctx.Db.Structure.ByChunk.Filter((i, j)))
-                    yield return s;
+            {
+                if (!AnimalTickScope)
+                {
+                    foreach (var s in ctx.Db.Structure.ByChunk.Filter((i, j)))
+                        yield return s;
+                    continue;
+                }
+                // During the animal tick every animal asks about the same few chunks: read each once.
+                if (!AnimalScopedStructures.TryGetValue((i, j), out var here))
+                    AnimalScopedStructures[(i, j)] = here = ctx.Db.Structure.ByChunk.Filter((i, j)).ToList();
+                foreach (var s in here) yield return s;
+            }
     }
 
     static List<MaterialNeed> NeedsFor(int kind, int stage) =>

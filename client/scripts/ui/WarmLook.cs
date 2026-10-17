@@ -20,7 +20,7 @@ public partial class WarmLook : Node
 
     const string Mark = "warm_window";
     static readonly string[] ColourKeys = { "font_color", "font_hover_color", "font_pressed_color", "font_disabled_color", "font_placeholder_color", "font_uneditable_color" };
-    static readonly string[] BoxKeys = { "panel", "normal", "hover", "pressed", "disabled", "focus", "read_only" };
+    static readonly string[] BoxKeys = { "panel", "normal", "hover", "pressed", "disabled", "focus", "read_only", "background", "fill", "slider", "grabber_area", "grabber_area_highlight" };
 
     readonly List<Control> windows = new();
     float scan;
@@ -107,6 +107,21 @@ public partial class WarmLook : Node
         theme.SetColor("selection_color", "LineEdit", new Color(Butter, 0.5f));
         theme.SetColor("clear_button_color", "LineEdit", new Color(Ink, 0.6f));
         return theme;
+    }
+
+    static (ImageTexture Normal, ImageTexture Held, ImageTexture Off)? knobs;
+
+    static ImageTexture Dot(Color colour, int size = 16)
+    {
+        var image = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+        float r = size / 2f;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float d = new Vector2(x + 0.5f - r, y + 0.5f - r).Length();
+                image.SetPixel(x, y, new Color(colour, colour.A * Mathf.Clamp(r - 1f - d + 0.5f, 0f, 1f)));
+            }
+        return ImageTexture.CreateFromImage(image);
     }
 
     // The one filled button in a window (Ui.MainButton): soft coral with cream words on paper,
@@ -286,19 +301,30 @@ public partial class WarmLook : Node
         {
             if (!c.HasThemeStyleboxOverride(key) || c.GetThemeStylebox(key) is not StyleBoxFlat flat) continue;
             if (flat.HasMeta("warm")) continue;
-            var warm = Restyle(flat);
+            // Bars keep their thin corners.
+            var warm = Restyle(flat, round: key is not ("background" or "fill" or "slider" or "grabber_area" or "grabber_area_highlight"));
             warm.SetMeta("warm", true);
             c.AddThemeStyleboxOverride(key, warm);
+        }
+        // Slider knobs on paper (ui-67): Godot's white grabber vanished. A brown ink dot, a
+        // touch of coral when held. Sliders on the dark Esc pages keep theirs.
+        if (c is HSlider slider && !slider.HasThemeIconOverride("grabber"))
+        {
+            knobs ??= (Dot(Ink), Dot(Coral.Darkened(0.1f)), Dot(new Color(Ink, 0.4f)));
+            slider.AddThemeIconOverride("grabber", knobs.Value.Normal);
+            slider.AddThemeIconOverride("grabber_highlight", knobs.Value.Held);
+            slider.AddThemeIconOverride("grabber_disabled", knobs.Value.Off);
         }
         // Pictures and swatches keep their own colours; a faded modulate keeps its fade.
     }
 
-    static StyleBoxFlat Restyle(StyleBoxFlat old)
+    static StyleBoxFlat Restyle(StyleBoxFlat old, bool round = true)
     {
         var s = (StyleBoxFlat)old.Duplicate();
         s.BgColor = Recolour(old.BgColor, ground: true);
         s.BorderColor = Recolour(old.BorderColor);
         if (old.ShadowSize > 0) s.ShadowColor = new Color(0.25f, 0.12f, 0.08f, Mathf.Min(old.ShadowColor.A, 0.18f));
+        if (!round) return s;
         // Rounder, friendlier corners.
         s.CornerRadiusTopLeft = Mathf.Max(old.CornerRadiusTopLeft, 10);
         s.CornerRadiusTopRight = Mathf.Max(old.CornerRadiusTopRight, 10);
