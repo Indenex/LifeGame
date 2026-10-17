@@ -253,11 +253,15 @@ void WallsStopWalkers(ulong id)
     // (bugfix-45), however the bot happened to be standing after the last stage.
     var og = new BotGround(a.Conn);
     (float x, float z)? start = null, target = null;
-    foreach (var off in new[] { 0f, 0.5f, -0.5f, 0.9f, -0.9f })
+    // Along the fence and at three gaps: a tree beside it once blocked every spot in a short list
+    // ("found clear ground either side of the fence" failed on #861, bugfix-68).
+    var offs = new[] { 0f, 0.25f, -0.25f, 0.5f, -0.5f, 0.7f, -0.7f, 0.9f, -0.9f };
+    foreach (var gap in new[] { 0.9f, 0.7f, 1.1f })
+      foreach (var off in offs)
         foreach (var side in new[] { 1f, -1f })
         {
-            var f = Structures.ToWorld(s.X, s.Z, s.Yaw, off, side * 0.9f);
-            var t = Structures.ToWorld(s.X, s.Z, s.Yaw, off, -side * 0.9f);
+            var f = Structures.ToWorld(s.X, s.Z, s.Yaw, off, side * gap);
+            var t = Structures.ToWorld(s.X, s.Z, s.Yaw, off, -side * gap);
             if (start != null || Obstacles.StepBlocked(og, 0.4f, f.x, f.z, t.x, t.z, 0f)
                 || Obstacles.PushOut(og, 0.4f, f.x, f.z, 0f) != (f.x, f.z) || Obstacles.PushOut(og, 0.4f, t.x, t.z, 0f) != (t.x, t.z)) continue;
             start = f; target = t;
@@ -827,8 +831,26 @@ void StoreInBasket(ulong basket)
 {
     Console.WriteLine("--- Storing");
     var s = a.Conn.Db.Structure.Id.Find(basket)!;
-    a.WalkTo(s.X + 0.9f, s.Z, 0.3f, Pump);
-    b.WalkTo(s.X - 0.9f, s.Z, 0.3f, Pump);
+    // Stand on two clear spots beside it: a fixed spot 0.9 m east once sat inside a trunk next to the
+    // chest and A walked into it until the check failed (bugfix-68).
+    var og = new BotGround(a.Conn);
+    var shape = Structures.Shape((int)s.Kind);
+    var spots = new List<(float x, float z)>();
+    // Out from each side, just past the footprint and well inside the work reach (WorkReach past it).
+    foreach (var extra in new[] { 0.5f, 0.9f })
+        foreach (var (ux, uz) in new[] { (1f, 0f), (-1f, 0f), (0f, 1f), (0f, -1f) })
+        {
+            float lx = ux * ((shape.Round ? shape.Radius : shape.HalfWidth) + extra);
+            float lz = uz * ((shape.Round ? shape.Radius : shape.HalfDepth) + extra);
+            var w = Structures.ToWorld(s.X, s.Z, s.Yaw, lx, lz);
+            if (Obstacles.PushOut(og, 0.6f, w.x, w.z, 0f) != (w.x, w.z)) continue;
+            if (a.Conn.Db.Structure.Iter().Any(o => o.Id != s.Id && Structures.Contains((int)o.Kind, o.X, o.Z, o.Yaw, w.x, w.z, 0.4f))) continue;
+            if (spots.Any(p => (p.x - w.x) * (p.x - w.x) + (p.z - w.z) * (p.z - w.z) < 1f)) continue;
+            spots.Add(w);
+        }
+    Check(spots.Count >= 2, $"found two clear spots beside the {shape.Name}");
+    a.WalkTo(spots[0].x, spots[0].z, 0.3f, Pump);
+    b.WalkTo(spots[1].x, spots[1].z, 0.3f, Pump);
     uint sticks = a.CountOf(Item.Stick);
     Check(sticks >= 2, $"A carries sticks to store ({a.Carried()})");
     var stack = a.Conn.Db.MyInventory.Iter().First(i => i.Item == (ushort)Item.Stick);

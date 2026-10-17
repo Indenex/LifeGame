@@ -478,6 +478,8 @@ public partial class Terrain : Node3D
                     if (pebble)
                         landmarks.Put(PropMeshes.RiverStone(Regional(x, z, 95, PropMeshes.RiverStoneVariants)), Painted.Rock,
                             (at.ScaledLocal(Vector3.One * size * 3.3f), stone.Item2, stone.Item3));
+                    else if (NatureKit.Rocks && NatureKit.Rock(RockVariant(x, z)) is var (kitRock, kitLook, kitScale, kitSink))
+                        landmarks.Put(kitRock, kitLook, NatureKit.Placed(stone, kitScale, kitSink));
                     else
                         landmarks.Put(PropMeshes.Rock(RockVariant(x, z)), Painted.Rock, stone);
                     continue;
@@ -595,6 +597,12 @@ public partial class Terrain : Node3D
         // Painted trees in full near the camera and as a lighter far version beyond.
         foreach (var ((pine, v), items) in painted)
         {
+            // Or the nature kit's tree, in our light, behind a setting (Modeling's naturekit-1).
+            if (NatureKit.Trees && NatureKit.Tree(pine, v) is var (kitMesh, kitScale))
+            {
+                data.Add(kitMesh, NatureKit.Scaled(items, kitScale), null!);
+                continue;
+            }
             var material = pine ? PaintedTrees.PineMaterial : PaintedTrees.BroadleafMaterial;
             data.Add(pine ? PaintedTrees.Pine(v, false) : PaintedTrees.Broadleaf(v, false), items, material, range: (0f, PaintedTrees.NearRange));
             data.Add(pine ? PaintedTrees.Pine(v, true) : PaintedTrees.Broadleaf(v, true), items, material, range: (PaintedTrees.NearRange, 0f));
@@ -674,6 +682,19 @@ public partial class Terrain : Node3D
                 root.AddChild(ghosts);
             }
             ghosts.AddChild(new MultiMeshInstance3D { Multimesh = mm, MaterialOverride = ghost, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, VisibilityRangeBegin = range.Begin, VisibilityRangeEnd = range.End });
+        }
+        // A kit tree (naturekit-1) carries its materials on its surfaces, so its ghost is a
+        // see-through copy of the mesh over a copy of the same instances.
+        else if (range.Begin == 0f && material == null && NatureKit.GhostOf(mesh) is { } ghostMesh)
+        {
+            if (root.GetNodeOrNull<Node3D>(GhostsName) is not { } ghosts)
+            {
+                ghosts = new Node3D { Name = GhostsName, Visible = false };
+                root.AddChild(ghosts);
+            }
+            var copy = new MultiMesh { TransformFormat = mm.TransformFormat, UseColors = true, UseCustomData = custom, Mesh = ghostMesh, InstanceCount = mm.InstanceCount };
+            copy.Buffer = mm.Buffer;
+            ghosts.AddChild(new MultiMeshInstance3D { Multimesh = copy, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, VisibilityRangeBegin = range.Begin, VisibilityRangeEnd = range.End });
         }
     }
 

@@ -223,6 +223,8 @@ public partial class Main : Node3D
             AnswerTrade = yes => trade.Link.Answer(yes),
             InviteToTown = id => conn?.Reducers.InviteToTown(id),
             InviteToGroup = id => conn?.Reducers.InviteToGroup(id),
+            AddFriend = id => conn?.Reducers.AddFriend(id),
+            ToggleFriends = social.ToggleFriends,
             JoinGroup = id => { if (groupView.Incoming is { } i && i.FromId == id) groupView.Answer(i, true); },
             OpenChat = social.OpenChat,
             SomeoneNear = () => others.Values.Any(o => o.Position.DistanceTo(me.Position) < PlayerMenu.Reach),
@@ -231,6 +233,8 @@ public partial class Main : Node3D
         // ui-38: your group's members, and the invitation waiting for you.
         groupView.AvatarOf = id => others.GetValueOrDefault(id);
         groupView.MyId = () => myId;
+        groupView.ShowWay = social.ShowWay;
+        groupView.Showing = () => social.ShowingWay;
         AddChild(groupView);
         // ui-48: the emote wheel (Q); the server checks the emote and everyone sees it (anim-16).
         AddChild(new EmoteWheel

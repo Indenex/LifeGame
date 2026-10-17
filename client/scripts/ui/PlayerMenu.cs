@@ -13,7 +13,8 @@ public sealed record PlayerFacts(
     string? Town, string[] Offices, (Glyph glyph, Color ink)? Mark,
     bool AskedYou, bool Trading, bool MayInvite, string? InviteWhyNot,
     bool GroupAskedYou = false, string? GroupWhyNot = null,
-    bool InYourGroup = false, bool InYourTown = false);
+    bool InYourGroup = false, bool InYourTown = false,
+    bool Friend = false, string? FriendWhyNot = null);
 
 // Right-click a player (ui-35, Justin: "make it so right clicking a person opens a menu to
 // invite them to group, trade, etc. just being near them and hitting E shouldn't do
@@ -34,6 +35,10 @@ public partial class PlayerMenu : CanvasLayer
     public Action<bool> AnswerTrade = _ => { };
     public Action<uint> InviteToTown = _ => { };
     public Action<uint> InviteToGroup = _ => { };
+    // Marks them as a friend (claims-32's AddFriend reducer).
+    public Action<uint> AddFriend = _ => { };
+    // Opens or closes the friends list (claims-32), on the friends key (O, ui-81).
+    public Action ToggleFriends = () => { };
     // Says yes to the group invitation from this player.
     public Action<uint> JoinGroup = _ => { };
     public Action<string> OpenChat = _ => { };
@@ -123,6 +128,14 @@ public partial class PlayerMenu : CanvasLayer
 
     public override void _UnhandledInput(InputEvent e)
     {
+        // The friends key lives here with the rest of the social keys this lane binds (ui-81);
+        // words being typed never reach it (chat's text box takes them first).
+        if (e.IsActionPressed("friends"))
+        {
+            ToggleFriends();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         if (!IsOpen || !e.IsActionPressed("ui_cancel")) return;
         Close();
         GetViewport().SetInputAsHandled();
@@ -170,6 +183,7 @@ public partial class PlayerMenu : CanvasLayer
         if (inspecting) column.AddChild(Details(f));
         if (!f.GroupAskedYou)
             Item("Invite to group", f.GroupWhyNot, () => InviteToGroup(f.Id));
+        Item("Add friend", f.FriendWhyNot, () => AddFriend(f.Id));
 
         // Beside the cursor, kept on screen.
         frame.ResetSize();
@@ -275,13 +289,20 @@ public static class PlayerMenuFacts
             else mayInvite = true;
         }
 
+        // Friends you have marked (claims-32); the server checks again.
+        bool friend = conn.Db.MyFriends.Iter().Any(f => f.OwnerId == me && f.FriendId == them);
+
         return new PlayerFacts(them, p.Name, d, town, offices, mark,
             AskedYou: incomingTradeFrom == them, Trading: conn.Db.MyTrade.Count > 0,
             MayInvite: mayInvite, InviteWhyNot: whyNot,
             GroupAskedYou: conn.Db.MyGroupInvites.Iter().Any(i => i.FromId == them && i.InviteeId == me),
             GroupWhyNot: GroupWhyNot(conn, me, them, p.Name, d),
             InYourGroup: conn.Db.MyGroup.Iter().Any(m => m.PlayerId == them),
-            InYourTown: mySigner != null && theirSigner?.TownId == mySigner.TownId);
+            InYourTown: mySigner != null && theirSigner?.TownId == mySigner.TownId,
+            Friend: friend,
+            FriendWhyNot: friend ? $"{p.Name} is your friend"
+                : conn.Db.MyFriends.Iter().Count(f => f.OwnerId == me) >= Friends.Max ? $"You have {Friends.Max} friends already"
+                : null);
     }
 
     // Why you can't invite them to your group now, or null when you can (the server checks again).

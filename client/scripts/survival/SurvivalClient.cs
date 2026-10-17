@@ -89,6 +89,7 @@ public partial class SurvivalClient : Node
         }
         // Picked mushrooms on the ground, in the hand and as the icon: Modeling's pile (model-34).
         ItemModels.MushroomItem = Item.Mushrooms;
+        ItemModels.WildRootItem = Item.WildRoots;
         if (BerryCloseup.Wanted) world.AddChild(new BerryCloseup(terrain, player));
     }
 

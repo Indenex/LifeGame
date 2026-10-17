@@ -103,6 +103,7 @@ public partial class PlayerHover : Control
         if (f.GroupAskedYou) rows.Add(("Asking you to join their group", 13, ask));
         if (f.InYourGroup) rows.Add(("In your group", 13, good));
         else if (f.InYourTown) rows.Add(("In your town", 13, good));
+        if (f.Friend) rows.Add(("Your friend", 13, good));
         string who = f.Town is { } t ? $"Of {t}" : "No town yet";
         if (f.Offices.Length > 0) who += ", " + string.Join(", ", f.Offices);
         rows.Add((who, 13, soft));
