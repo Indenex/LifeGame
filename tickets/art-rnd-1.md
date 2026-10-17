@@ -34,9 +34,11 @@ Justin found Pebble's turtle shell (#594, renders/model-11-pebble-shell-*.png on
 
 - 2026-10-17: merged heads (3b3eb158): ChibiFace.cs (face atlas, expression 0 open, 1 closed, 2 happy, 3 sleepy via ChibiFace.SetExpression), ChibiFigure.AuthoredHeads (off by default); renders/art-rnd-1-bramble.png, -pebble-head.png, -faces.png.
 
+- 2026-10-17: merged branch 282da54a builds and renders (faces check). PM: hair pass + Pebble beak before morning, then one sheet per piece and a list for the PM to present together with the rollout question.
+
 ## Open questions / blockers
 - Justin (morning): tree palette (a) fresh greens, recommended, (b) partway to olive, (c) mixed; D-154, not defaulted.
 - Justin: is this the direction (painted texture on authored meshes) to roll out to other hero pieces?
 
 ## Next step
-Merge each helper branch as it reports (git worktree branches in this repo), check its image, push, and send the PM the raw link. If a helper session is lost, its piece's brief is in the 2026-10-17 progress entry; restart it from tools/art/pebble_shell as the example.
+When the tree-variants and hair/beak helpers report: merge, check images, make the final per-piece sheets under renders/art-rnd-1-*.png, add a Showcase index to docs/art-pipeline.md, and send the PM the list of raw links.
