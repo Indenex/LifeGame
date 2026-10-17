@@ -581,7 +581,8 @@ public partial class Terrain : Node3D
         // Trees in the way of the camera fade; their ghost draws them see-through.
         // Ghosts sit under one node per chunk so ShowGhosts can switch them off
         // wherever nothing can be in the way.
-        if (Look.GhostOf(material) is { } ghost)
+        // A far batch never stands between the camera and the player, so it needs no ghost.
+        if (range.Begin == 0f && Look.GhostOf(material) is { } ghost)
         {
             if (root.GetNodeOrNull<Node3D>(GhostsName) is not { } ghosts)
             {
