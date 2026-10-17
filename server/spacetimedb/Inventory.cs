@@ -123,6 +123,7 @@ public static partial class Module
         }
         else
             ctx.Db.InventoryItem.Id.Update(row with { OnBelt = true, Slot = place });
+        ClearHandIfGone(ctx, Me(ctx), row.Item);
     }
 
     // Takes a tool off the tools section into the bag (a place, or 65535 for the first free one).
