@@ -26,7 +26,7 @@ public static partial class Module
 
     [SpacetimeDB.View(Accessor = "MyWorn", Public = true)]
     public static System.Collections.Generic.List<WornItem> MyWorn(ViewContext ctx) =>
-        ctx.Db.WornItem.Owner.Filter(ctx.Sender).ToList();
+        ctx.Db.WornItem.Owner.Filter(Me(ctx)).ToList();
 
     // Puts on one carried piece; whatever was in its slot goes back into the inventory.
     [SpacetimeDB.Reducer]
@@ -34,17 +34,17 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         var piece = Clothing.Find(item) ?? throw new Exception("You can't wear that");
-        var stack = FindStack(ctx, ctx.Sender, (Item)item, quality) ?? throw new Exception("You are not carrying that");
+        var stack = FindStack(ctx, Me(ctx), (Item)item, quality) ?? throw new Exception("You are not carrying that");
         RemoveFromStack(ctx, stack, 1);
-        if (WornIn(ctx, ctx.Sender, (byte)piece.Slot) is { } old)
+        if (WornIn(ctx, Me(ctx), (byte)piece.Slot) is { } old)
         {
-            AddToInventory(ctx, ctx.Sender, (Item)old.Item, 1, old.Quality);
+            AddToInventory(ctx, Me(ctx), (Item)old.Item, 1, old.Quality);
             ctx.Db.WornItem.Id.Delete(old.Id);
         }
         ctx.Db.WornItem.Insert(new WornItem
         {
             Id = 0,
-            Owner = ctx.Sender,
+            Owner = Me(ctx),
             PlayerId = player.PlayerId,
             Slot = (byte)piece.Slot,
             Item = item,
@@ -56,8 +56,8 @@ public static partial class Module
     public static void TakeOff(ReducerContext ctx, byte slot)
     {
         RequirePlayer(ctx);
-        var worn = WornIn(ctx, ctx.Sender, slot) ?? throw new Exception("You aren't wearing anything there");
-        AddToInventory(ctx, ctx.Sender, (Item)worn.Item, 1, worn.Quality);
+        var worn = WornIn(ctx, Me(ctx), slot) ?? throw new Exception("You aren't wearing anything there");
+        AddToInventory(ctx, Me(ctx), (Item)worn.Item, 1, worn.Quality);
         ctx.Db.WornItem.Id.Delete(worn.Id);
     }
 

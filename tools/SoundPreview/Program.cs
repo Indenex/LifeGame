@@ -140,7 +140,7 @@ foreach (var scene in scenes)
         mix.StreamPan = 0.4f;
         mix.Water = water * water;
         mix.WaterPan = -0.4f;
-        bool walks = parts[0] is "approach" or "streamwalk" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && parts[0] != "cues" && parts[0] != "water" && parts[0] != "hens" && parts[0] != "tools" && parts[0] != "doors" && work == Work.None && t < seconds / 2;
+        bool walks = parts[0] is "approach" or "streamwalk" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && parts[0] != "cues" && parts[0] != "water" && parts[0] != "hens" && parts[0] != "tools" && !AudioScenes.Owns(parts[0]) && parts[0] != "doors" && work == Work.None && t < seconds / 2;
         if (work != Work.None && !workEnded && t >= seconds - 1)
         {
             mix.Working(Work.None);
@@ -221,6 +221,7 @@ foreach (var scene in scenes)
             if (At(12.5)) mix.Play(CueDefs.DirtThrow);
             if (At(14)) mix.Play(CueDefs.DigHands);
         }
+        AudioScenes.Render(parts[0], mix, done, n, rate);
         // Doors scene: open, shut, bar, unbar.
         if (parts[0] == "doors")
         {

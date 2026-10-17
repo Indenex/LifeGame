@@ -346,6 +346,8 @@ public partial class Avatar : Node3D
             SquishTick(dt);
             animator.Update(dt, speed, turnRate, sneaking);
             if (actItem != null) ShowActItem();
+            // Blinks and expressions on the chibi's face parts (#16); a no-op on bodies without them.
+            if (figure is Skeleton3D skeleton) PlayerModel.SetFace(skeleton, animator.Face);
             // The name comes down with the head when sitting or lying.
             nameplate.Position = new Vector3(0, nameplateY - rig.Height * animator.RestLowering, 0);
         }
