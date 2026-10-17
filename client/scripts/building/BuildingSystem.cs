@@ -185,6 +185,12 @@ public partial class BuildingSystem : Node
         c.Db.Structure.OnInsert += (_, s) => Upsert(s, fresh: s.Stage == 0 && s.Builders == 0 && s.Needs.All(n => n.Have == 0));
         c.Db.Structure.OnUpdate += (_, _, s) => Upsert(s, fresh: false);
         c.Db.Structure.OnDelete += (_, s) => Remove(s);
+        c.Db.DeviceJob.OnInsert += (_, j) => RefreshDevice(j.StructureId);
+        c.Db.DeviceJob.OnUpdate += (_, _, j) => RefreshDevice(j.StructureId);
+        c.Db.DeviceJob.OnDelete += (_, j) => RefreshDevice(j.StructureId);
+        c.Db.DeviceOutput.OnInsert += (_, o) => RefreshDevice(o.StructureId);
+        c.Db.DeviceOutput.OnUpdate += (_, _, o) => RefreshDevice(o.StructureId);
+        c.Db.DeviceOutput.OnDelete += (_, o) => RefreshDevice(o.StructureId);
         BindUse(c);
     }
 
@@ -208,6 +214,8 @@ public partial class BuildingSystem : Node
             ApplyExtras(s, v);
         }
 
+        if (s.Complete && Structures.Shape((int)s.Kind).Station is StationKind.ClayTub or StationKind.CrushBlock or StationKind.TemperTrough)
+            ShowDevice(s, v);
         int appeared = v.Show(s.Stage, Fraction(s), s.Complete, animate: existed || fresh);
         // A finished claim marker is drawn by client/scripts/social, which weathers it.
         v.Visible = !(s.Complete && Structures.Shape((int)s.Kind).Model == "ClaimMarker");
@@ -216,6 +224,24 @@ public partial class BuildingSystem : Node
 
         if (existed && !before!.Complete && s.Complete && me.Position.DistanceTo(v.Position) < 30f)
             hud.Note($"The {ShapeOf(s).Name.ToLowerInvariant()} is finished");
+    }
+
+    // How full a batch device looks: 0 idle, 1 for 1 to 3 units, 2 for 4 to 7, 3 for 8 to 10
+    // or output waiting; working while a job runs.
+    void ShowDevice(Structure s, StructureView v)
+    {
+        if (conn() is not { } db) return;
+        var job = db.Db.DeviceJob.StructureId.Find(s.Id);
+        bool waiting = db.Db.DeviceOutput.Iter().Any(o => o.StructureId == s.Id);
+        uint units = job?.Remaining ?? 0;
+        int fill = waiting ? 3 : units == 0 ? 0 : units <= 3 ? 1 : units <= 7 ? 2 : 3;
+        v.SetDevice(fill, job != null);
+    }
+
+    void RefreshDevice(ulong structureId)
+    {
+        if (rows.TryGetValue(structureId, out var s) && views.TryGetValue(structureId, out var v) && s.Complete)
+            Upsert(s, fresh: false);
     }
 
     void Remove(Structure s)
