@@ -247,7 +247,7 @@ public sealed class PlayerAnimator
         if (walkBlend > 0.005f) Walk(walk);
         pose.Blend(idle, walk, walkBlend > 0.995f ? 1f : walkBlend < 0.005f ? 0f : walkBlend);
 
-        if (crouch > 0.005f) Crouch(pose, crouch);
+        if (crouch > 0.005f) Crouch(pose, crouch, sneak: true);
         if (wade > 0.005f) Wade(pose, wade);
         if (afloat > 0.005f)
         {
@@ -771,8 +771,13 @@ public sealed class PlayerAnimator
 
     // Sneaking: knees bent and hips low with the feet still planted, chest over the knees,
     // head up and hands held ready. Added on top of whatever idle or walk is doing.
-    void Crouch(Pose p, float w)
+    void Crouch(Pose p, float w, bool sneak = false)
     {
+        if (sneak && Bounce >= 1f)
+        {
+            Tiptoe(p, w);
+            return;
+        }
         const float bend = 0.62f; // thigh angle; the hips drop by LegLength * (1 - cos bend)
         p.HipsOffset.Y -= rig.LegLength * (1f - Mathf.Cos(bend)) * w;
         p[Joint.HipL].X -= bend * w;
@@ -787,6 +792,29 @@ public sealed class PlayerAnimator
         p[Joint.ShoulderR].X -= 0.3f * w;
         p[Joint.ElbowL].X -= 0.55f * w;
         p[Joint.ElbowR].X -= 0.55f * w;
+    }
+
+    // A small round body sneaks on tiptoe (anim-22): up on the balls of the feet with
+    // the knees soft, chest forward, head up, and the hands held up in front like paws.
+    void Tiptoe(Pose p, float w)
+    {
+        const float bend = 0.3f;
+        p.HipsOffset.Y += (0.035f * rig.LegLength - rig.LegLength * (1f - Mathf.Cos(bend))) * w;
+        p[Joint.HipL].X -= bend * w;
+        p[Joint.HipR].X -= bend * w;
+        p[Joint.KneeL].X += 2f * bend * w;
+        p[Joint.KneeR].X += 2f * bend * w;
+        // Heels up.
+        p[Joint.FootL].X -= (bend + 0.35f) * w;
+        p[Joint.FootR].X -= (bend + 0.35f) * w;
+        p[Joint.Spine].X += 0.22f * w;
+        p[Joint.Neck].X -= 0.2f * w;
+        p[Joint.ShoulderL] = p[Joint.ShoulderL].Lerp(new Vector3(-0.55f, 0, 0.12f), w);
+        p[Joint.ShoulderR] = p[Joint.ShoulderR].Lerp(new Vector3(-0.55f, 0, -0.12f), w);
+        p[Joint.ElbowL].X = Mathf.Lerp(p[Joint.ElbowL].X, -1.65f, w);
+        p[Joint.ElbowR].X = Mathf.Lerp(p[Joint.ElbowR].X, -1.65f, w);
+        p[Joint.HandL].X = Mathf.Lerp(p[Joint.HandL].X, 0.8f, w);
+        p[Joint.HandR].X = Mathf.Lerp(p[Joint.HandR].X, 0.8f, w);
     }
 
     // One leg through the cycle; at legPhase 0 it passes under the body swinging forward.
