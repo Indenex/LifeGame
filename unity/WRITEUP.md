@@ -48,7 +48,9 @@ differences come from the engine and not from different content or numbers:
 
 - **The same world:** the ground is generated in Unity by `shared/World.cs`,
   `Forest.cs` and `Landmarks.cs`. `shared/` compiled for Unity unchanged; the only
-  shim needed was for `MathF.Tau`, which Unity's .NET Standard 2.1 lacks.
+  shim needed was for `MathF.Tau`, which Unity's .NET Standard 2.1 lacks. Checked
+  against Godot's own ground mesh: heights are identical, and colours are within
+  1/255 (Godot stores them as 8-bit) over 2,640 vertices (`Tools~/GroundCheck`).
 - **The same objects:** the painted pines (#544), the chibi player (#466), rocks,
   grass and water are exported from the running Godot client. That's 344 meshes and
   25,641 instances within 140 m of spawn.

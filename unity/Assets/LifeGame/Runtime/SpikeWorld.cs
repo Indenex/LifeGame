@@ -38,6 +38,7 @@ namespace LifeGame.Spike
         Vector3 godotCamPos;
         Quaternion godotCamRot;
         bool help = true;
+        SphericalHarmonicsL2 ambientProbe;
         string status = "";
         float yaw, pitch;
 
@@ -253,7 +254,9 @@ namespace LifeGame.Spike
                     sh.AddDirectionalLight(d, col, energy * skyMix * 4f / samples);
                 }
             }
-            RenderSettings.ambientMode = AmbientMode.Custom;
+            // Unity may regenerate the probe from the skybox on its own; Update puts ours back.
+            RenderSettings.ambientMode = AmbientMode.Skybox;
+            ambientProbe = sh;
             RenderSettings.ambientProbe = sh;
             RenderSettings.ambientIntensity = 1f;
             RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
@@ -464,6 +467,7 @@ namespace LifeGame.Spike
         void Update()
         {
             Shader.SetGlobalFloat("lg_world_seconds", Time.time);
+            if (data != null) RenderSettings.ambientProbe = ambientProbe;
             foreach (var b in batches)
             {
                 var rp = new RenderParams(b.Material)
