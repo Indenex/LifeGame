@@ -65,7 +65,9 @@ public partial class Atmosphere
         env.GlowBloom = 0.08f + 0.06f * grade + 0.1f * lowSun;
         env.GlowHdrThreshold = 1.1f - 0.25f * grade;
         // Faded and warm: a touch less contrast, darks lifted, lights creamy.
-        env.AdjustmentSaturation += 0.04f * grade;
+        // The Golden Skull packs are muted (olive-yellow greens, violet-grey stone), so ease
+        // saturation down a little rather than up.
+        env.AdjustmentSaturation -= 0.06f * grade;
         env.AdjustmentContrast = 1.08f - 0.12f * grade;
         env.AdjustmentColorCorrection = grade > 0.5f ? (curve ??= FadedCurve()) : null;
         if (GetViewport()?.GetCamera3D()?.Attributes is CameraAttributesPractical lens)
