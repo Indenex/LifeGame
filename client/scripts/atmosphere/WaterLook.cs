@@ -326,8 +326,12 @@ public static class WaterLook
             // fading with distance; no sun glare, only a soft warm sheen on the
             // ripples that face the sun.
             float rp = fine_ripples(p * 0.8, t * 0.8, f);
-            float line = smoothstep(0.62, 0.7, rp) * (1.0 - smoothstep(0.78, 0.9, rp));
+            // Edges widened by how fast the pattern changes on screen, so the strokes
+            // stay soft instead of breaking into pixel steps, and fainter close up.
+            float aa = fwidth(rp) * 1.5;
+            float line = smoothstep(0.62 - aa, 0.7 + aa, rp) * (1.0 - smoothstep(0.78 - aa, 0.9 + aa, rp));
             line *= (0.25 + 0.35 * wind_strength) * (1.0 - smoothstep(12.0, 30.0, reach)) * smoothstep(0.08, 0.25, depth);
+            line *= mix(0.45, 1.0, smoothstep(2.0, 7.0, reach)) / (1.0 + aa * 8.0);
             vec3 sunw = normalize(water_sun_dir);
             float sheen = smoothstep(0.85, 0.9, dot(rw, sunw)) * smoothstep(0.1, 0.4, sunw.y);
             col = mix(col, foam_color.rgb * lit * 1.05, line * 0.5);
