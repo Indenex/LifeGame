@@ -170,14 +170,7 @@ public partial class TradeWindow : CanvasLayer
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
 
-        var panel = Hud.Panel(box, Vector2.Zero);
-        var style = (StyleBoxFlat)panel.GetThemeStylebox("panel");
-        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.82f);
-        style.ContentMarginTop = style.ContentMarginBottom = 14;
-        style.ContentMarginLeft = style.ContentMarginRight = 18;
-        panel.SetAnchorsPreset(Control.LayoutPreset.Center);
-        panel.GrowHorizontal = Control.GrowDirection.Both;
-        panel.GrowVertical = Control.GrowDirection.Both;
+        var panel = Ui.Window(box);
         return panel;
     }
 

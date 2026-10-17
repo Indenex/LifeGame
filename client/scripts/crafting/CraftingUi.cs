@@ -39,10 +39,11 @@ public partial class CraftingUi : CanvasLayer
         Layer = 3; // above the HUD (Layer 2), so open panels cover prompts and rings
         panel = Card(Vector2.Zero);
         var style = (StyleBoxFlat)panel.GetThemeStylebox("panel");
-        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.82f);
+        // The shared window look (ui/Ui.cs).
+        style.BgColor = Ui.Frame;
         style.ContentMarginTop = style.ContentMarginBottom = 14;
         style.ContentMarginLeft = style.ContentMarginRight = 18;
-        style.SetCornerRadiusAll(12); // the build menu's frame (Hud.Panel)
+        style.SetCornerRadiusAll(Ui.Corner);
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 10);
         box.AddChild(Text("Crafting", 20));
