@@ -3,7 +3,7 @@ Lane: Modeling
 Owner: Modeling lane (session_01JKX3FNjkrEkAqoTaFJiXAm)
 Status: in_review
 Branch: claude/model-33-rabbit-snare
-PR: (opening)
+PR: #818
 
 ## Goal
 Animals' animals-34 rabbit snare (their item id 218): a cord noose tied to two small pegged sticks, in the painted item look at real scale (hazel pegs ~20 cm, noose ~12 cm across). In ItemModels:
