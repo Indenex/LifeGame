@@ -2,18 +2,21 @@
 
     python3 tools/art/compare.py out.png "label one" a.png "label two" b.png ...
 
-Each render is cropped to its middle band (the figures) and stacked with its label.
+Each render is cropped to its middle band (the figures; CROP=top,bottom as fractions,
+default 0.22,0.74) and stacked with its label.
 """
+import os
 import sys
 
 from PIL import Image, ImageDraw, ImageFont
 
 out, pairs = sys.argv[1], sys.argv[2:]
+top, bottom = (float(v) for v in os.environ.get("CROP", "0.22,0.74").split(","))
 rows = []
 for label, path in zip(pairs[::2], pairs[1::2]):
     im = Image.open(path).convert("RGB")
     w, h = im.size
-    rows.append((label, im.crop((0, int(h * 0.22), w, int(h * 0.74)))))
+    rows.append((label, im.crop((0, int(h * top), w, int(h * bottom)))))
 font = None
 for name in ("DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"):
     try:

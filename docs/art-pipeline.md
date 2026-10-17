@@ -71,9 +71,24 @@ For hero pieces (characters and what they wear, tools in hand, furniture, buildi
 For seeded families (trees, rocks, bushes) keep the C# builders, and lift them with methods 2, 5 and 6: smooth shading normals, painted value maps shared across the family, and baked AO. Trim sheets (7) come next for buildings.
 
 **What this needs from other lanes:**
-- *Integration:* `.glb` files under `client/assets/` must be imported before the client exports. CI should run `godot --headless --import` before exporting, so a fresh checkout has its `.godot/imported` files (to be confirmed with Integration). Blender is not needed in CI, because the exported `.glb` and `.png` are committed.
+- *Integration:* nothing new. `.glb` files under `client/assets/` must be imported before the client runs or exports, and CI already runs `godot --headless --import` (`.github/workflows/build.yml`), as does `tools/render/lib.sh`. Blender is not needed in CI, because the exported `.glb` and `.png` files are committed. Blender is not needed in CI, because the exported `.glb` and `.png` are committed.
 - *Modeling:* it owns `client/scripts/models/` and `client/assets/models/`. The pilot's shell goes to Modeling as a proposal, not as an edit to their open PR.
 
 ## Pilot: Pebble's shell
 
-(Filled in when the pilot is done: method, triangle and texture budget, before and after turntables, and what it says about the pipeline.)
+**Result.** The rebuilt shell reads as a real tortoise shell from every side. It is one high, smooth dome. Five hexagonal vertebral scutes run down the spine, with four costal scutes a side. A ring of 24 marginal scutes, the nuchal one centred at the neck, scallops the edge. On the front, the plastron has six pairs of plates: gular, humeral, pectoral, abdominal, femoral and anal. Every plate is painted in three tones, with a dark seam, a pale bevel on its upper edge, growth rings following its outline, and brush strokes along them. The three shell colours and the worn style 0 still work. Before and after turntables are in `renders/art-rnd-1-*.png`.
+
+**How it was made** (`tools/art/pebble_shell/`; `build.sh` runs all of it in about 75 s on 4 CPU cores):
+
+1. `geom.py` (numpy) defines the shape and the scute layout. The dome is parameterised by distance from its top along the surface, so the seams have the same width everywhere and the texture is not stretched on the steep sides. The scutes are Voronoi cells of hand-placed seeds (vertebrals in the middle, costals staggered between them, which makes the vertebrals hexagonal) inside a ring of radial marginal seams.
+2. `blender_build.py` (Blender 4.2, `-b`) builds the game mesh: a smooth dome (so the light bands stay clean), the shell's wall and inside, and the plastron fitted to the body's lofts, about 3,400 triangles in all. It also builds a carved high mesh with V-grooved seams and slightly domed plates, about 460k triangles. Cycles bakes the high mesh's AO and normals onto the game mesh, with a stand-in body for contact shadow, and exports a `.glb`.
+3. `paint.py` (numpy + Pillow) paints the albedo over the baked AO: per-plate tones, seams, bevels, rings and strokes. It paints at 2048 px and scales down to 1024 px. It makes two textures (scutes and worn) from one script.
+4. `ChibiShell.cs` loads the `.glb` and puts it on the Spine bone with a `BoneAttachment3D`, so every pose and animation carries it. It draws the shell with `ChibiLook`'s banded light over the painted texture, plus the baked normals at 0.55 strength. A tint uniform recolours the carapace for the look's shell colour (vertex colour red masks the plastron out). `ChibiShell.Enabled = false` brings back the built shell, and Showcase's `--built-shell` does the same for comparisons.
+
+**What it showed:**
+- The quality gain came from three things, in this order: the painted texture, one continuous surface instead of stacked primitives, and checking against real tortoise anatomy. The normal map helps only at the seams.
+- Iterating in-engine is quick: change a number, rebuild (75 s), render the turntable (about 90 s). It took three rounds: first too flat and too orange, then higher, then rounder lit centres and cooler browns.
+- The painting is the part that most needs an artist's eye, and it is where a script is weakest. The plates are tidier and more regular than a hand-painted shell. The next step would be stamped brush strokes taken from real painted samples (the Golden Skull tiles show the stroke shapes), plus a little asymmetry.
+- Cost: one 1024 px texture (about 0.5 MB as PNG) and 3,400 triangles, against roughly 2,000 triangles of ellipsoids before. That is fine for a player character.
+
+**Handing it on.** Modeling owns `client/scripts/models/` and `client/assets/models/`. This branch is a proposal: Modeling can take `ChibiShell.cs` and `tools/art/pebble_shell/` as they are, or fold the method into #594.
