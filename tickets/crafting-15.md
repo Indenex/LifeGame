@@ -1,7 +1,7 @@
 # crafting-15: Crafting stations (D-098)
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-stations
 PR: #160
 
@@ -70,4 +70,4 @@ Questions for Justin (recommended option first):
 - Known limits: the panel's greyed-out state refreshes on inventory changes, not when you walk up to a table (pressing the number still checks). The client doesn't check claim rights; the server does.
 
 ## Next step
-Wait for CI on the PR, then send the PM the green sha; ping Animals, Animation and Ceramics with it.
+None. Merged to main; kept for history.

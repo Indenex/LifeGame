@@ -1,7 +1,7 @@
 # crafting-21: Craft output and placing items
 Lane: Crafting (UX does the drag, ghost and prompt)
 Owner: Crafting thread (Sonnet, D-159)
-Status: in_review
+Status: done
 Branch: crafting-place (stacked on crafting-durability, PR #267)
 PR: (to open)
 
@@ -26,4 +26,4 @@ Justin (via the PM): finished crafts go to the bag; real-world items (bricks, po
 - Fired pots and bricks come out of the kiln or the drying stage, not an Outcome.Item craft, so Finished won't fire for them; Ceramics can raise a prompt from their own finish if Justin wants it.
 
 ## Next step
-Open the PR (after #267 merges, or stacked), send the PM the green sha, tell UX (session_01V6qgbNbvTwniqW946KACLr) when it merges.
+None. Merged to main; kept for history.

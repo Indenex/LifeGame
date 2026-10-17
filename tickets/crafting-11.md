@@ -1,7 +1,7 @@
 # crafting-11: Cold hearths and fires off the rocks
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-cold-hearth
 PR: #92
 
@@ -26,4 +26,4 @@ From Bug fixes' playtest 5 (screenshots/playtest5-fire-gone.png, playtest5-fire-
 - (none)
 
 ## Next step
-Wait for CI on the merge with main (after #70 and #47), send the PM the green sha.
+None. Merged to main; kept for history.
