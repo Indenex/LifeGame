@@ -88,6 +88,7 @@ public static partial class Module
     {
         RequirePlayer(ctx);
         if (!Items.IsKnown(item)) throw new Exception("Unknown item");
+        RequireHeld(ctx, item);
         var stack = BestStack(ctx, (Item)item) ?? throw new Exception("You are not carrying that");
         switch (Items.UseOf((Item)item))
         {

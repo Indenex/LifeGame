@@ -54,6 +54,13 @@ public static partial class Module
             ctx.Db.PlayerEquip.Owner.Delete(ctx.Sender);
     }
 
+    // Using or setting down an item is a click on the item in hand (Justin): refuses any other item.
+    static void RequireHeld(ReducerContext ctx, ushort item)
+    {
+        if (ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) is not { } equip || equip.Item != item)
+            throw new Exception("Take it in your hand first: press its number key");
+    }
+
     // Uses the item in hand the way its Def says (eat, drink, wear): a click on the held item. The
     // item is the server's own record of what is in hand, never a client argument.
     [SpacetimeDB.Reducer]
