@@ -74,38 +74,10 @@ public static partial class Module
     }
 
     // Level ground above the water with no boulder, trunk, fire or hearth under the stone ring.
+    // The terrain rules are shared (FireGround); a building clears the ground under it.
     static bool ClearForFire(ReducerContext ctx, float x, float z)
     {
-        int cx = World.CellOf(x), cz = World.CellOf(z);
-        float lo = float.MaxValue, hi = float.MinValue;
-        for (int i = cx - 1; i <= cx + 1; i++)
-            for (int j = cz - 1; j <= cz + 1; j++)
-            {
-                float h = World.Height(i, j, DepthAt(ctx, i, j));
-                lo = Math.Min(lo, h);
-                hi = Math.Max(hi, h);
-            }
-        if (lo < World.WaterLevel + 0.02f || hi - lo > 0.4f) return false;
-
-        for (int i = cx - 2; i <= cx + 2; i++)
-            for (int j = cz - 2; j <= cz + 2; j++)
-            {
-                if (DepthAt(ctx, i, j) != 0) continue;
-                // Test the cheap shared lookups first; a building clears the ground under it
-                // (the client draws no boulder or tree there), checked only where one stands.
-                if (Rocks.LiesAt(i, j))
-                {
-                    if (UnderStructure(ctx, i, j)) continue;
-                    var (rx, rz) = Rocks.Center(i, j);
-                    if (Dist(rx, rz, x, z) < Rocks.Radius(i, j) + Fires.RingRadius) return false;
-                }
-                else if (Trees.GrowsAt(i, j))
-                {
-                    if (UnderStructure(ctx, i, j)) continue;
-                    var (tx, tz) = Trees.Trunk(i, j);
-                    if (Dist(tx, tz, x, z) < 0.4f + Fires.RingRadius) return false;
-                }
-            }
+        if (!FireGround.Clear(x, z, (i, j) => DepthAt(ctx, i, j), (i, j) => UnderStructure(ctx, i, j))) return false;
 
         int chx = World.ChunkOf(x), chz = World.ChunkOf(z);
         for (int dx = -1; dx <= 1; dx++)

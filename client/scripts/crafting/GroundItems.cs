@@ -40,7 +40,7 @@ public partial class GroundItems : Node3D
                 Mesh = new MultiMesh
                 {
                     TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-                    Mesh = (variant > 0 ? ClayItemLook.MarkedMesh(item, (uint)(variant - 1)) : null) ?? ItemLook.MeshFor(item),
+                    Mesh = (variant > 0 && ClayItemLook.MarkedMesh(item, (uint)(variant - 1)) is { } marked ? PaintedItems.Paint(marked, PaintedItems.Family.Clay) : null) ?? ItemLook.MeshFor(item),
                 },
                 // Unused slots collapse to a point inside the patch, so they draw
                 // nothing and don't stretch the batch's bounds.

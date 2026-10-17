@@ -27,7 +27,9 @@ public partial class Terrain
             // so only the near one is drawn, with no distance limit.
             if (painted && range.Item1 > 0f) continue;
             var drawn = mesh;
-            if (felled && painted) drawn = PaintedTrees.Felled(material == PaintedTrees.PineMaterial, TreeVariant(x, z, material == PaintedTrees.PineMaterial ? 31u : 30u));
+            // A crown on its own trunk (a birch) falls as it is; a whole painted tree is swapped
+            // for its sawn-off version.
+            if (felled && painted && !PaintedTrees.IsCrown(mesh)) drawn = PaintedTrees.Felled(material == PaintedTrees.PineMaterial, TreeVariant(x, z, material == PaintedTrees.PineMaterial ? 31u : 30u));
             else if (felled && material == Painted.Bark) drawn = PropMeshes.CutTrunk;
             if (painted || material == Painted.Bark || material == Painted.Leaves || material == Look.TreeBark || material == Look.TreeFoliage)
                 AddMulti(root, drawn, items.Select(i => (i.Item1, i.Item2, new Color(0, 0, 0, i.Item3.A))).ToList(), material, shadow);
