@@ -182,6 +182,8 @@ public static partial class Module
         EnsureTownTimer(ctx);
         var town = ctx.Db.Town.Insert(new Town { Id = 0, Name = name, StartedAt = ctx.Timestamp });
         Sign(ctx, town.Id, claim, player);
+        // Invitations to other towns no longer apply once you have started your own.
+        foreach (var invite in ctx.Db.TownInvite.Invitee.Filter(ctx.Sender).ToList()) ctx.Db.TownInvite.Id.Delete(invite.Id);
         // The founder is the first Mayor until the signers vote.
         ctx.Db.TownOffice.Insert(new TownOffice
         {
