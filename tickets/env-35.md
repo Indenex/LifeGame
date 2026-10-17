@@ -3,7 +3,7 @@ Lane: Environment
 Owner: Environment thread (session_014EL1FHDJi92N6gKixNv6Q5)
 Status: in_review
 Branch: claude/environment-np240l (continues claude/environment-ambient-life-2)
-PR: (none yet)
+PR: #828
 
 ## Goal
 More small life, client-only, under the existing Options -> Graphics -> Ambient life
@@ -30,6 +30,7 @@ setting (D-145 next item, option (b) sent to the PM):
   over water (~0.6 m above the surface) and moving between spots, so the logic works; they
   are small at the default zoom, so take the clip close (camera-zoom about -2 to 1).
 - 2026-10-17 14:58: lane moved back to this account; new session continues on
+- 2026-10-17 15:02: PR #828 opened; Render requested 07ec0fee (via the PM, D-059).
   claude/environment-np240l, main merged in cleanly. No Godot in this container, so the
   pond render goes to the Render lane (D-059) and CI does the build.
 
