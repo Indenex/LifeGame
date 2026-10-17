@@ -128,7 +128,7 @@ Console.WriteLine($"A gathered {a.Count(Item.Stick)} sticks, {a.Count(Item.Fiber
 
 // Markers are refused in the waking clearing.
 Walk(a, 2, 2);
-ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.ClaimMarker, 3, 2, 0), "clearing", "no claims in the waking clearing");
+ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.ClaimMarker, 3, 2, 0), "newcomers wake", "no claims in the waking clearing");
 
 // A lays out a marker like any structure and builds it; the claim starts when it stands.
 // Other checks share this database and may have built near here, so take the first
@@ -243,6 +243,27 @@ Pump(() => b.Conn.Db.WorldItem.Iter().Any(i => Social.InClaim(claim.X, claim.Z, 
 var stone = b.Conn.Db.WorldItem.Iter().First(i => Social.InClaim(claim.X, claim.Z, i.X, i.Z) && i.Item == (ushort)Item.Stone);
 Walk(b, stone.X, stone.Z);
 ExpectError(b, () => b.Conn.Reducers.PickUp(stone.Id), "claimed", "B cannot pick up inside A's claim");
+// claims-29: what you drop is yours to pick back up, even inside someone else's claim.
+var bOwn = b.Conn.Db.MyInventory.Iter().Where(i => i.Count > 0 && !i.OnBelt).Take(1).ToList();
+if (bOwn.Count == 0) Console.WriteLine("  (B carries nothing; own-drop pick-up not checked)");
+else
+{
+    var own = bOwn[0];
+    uint ownBefore = b.Count((Item)own.Item);
+    var seen = b.Conn.Db.WorldItem.Iter().Select(i => i.Id).ToHashSet();
+    b.LastError = null;
+    b.Conn.Reducers.Drop(own.Item, own.Quality);
+    Pump(() => b.Conn.Db.WorldItem.Iter().Any(i => !seen.Contains(i.Id) && i.Item == own.Item) || b.LastError != null, 5, "B's own drop visible");
+    var dropped = b.Conn.Db.WorldItem.Iter().Where(i => !seen.Contains(i.Id) && i.Item == own.Item).Take(1).ToList();
+    Check(dropped.Count == 1, $"B drops a thing inside A's claim ({b.LastError ?? "ok"})");
+    if (dropped.Count == 1)
+    {
+        b.LastError = null;
+        b.Conn.Reducers.PickUp(dropped[0].Id);
+        Pump(() => b.Count((Item)own.Item) == ownBefore || b.LastError != null, 5, "pick own back up");
+        Check(b.LastError == null && b.Count((Item)own.Item) == ownBefore, $"B picks up what B dropped inside A's claim ({b.LastError ?? "ok"})");
+    }
+}
 ExpectError(b, () => b.Conn.Reducers.TendClaim(claim.Id), "Only the owner", "B cannot tend A's marker");
 
 // The owner can still dig at home, and working the land tends the claim (claims-5).
@@ -588,7 +609,9 @@ else
         Check(aClaim != null && bClaim != null, $"A and B each hold a claim for the town check (A {(aClaim != null ? "ok" : a.LastError ?? "none")}, B {(bClaim != null ? "ok" : b.LastError ?? "none")})");
         if (aClaim != null && bClaim != null)
         {
-            // B stays at their marker and tends it, so both claims are fresh for the next 30 s.
+            // The decay check is done: the town checks walk a lot, so claims stand 10 minutes from here
+            // (tending renews them for the new lifetime).
+            if (decay) AsOwner("set_claim_lifetime", "600");
             b.Conn.Reducers.TendClaim(bClaim.Id);
             a.Conn.Reducers.TendClaim(aClaim.Id);
 
@@ -626,6 +649,68 @@ else
             ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, tx, tz, 0), "claimed", "before B signs, A cannot build on B's land");
             b.Conn.Reducers.SignTown(townId);
             Check(Wait(() => a.Conn.Db.TownSigner.Iter().Count(t => t.TownId == townId) == 2, 5), "B signs, and the roster holds both claims");
+
+            // claims-28: the town's store, at the main marker (the claim on the roster longest: A's here),
+            // while both claims are fresh. Anyone on the roster puts in; only the Treasurer or the Mayor
+            // (A here) takes out; the Treasurer keeps up a claim from it; the log has each.
+            {
+                // Both owners tend first.
+                Walk(a, aClaim.X - 1.5f, aClaim.Z);
+                a.Conn.Reducers.TendClaim(aClaim.Id);
+                Walk(b, bClaim.X - 1.5f, bClaim.Z);
+                b.Conn.Reducers.TendClaim(bClaim.Id);
+                var putter = b.Conn.Db.MyInventory.Iter().Any(i => i.Count > 0 && !i.OnBelt) ? b : a;
+                Walk(putter, bClaim.X + 1.5f, bClaim.Z);
+                var storeCarried = putter.Conn.Db.MyInventory.Iter().Where(i => i.Count > 0 && !i.OnBelt).Take(1).ToList();
+                if (storeCarried.Count == 0) Console.WriteLine("  (A and B carry nothing to put in the town's store; store check skipped)");
+                else
+                {
+                    var put = storeCarried[0];
+                    var putItem = (Item)put.Item;
+                    ExpectError(putter, () => putter.Conn.Reducers.PutInTownStore(bClaim.Id, put.Item, put.Quality, 1), "kept at", "the store is only at the town's main marker");
+                    Walk(putter, aClaim.X + 1.5f, aClaim.Z);
+                    putter.LastError = null;
+                    putter.Conn.Reducers.PutInTownStore(aClaim.Id, put.Item, put.Quality, 1);
+                    Check(Wait(() => putter.Conn.Db.MyTownStore.Iter().Any(r => r.TownId == townId && r.Item == put.Item), 5), $"a signer puts a thing in the town's store ({putter.LastError ?? "ok"})");
+                    Check(Wait(() => a.Conn.Db.MyTownStore.Iter().Any(r => r.TownId == townId) && b.Conn.Db.MyTownStore.Iter().Any(r => r.TownId == townId), 5), "every signer sees the store");
+                    Walk(b, aClaim.X + 1.5f, aClaim.Z);
+                    ExpectError(b, () => b.Conn.Reducers.TakeFromTownStore(aClaim.Id, put.Item, put.Quality, 1), "Treasurer", "a plain signer cannot take from the store");
+                    Walk(a, aClaim.X + 12f, aClaim.Z + 12f);
+                    ExpectError(a, () => a.Conn.Reducers.TakeFromTownStore(aClaim.Id, put.Item, put.Quality, 1), "Walk up", "the store is reached at its marker");
+                    uint before = a.Count(putItem);
+                    Walk(a, aClaim.X - 1.5f, aClaim.Z);
+                    a.LastError = null;
+                    a.Conn.Reducers.TakeFromTownStore(aClaim.Id, put.Item, put.Quality, 1);
+                    Check(Wait(() => a.Count(putItem) == before + 1 && !a.Conn.Db.MyTownStore.Iter().Any(r => r.TownId == townId), 5), $"the Mayor takes it out ({a.LastError ?? "ok"})");
+                    Check(a.Conn.Db.TownLog.Iter().Any(l => l.TownId == townId && l.Text.Contains("in the store")) && a.Conn.Db.TownLog.Iter().Any(l => l.TownId == townId && l.Text.Contains("from the store")), "the town log has the put and the take");
+                }
+
+                // Upkeep: A, elected Treasurer, keeps up B's claim for a stick and a fiber from the store.
+                Walk(a, aClaim.X - 1.5f, aClaim.Z);
+                ExpectError(a, () => a.Conn.Reducers.KeepUpTownClaim(aClaim.Id, bClaim.Id), "Treasurer", "only the Treasurer keeps up claims (the Mayor does not)");
+                a.Conn.Reducers.VoteTownOffice(6, a.PlayerId);
+                b.Conn.Reducers.VoteTownOffice(6, a.PlayerId);
+                Check(Wait(() => a.Conn.Db.TownOffice.Iter().Any(o => o.TownId == townId && o.Office == 6 && o.HolderId == a.PlayerId), 5), "A is elected Treasurer");
+                ExpectError(a, () => a.Conn.Reducers.KeepUpTownClaim(aClaim.Id, bClaim.Id), "store needs", "upkeep needs a stick and fiber in the store");
+                if (a.Count(Item.Stick) >= Towns.UpkeepSticks && a.Count(Item.Fiber) >= Towns.UpkeepFiber)
+                {
+                    var stick = a.Conn.Db.MyInventory.Iter().First(i => i.Item == (ushort)Item.Stick && !i.OnBelt);
+                    var fiber = a.Conn.Db.MyInventory.Iter().First(i => i.Item == (ushort)Item.Fiber && !i.OnBelt);
+                    a.Conn.Reducers.PutInTownStore(aClaim.Id, stick.Item, stick.Quality, Towns.UpkeepSticks);
+                    a.Conn.Reducers.PutInTownStore(aClaim.Id, fiber.Item, fiber.Quality, Towns.UpkeepFiber);
+                    Wait(() => a.Conn.Db.MyTownStore.Iter().Count(r => r.TownId == townId) >= 2, 5);
+                    long bExpires = a.Conn.Db.Claim.Id.Find(bClaim.Id)?.ExpiresAt.MicrosecondsSinceUnixEpoch ?? 0;
+                    Thread.Sleep(1100);
+                    a.LastError = null;
+                    a.Conn.Reducers.KeepUpTownClaim(aClaim.Id, bClaim.Id);
+                    Check(Wait(() => (a.Conn.Db.Claim.Id.Find(bClaim.Id)?.ExpiresAt.MicrosecondsSinceUnixEpoch ?? 0) > bExpires, 5), $"the Treasurer keeps up B's claim from the store ({a.LastError ?? "ok"})");
+                    Check(Wait(() => !a.Conn.Db.MyTownStore.Iter().Any(r => r.TownId == townId), 5), "upkeep uses the stick and the fiber");
+                    Check(a.Conn.Db.TownLog.Iter().Any(l => l.TownId == townId && l.Text.Contains("kept up")), "the town log has the upkeep");
+                }
+                else Console.WriteLine("  (A carries no stick and fiber; upkeep from the store not checked)");
+                Check(Towns.Get(6)!.Powers.HasFlag(TownPower.Store | TownPower.Upkeep) && Towns.Get(Social.OfficeMayor)!.Powers.HasFlag(TownPower.Store), "the Treasurer and the Mayor keep the store, as data");
+                Walk(a, bClaim.X + 4f, bClaim.Z + 4f);
+            }
 
             // Builder rights now; the stash and the marker's upkeep stay B's.
             a.LastError = null;
@@ -708,6 +793,7 @@ else
             a.Conn.Reducers.WriteTownLog("The well was dug");
             Check(Wait(() => a.Conn.Db.TownLog.Iter().Any(l => l.TownId == townId && l.Note && l.Text.Contains("The well was dug")), 5), "the Scribe adds a note to the log");
             ExpectError(a, () => a.Conn.Reducers.WriteTownLog("Again"), "moment", "notes are rate limited");
+
 
             // D-323: a ban is per character. A's second character is banned; A's first still builds.
             a.Conn.Reducers.ReturnToMenu();
@@ -817,7 +903,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_characters", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_standing", "SELECT * FROM my_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_group", "SELECT * FROM my_group_invites",
+                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_characters", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_standing", "SELECT * FROM my_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_group", "SELECT * FROM my_group_invites", "SELECT * FROM my_town_store",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))
