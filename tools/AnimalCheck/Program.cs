@@ -5,7 +5,10 @@
 // is state-based with a generous timeout. Needs no admin, no weapon and no walking, so it runs in a
 // few seconds. Exits non-zero on failure.
 //
-// Usage: dotnet run -- [uri=http://127.0.0.1:3000] [db=lifegame]
+// The second half needs an admin (to place animals and give a bow and a spear): the tool makes its
+// bot an admin through the CLI (the publisher's identity), which must be on PATH as `spacetimedb-cli`.
+//
+// Usage: dotnet run -- [uri=http://127.0.0.1:3000] [db=lifegame] [server=local]
 using System.Diagnostics;
 using LifeGame.Shared;
 using SpacetimeDB;
@@ -13,6 +16,7 @@ using SpacetimeDB.Types;
 
 string uri = args.Length > 0 ? args[0] : "http://127.0.0.1:3000";
 string db = args.Length > 1 ? args[1] : "lifegame";
+string server = args.Length > 2 ? args[2] : "local";
 var clock = Stopwatch.StartNew();
 Identity? me = null;
 bool subscribed = false;
@@ -58,6 +62,14 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM player",
                 "SELECT * FROM player_pos",
                 "SELECT * FROM animal",
+                "SELECT * FROM animal_carcass",
+                "SELECT * FROM terrain_edit",
+                "SELECT * FROM chopped_tree",
+                "SELECT * FROM structure",
+                "SELECT * FROM structure_door",
+                "SELECT * FROM my_inventory",
+                "SELECT * FROM my_admin",
+                "SELECT * FROM player_equip",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -69,6 +81,12 @@ void Pump(Func<bool> done, int seconds, string what)
     var until = clock.Elapsed + TimeSpan.FromSeconds(seconds);
     while (!done() && clock.Elapsed < until) { conn.FrameTick(); Thread.Sleep(5); }
     if (!done()) Fail($"timed out waiting for {what}");
+}
+
+void Settle(int ms)
+{
+    var until = clock.Elapsed + TimeSpan.FromMilliseconds(ms);
+    while (clock.Elapsed < until) { conn.FrameTick(); Thread.Sleep(5); }
 }
 
 Pump(() => subscribed, 30, "subscription");
@@ -105,11 +123,11 @@ else
 {
     string strike = Refused("a strike out of reach", () => conn.Reducers.StrikeAnimal(far.Id));
     if (strike.Length == 0) Fail("a strike out of reach was refused with no reason");
-    Ok($"a strike at an animal {Away(far):F0} m away is refused ({strike})");
+    Ok($"a strike with nothing in hand is refused ({strike})");
 
     string shot = Refused("a shot out of range", () => conn.Reducers.ShootAnimal(far.Id));
     if (shot.Length == 0) Fail("a shot out of range was refused with no reason");
-    Ok($"a shot at an animal {Away(far):F0} m away is refused ({shot})");
+    Ok($"a shot without facing the animal is refused ({shot})");
 
     // Eggs are only laid by Defs with an Egg; either way a far animal is not collected from.
     string eggs = Refused("eggs from an animal out of reach", () => conn.Reducers.CollectEggs(far.Id));
@@ -118,6 +136,190 @@ else
     if (!lays && !eggs.Contains("doesn't lay")) Fail($"eggs from a non-layer were refused with \"{eggs}\"");
     Ok($"eggs from an animal {Away(far):F0} m away are refused ({eggs})");
 }
+
+
+// --- Test hooks: the bot becomes an admin (the CLI is the publisher) ---
+string name = "Anim" + new string(Enumerable.Range(0, 8).Select(_ => (char)('a' + Random.Shared.Next(26))).ToArray());
+conn.Reducers.SetName(name);
+Pump(() => Me().Name == name, 10, "the name to be set");
+var psi = new ProcessStartInfo("spacetimedb-cli", new[] { "call", db, "--server", server, "make_admin", $"\"{name}\"" })
+{
+    RedirectStandardOutput = true,
+    RedirectStandardError = true,
+};
+try
+{
+    using var p = Process.Start(psi)!;
+    p.WaitForExit(60_000);
+    if (p.ExitCode != 0) Fail($"make_admin through the CLI failed: {p.StandardError.ReadToEnd()}");
+}
+catch (Exception e) when (e is not OperationCanceledException)
+{
+    Fail($"could not run spacetimedb-cli to make the bot an admin: {e.Message}");
+}
+Pump(() => conn.Db.MyAdmin.Iter().Any(), 15, "the bot to become an admin");
+Ok("bot is an admin (animals can be placed, items given)");
+
+uint CountOf(Item item) => (uint)conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)item).Sum(r => (long)r.Count);
+
+void Give(Item item, uint count, byte quality = 60)
+{
+    uint before = CountOf(item);
+    lastError = null;
+    conn.Reducers.AdminGive((ushort)item, count, quality);
+    Pump(() => lastError != null || CountOf(item) >= before + count, 10, $"{item} to be given");
+    if (lastError != null) Fail($"giving {item}: {lastError}");
+}
+
+// Puts an item in a hotbar slot and takes it in hand.
+void Hold(byte slot, Item item)
+{
+    conn.Reducers.EquipSlot(255);
+    Pump(() => conn.Db.PlayerEquip.Owner.Find(me!.Value) is null, 10, "the hand to be put away");
+    conn.Reducers.SetHotbarSlot(slot, (ushort)item);
+    conn.Reducers.EquipSlot(slot);
+    Pump(() => conn.Db.PlayerEquip.Owner.Find(me!.Value) is { } e && e.Item == (ushort)item, 10, $"{item} to come to hand");
+}
+
+// Places an animal exactly where asked and returns it once it shows.
+Animal Spawn(AnimalSpecies species, float x, float z, byte eggs = 0)
+{
+    var before = conn.Db.Animal.Iter().Select(a => a.Id).ToHashSet();
+    lastError = null;
+    conn.Reducers.AdminSpawnAnimal((byte)species, x, z, eggs);
+    Pump(() => lastError != null || conn.Db.Animal.Iter().Any(a => !before.Contains(a.Id)), 10, $"a {species} to be placed");
+    if (lastError != null) Fail($"placing a {species}: {lastError}");
+    return conn.Db.Animal.Iter().First(a => !before.Contains(a.Id));
+}
+
+PlayerPos Pos() => conn.Db.PlayerPos.PlayerId.Find(Me().PlayerId)!;
+
+float bx = here.X, bz = here.Z;
+var walker = new BotWalker(conn, Me().PlayerId, "Animal check", name, ms =>
+{
+    for (var until = clock.Elapsed + TimeSpan.FromMilliseconds(ms); clock.Elapsed < until; Thread.Sleep(5)) conn.FrameTick();
+}, msg => Fail(msg));
+var ground = new BotGround(conn);
+
+void Face(float tx, float tz)
+{
+    var at = Pos();
+    float heading = MathF.Atan2(tx - at.X, tz - at.Z);
+    conn.Reducers.Move(at.X, at.Z, heading);
+    Pump(() => MathF.Abs(MathF.IEEERemainder(Pos().Heading - heading, MathF.Tau)) < 0.05f, 10, "the bot to face the target");
+}
+
+// --- Arrows stop at a trunk (bow, D-182) ---
+// The server walks the line from the shooter to the animal in steps of about a metre (Bow.cs
+// ArrowBlocked); this works the same steps out here with the same shared rule, to find a trunk the
+// line really passes through and a clear line to compare it with.
+bool LineBlocked(float fx, float fz, float tx, float tz)
+{
+    float dx = tx - fx, dz = tz - fz;
+    int steps = Math.Max(1, (int)MathF.Ceiling(MathF.Sqrt(dx * dx + dz * dz)));
+    float px = fx, pz = fz;
+    for (int i = 1; i <= steps; i++)
+    {
+        float x = fx + dx * i / steps, z = fz + dz * i / steps;
+        if (Obstacles.StepBlocked(ground, 0.05f, px, pz, x, z, 1.2f)) return true;
+        (px, pz) = (x, z);
+    }
+    return false;
+}
+
+(float X, float Z, float R)? trunk = null;
+for (int ring = 6; ring <= 40 && trunk == null; ring++)
+    for (int cx = (int)here.X - ring; cx <= (int)here.X + ring && trunk == null; cx++)
+        for (int cz = (int)here.Z - ring; cz <= (int)here.Z + ring && trunk == null; cz++)
+        {
+            if (Math.Max(Math.Abs(cx - (int)here.X), Math.Abs(cz - (int)here.Z)) != ring) continue;
+            if (!Obstacles.At(ground, cx, cz, out float ox, out float oz, out float r, out float h) || h != float.MaxValue || r < 0.2f) continue;
+            // Room to stand 3 m from it on one side.
+            var (sx, sz) = ground.Stand(ox - 3f, oz);
+            if (MathF.Abs(sx - (ox - 3f)) > 0.01f || MathF.Abs(sz - oz) > 0.01f) continue;
+            trunk = (ox, oz, r);
+        }
+if (trunk is not { } tree) { Fail("no tree trunk within 40 m of the start to test arrows against"); return 1; }
+Give(Item.Bow, 1);
+Give(Item.Arrow, 6);
+Hold(8, Item.Bow);
+walker.To(ref bx, ref bz, tree.X - 3f, tree.Z, 0.15f, stand: true);
+var at0 = Pos();
+float tdx = tree.X - at0.X, tdz = tree.Z - at0.Z, tdist = MathF.Sqrt(tdx * tdx + tdz * tdz);
+float ux = tdx / tdist, uz = tdz / tdist;
+// A length for the line past the trunk where one of the server's steps lands on the trunk's middle.
+float? line = null;
+for (float len = tdist + 2f; len < 20f && line == null; len += 0.01f)
+{
+    int n = (int)MathF.Ceiling(len);
+    for (int k = 1; k <= n; k++)
+        if (MathF.Abs(k * len / n - tdist) < tree.R * 0.5f) { line = len; break; }
+}
+if (line is not { } len0) { Fail("no line length puts a step on the trunk"); return 1; }
+float ax = at0.X + ux * len0, az = at0.Z + uz * len0;
+if (!LineBlocked(at0.X, at0.Z, ax, az)) Fail($"worked out a line through the trunk at ({tree.X:F1}, {tree.Z:F1}) that the shared rule says is clear");
+var behind = Spawn(AnimalSpecies.Sheep, ax, az);
+Face(ax, az);
+string blocked = Refused("a shot through a tree trunk", () => conn.Reducers.ShootAnimal(behind.Id));
+if (!blocked.Contains("in the way")) Fail($"a shot through a trunk was refused with \"{blocked}\", expected \"Something is in the way\"");
+Ok($"an arrow through a tree trunk ({len0:F1} m line) is stopped ({blocked})");
+
+// The same distance with nothing in between is not stopped for that reason.
+float clearX = 0, clearZ = 0;
+bool foundClear = false;
+for (int deg = 0; deg < 360 && !foundClear; deg += 15)
+{
+    float rad = deg * MathF.PI / 180f;
+    clearX = at0.X + MathF.Sin(rad) * len0;
+    clearZ = at0.Z + MathF.Cos(rad) * len0;
+    foundClear = !LineBlocked(at0.X, at0.Z, clearX, clearZ);
+}
+if (!foundClear) Fail("no clear line found round the bot to compare with");
+var open = Spawn(AnimalSpecies.Sheep, clearX, clearZ);
+Face(clearX, clearZ);
+lastError = null;
+conn.Reducers.ShootAnimal(open.Id);
+Pump(() => CountOf(Item.Arrow) < 6 || lastError != null, 10, "the clear shot to be answered");
+if (lastError != null) Fail($"a shot with nothing in the way was refused: {lastError}");
+Ok("a shot with nothing in the way is let fly (an arrow was used)");
+
+// --- One swing at a time, whichever animal it lands on (D-182) ---
+Give(Item.Spear, 1, 60);
+Hold(9, Item.Spear);
+var near = Pos();
+var first = Spawn(AnimalSpecies.Sheep, near.X, near.Z + 1.5f);
+var second = Spawn(AnimalSpecies.Sheep, near.X, near.Z - 1.5f);
+// Let any draw timer and the arrow thump settle so nothing else interferes.
+Settle(1500);
+conn.Reducers.StrikeAnimal(first.Id);
+conn.Reducers.StrikeAnimal(second.Id);
+// The first swing hurt its target; the second came too soon after it and did nothing.
+Settle(1400);
+conn.Reducers.StrikeAnimal(second.Id);
+Settle(1000);
+if (conn.Db.Animal.Id.Find(second.Id) == null)
+    Fail("the second animal died after being struck once at a normal pace: a second swing landed within the swing pause");
+Ok("a swing straight after another does nothing, even on a different animal");
+Settle(1400);
+conn.Reducers.StrikeAnimal(second.Id);
+Pump(() => conn.Db.Animal.Id.Find(second.Id) == null, 10, "the second animal to fall to a second swing");
+Ok("swings at the normal pace land: two good spear strikes fell a sheep");
+
+// --- Out of reach, now with a spear in hand and a hen with eggs ---
+var distant = Spawn(AnimalSpecies.Sheep, Pos().X + 15f, Pos().Z);
+lastError = null;
+conn.Reducers.StrikeAnimal(distant.Id);
+Pump(() => lastError != null, 10, "a strike at a sheep 15 m away to be refused");
+if (!lastError!.Contains("Too far")) Fail($"a strike at a sheep 15 m away was refused with \"{lastError}\"");
+Ok("a spear strike at an animal 15 m away is out of reach");
+var henFar = Spawn(AnimalSpecies.Hen, Pos().X + 15f, Pos().Z + 4f, 2);
+string henRefused = Refused("eggs from a hen 15 m away", () => conn.Reducers.CollectEggs(henFar.Id));
+if (!henRefused.Contains("reach")) Fail($"eggs from a hen 15 m away were refused with \"{henRefused}\"");
+var henNear = Spawn(AnimalSpecies.Hen, Pos().X + 1f, Pos().Z + 1f, 2);
+uint eggsBefore = CountOf(Item.Egg);
+conn.Reducers.CollectEggs(henNear.Id);
+Pump(() => CountOf(Item.Egg) > eggsBefore, 10, "eggs from a hen at hand");
+Ok("eggs come only from a hen within reach");
 
 Console.WriteLine("Animal check passed");
 conn.Disconnect();
