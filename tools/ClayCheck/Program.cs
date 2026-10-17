@@ -629,6 +629,7 @@ void HuntMutton()
         }
         if (a == null) continue;
         lastError = null;
+        EquipAxe();
         conn.Reducers.StrikeAnimal(id);
         Pump(() => false, 1.1f, null);
         if (lastError != null && !lastError.Contains("Too far")) Fail($"striking the sheep: {lastError}");
