@@ -15,6 +15,8 @@ namespace LifeGame;
 public static class NatureKit
 {
     public const string Dir = "res://assets/quaternius/nature/";
+    // The village kit's props (village-1), drawn with the same blended look.
+    public const string VillageDir = "res://assets/quaternius/village/";
 
     public enum Kind { Leaves, Bark, Rock, Plant, Flower, Grass }
 
@@ -108,15 +110,15 @@ public static class NatureKit
         lock (Meshes)
         {
             if (Meshes.TryGetValue((name, raw), out var cached)) return cached;
-            var mesh = Load(name, raw);
+            var mesh = Load(name.StartsWith("Prop_") ? VillageDir : Dir, name, raw);
             Meshes[(name, raw)] = mesh;
             return mesh;
         }
     }
 
-    static Mesh? Load(string name, bool raw)
+    static Mesh? Load(string dir, string name, bool raw)
     {
-        string path = Dir + name + ".gltf";
+        string path = dir + name + ".gltf";
         if (!ResourceLoader.Exists(path) || GD.Load<PackedScene>(path) is not { } packed)
         {
             GD.PushWarning($"NatureKit: {path} could not be loaded.");
@@ -154,7 +156,9 @@ public static class NatureKit
 
     static Kind KindOf(string model, string material)
     {
-        if (material.StartsWith("Bark")) return Kind.Bark;
+        if (material.StartsWith("Bark") || material.StartsWith("MI_WoodTrim")) return Kind.Bark;
+        if (material.StartsWith("MI_RockTrim")) return Kind.Rock;
+        if (material.StartsWith("MI_Vine")) return Kind.Leaves;
         if (material.StartsWith("Rocks") || material.StartsWith("PathRocks")) return Kind.Rock;
         if (material.StartsWith("Flowers") || material.StartsWith("Mushrooms")) return Kind.Flower;
         if (material.StartsWith("Grass")) return Kind.Grass;
@@ -179,6 +183,9 @@ public static class NatureKit
     static readonly LeafLook BirchLeaves = new(new(0.56f, 0.7f, 0.18f), KitLow, new(0.62f, 0.76f, 0.1f), 1.836f, 0.25f, true); // kit: (1, 0.252, 0.066), glow (1, 0.495, 0.127), 0.335
     static readonly LeafLook TwistedLeaves = new(new(0.3f, 0.54f, 0.1f), KitLow, new(0.5f, 0.7f, 0.05f), 1.51f, 0.3f, true); // kit: (0.767, 0, 0.029), glow (0.547, 0, 0.131), 0.61
 
+    // The village kit's vines (MI_Vine: its two greens).
+    static readonly LeafLook VineLeaves = new(new(0.423f, 0.467f, 0.006f), new(0.257f, 0.398f, 0f), new(0.45f, 0.6f, 0f), 1.5f, 0.1f, false);
+
     static LeafLook? Leaf(string model) =>
         model.StartsWith("CommonTree") || model.StartsWith("Bush_Common") ? CommonLeaves
         : model.StartsWith("GiantPine") ? GiantPineLeaves
@@ -195,6 +202,7 @@ public static class NatureKit
         "Bark_DeadTree" => new(0f, 0f, 0f),
         "Bark_Pine" => new(0.545f, 0.659f, 0f),
         "Bark_TwistedTree" => new(0.219f, 0.271f, 0f),
+        "MI_WoodTrim" or "MI_WoodTrim_Wear" => Colors.White, // village timber: its texture as painted
         _ => new(0.235f, 0.29f, 0f),
     };
 
@@ -215,7 +223,7 @@ public static class NatureKit
         var texture = standard?.AlbedoTexture;
         string name = source?.ResourceName ?? "";
         var kind = KindOf(model, name);
-        var leaf = kind == Kind.Leaves ? Leaf(model) : null;
+        var leaf = kind == Kind.Leaves ? (name.StartsWith("MI_Vine") ? VineLeaves : Leaf(model)) : null;
         string look = kind switch
         {
             Kind.Leaves => leaf == CommonLeaves ? "common" : model.Split('_')[0],
@@ -228,7 +236,8 @@ public static class NatureKit
             var m = new ShaderMaterial { Shader = Shader };
             if (texture != null) m.SetShaderParameter("albedo_tex", texture);
             m.SetShaderParameter("has_tex", texture != null);
-            m.SetShaderParameter("albedo", standard?.AlbedoColor ?? Colors.White);
+            // The village kit's timber is a bright orange pine; ours is a weathered brown.
+            m.SetShaderParameter("albedo", name.StartsWith("MI_WoodTrim") ? new Color(0.8f, 0.7f, 0.62f) : standard?.AlbedoColor ?? Colors.White);
             bool cut = kind is Kind.Leaves or Kind.Plant or Kind.Flower;
             m.SetShaderParameter("cutout", cut ? 0.5f : 0f);
             m.SetShaderParameter("mode", kind switch { Kind.Leaves => 1, Kind.Grass => 2, Kind.Bark => 3, Kind.Plant or Kind.Flower => 4, _ => 0 });
@@ -241,9 +250,9 @@ public static class NatureKit
                 m.SetShaderParameter("glow_blend", l.GlowBlend);
                 m.SetShaderParameter("cards", l.Cards ? 1f : 0f);
             }
-            if (kind == Kind.Bark)
+            if (kind == Kind.Bark) m.SetShaderParameter("bark_foot", BarkFoot(name));
+            if (kind is Kind.Bark or Kind.Rock)
             {
-                m.SetShaderParameter("bark_foot", BarkFoot(name));
                 if (standard is { NormalEnabled: true, NormalTexture: { } normal })
                 {
                     m.SetShaderParameter("normal_tex", normal);
@@ -381,7 +390,6 @@ public static class NatureKit
                 NORMAL *= FRONT_FACING ? 1.0 : -1.0;
             } else if (mode == 3) {
                 color = mix(color * bark_foot, color, vertex_r);
-                if (has_normal) NORMAL_MAP = texture(normal_tex, UV).rgb;
             } else if (mode == 4) {
                 color *= vertex_r;
             } else if (tint_blend > 0.0) {
@@ -397,6 +405,7 @@ public static class NatureKit
                 turned = mix(turned, vec3(0.42, 0.28, 0.15) * (0.6 + lum), smoothstep(0.75, 1.0, season_autumn));
                 color = mix(color, turned, smoothstep(0.0, 0.6, season_autumn));
             }
+            if (has_normal) NORMAL_MAP = texture(normal_tex, UV).rgb;
             color *= mix(1.0, 0.8, wetness);
             ALBEDO = color;
             ROUGHNESS = 0.9;
