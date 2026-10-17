@@ -1,0 +1,16 @@
+# survival-38 (main f288761e): a real signal fire (the "Light a signal fire" action on 2 fiber) beside a
+# normal campfire, at dusk, camera pulled back and tilted up so a tall smoke column fits in frame.
+# Run with RENDER_PATCH=tools/render/patches/cabin.sh (SeedFire for the campfire only).
+client-as-puppet
+client --time-of-day=0.78 --rain=0 --cloud=0.15 --wind=0.1 --season=0.25 --render-cam=9,2.0,-45,4.5
+wait 35
+warp -7.2 -5.6
+give 3 4
+act SeedFire -4.7 -4.4
+act StartCraft fire.signal 1.0
+wait 12
+sqlout SELECT id, x, z, signal FROM fire
+wait 20
+snap
+wait 15
+snap
