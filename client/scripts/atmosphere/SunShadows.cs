@@ -50,34 +50,42 @@ public partial class SunShadows : Node
     }
 
     // What each level costs: shadow atlas size (px, shared by the cascades), cascade
-    // count, reach (m), Godot's soft-shadow filter, and how far (m) past the player the
-    // first, second and third cascades end. Bigger cascades hold more shadow casters,
+    // count, reach (m), Godot's soft-shadow filter, the sun's apparent size (degrees,
+    // how wide the soft edge is; wider costs more on weak GPUs), and how far (m) past
+    // the player the first, second and third cascades end. Bigger cascades hold more shadow casters,
     // so the near ones stay tight on Medium to keep its draw calls near the old ones.
     readonly record struct Tier(int Atlas, int Splits, float Reach, RenderingServer.ShadowQuality Filter,
-        float FirstPast, float SecondPast, float ThirdPast);
+        float Penumbra, float FirstPast, float SecondPast, float ThirdPast);
     static readonly Tier[] Tiers =
     {
-        new(2048, 2, 40f, RenderingServer.ShadowQuality.SoftLow, 8f, 8f, 8f),
-        new(4096, 4, 50f, RenderingServer.ShadowQuality.SoftMedium, 2f, 8f, 20f),
-        new(8192, 4, 70f, RenderingServer.ShadowQuality.SoftHigh, 5f, 16f, 34f),
+        new(2048, 2, 40f, RenderingServer.ShadowQuality.SoftLow, 0.5f, 8f, 8f, 8f),
+        new(4096, 4, 50f, RenderingServer.ShadowQuality.SoftMedium, 1.1f, 2f, 8f, 20f),
+        new(8192, 4, 70f, RenderingServer.ShadowQuality.SoftHigh, 1.1f, 5f, 16f, 34f),
     };
     // The sun's shadow direction steps by this much (degrees). At the normal day
     // length that is one small step about every 1.5 s; a 10 m tree's shadow tip moves
     // under 2 cm, within one texel of the nearest cascade.
     public const float SunStepDegrees = 0.1f;
-    // The sun's apparent size (degrees), which sets how wide the soft shadow edge is.
-    const float PenumbraDegrees = 1.1f;
     // Splits refit once the zoom settles this many metres from where they were fitted.
     const float RefitMetres = 1.5f;
 
-    readonly DirectionalLight3D sun;
+    readonly DirectionalLight3D? sun;
     float fittedFor = -1f;
     Level applied = (Level)(-1);
 
     public SunShadows(DirectionalLight3D sun) => this.sun = sun;
 
+    // For Godot, which needs a parameterless constructor on editor and hot reload.
+    // Atmosphere makes a fresh one with the sun, so this one stays idle.
+    public SunShadows() { }
+
     public override void _Ready()
     {
+        if (sun is null)
+        {
+            SetProcess(false);
+            return;
+        }
         Changed += OnChanged;
         sun.ShadowEnabled = true;
         sun.DirectionalShadowBlendSplits = true;
@@ -88,8 +96,7 @@ public partial class SunShadows : Node
         sun.ShadowBias = 0.05f;
         sun.ShadowNormalBias = 1.5f;
         // Soft, rounded edges for the cosy look (D-313): a wider sun disc for the
-        // penumbra and a little extra blur.
-        sun.LightAngularDistance = PenumbraDegrees;
+        // penumbra (per tier, ApplyLevel) and a little extra blur.
         sun.ShadowBlur = 1.5f;
         ApplyLevel();
     }
@@ -101,7 +108,7 @@ public partial class SunShadows : Node
     void ApplyLevel()
     {
         var level = Setting;
-        if (level == applied) return;
+        if (sun is null || level == applied) return;
         applied = level;
         var tier = Tiers[(int)level];
         RenderingServer.DirectionalShadowAtlasSetSize(tier.Atlas, true);
@@ -110,13 +117,14 @@ public partial class SunShadows : Node
             ? DirectionalLight3D.ShadowMode.Parallel4Splits
             : DirectionalLight3D.ShadowMode.Parallel2Splits;
         sun.DirectionalShadowMaxDistance = tier.Reach;
+        sun.LightAngularDistance = tier.Penumbra;
         fittedFor = -1f;
     }
 
     public override void _Process(double delta)
     {
         // The follow camera sits Camera.Position.Z metres behind the player (CameraRig).
-        if (GetViewport().GetCamera3D() is not { } camera) return;
+        if (sun is null || GetViewport().GetCamera3D() is not { } camera) return;
         float toPlayer = camera.GetParent() is CameraRig ? camera.Position.Z : 16f;
         if (fittedFor >= 0f && Mathf.Abs(toPlayer - fittedFor) < RefitMetres) return;
         fittedFor = toPlayer;

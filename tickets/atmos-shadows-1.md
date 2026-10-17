@@ -56,6 +56,10 @@ before and after; Render shows noon and dusk, walking, before and after.
   (shadow lines before Grade(), CapFog() last). gen-bindings and client Release build green
   locally (0 errors). Pushed claude/atmos-shadows-1, opened PR #667.
   Render requested 4e571073 (Render C, walking clips main vs branch, noon and dusk).
+- 2026-10-17: Atmosphere review via the PM (no clashes): Low tier's sun disc is 0.5 deg
+  (soft edges cost a lot on weak GPUs; Medium/High stay 1.1), set per tier in ApplyLevel;
+  SunShadows has a parameterless constructor for Godot's editor/hot reload (stays idle).
+  Client build green locally.
 
 ## Open questions / blockers
 - None.
