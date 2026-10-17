@@ -52,7 +52,9 @@ public static class HumanFigure
 
     // How one person differs from the next within a style: skin tone, hair colour,
     // haircut and a beard. Indexes into the palettes below, so it fits in a key.
-    public readonly record struct Appearance(int Skin, int Hair, int Cut, bool Beard)
+    // Race (model-6) picks the chibi figure when PlayerModel.Chibi is on; Skin,
+    // Hair, Cut and Beard are then that race's option slots (shared/Looks.cs).
+    public readonly record struct Appearance(int Skin, int Hair, int Cut, bool Beard, int Race = 0)
     {
         // Everyone's look before variety: today's skin and hair, the locks cut.
         public static readonly Appearance Default = new(1, 0, 0, false);
@@ -65,7 +67,7 @@ public static class HumanFigure
         }
 
         // The look a player chose, as stored on the server.
-        public static Appearance From(byte skin, byte hair, byte cut, byte beard) => new(skin, hair, cut, beard != 0);
+        public static Appearance From(byte skin, byte hair, byte cut, byte beard, byte race = 0) => new(skin, hair, cut, beard != 0, race);
 
         public override string ToString() => $"{Skin}{Hair}{Cut}{(Beard ? 1 : 0)}";
     }

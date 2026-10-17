@@ -28,9 +28,9 @@ int failures = 0;
 
 // Calls an admin reducer as the CLI's identity, which published the database. Runs
 // from the temp folder: inside server/ the CLI reads spacetime.json and misparses.
-void AsOwner(string reducer, string value)
+void AsOwner(string reducer, params string[] values)
 {
-    var run = Process.Start(new ProcessStartInfo("spacetimedb-cli", new[] { "call", "-s", uri, db, reducer, value })
+    var run = Process.Start(new ProcessStartInfo("spacetimedb-cli", new[] { "call", "-s", uri, db, reducer }.Concat(values).ToArray())
     {
         WorkingDirectory = Path.GetTempPath(),
         RedirectStandardOutput = true,
@@ -40,10 +40,10 @@ void AsOwner(string reducer, string value)
     run.WaitForExit();
     if (run.ExitCode != 0)
     {
-        Console.WriteLine($"FAIL  {reducer} {value} as the database owner: {output.Trim()}");
+        Console.WriteLine($"FAIL  {reducer} {string.Join(" ", values)} as the database owner: {output.Trim()}");
         Environment.Exit(1);
     }
-    Console.WriteLine($"Set {reducer} {value}");
+    Console.WriteLine($"Set {reducer} {string.Join(" ", values)}");
 }
 
 void Pump(Func<bool> until, double seconds, string what)
@@ -86,27 +86,21 @@ void ExpectError(Tester t, Action call, string contains, string what)
     Check(t.LastError?.Contains(contains) == true, $"{what} ({t.LastError ?? "no error"})");
 }
 
+// The shared walk (tools/common/BotWalker.cs): routes round trunks and walls, sidesteps a stall, and as a
+// last resort asks the server to shake the bot free (unstuck).
+var walkers = new Dictionary<Tester, BotWalker>();
 void Walk(Tester t, float x, float z)
 {
-    (x, z) = t.Stand(x, z);
-    var route = t.Route(x, z);
-    Console.WriteLine($"  walk {t.Name} ({t.X:F1}, {t.Z:F1}) -> ({x:F1}, {z:F1}) in {route.Count} legs: {string.Join(" ", route.Select(r => $"({r.X:F1},{r.Z:F1})"))}");
-    for (int i = 0; i < route.Count; i++)
+    if (!walkers.TryGetValue(t, out var w))
     {
-        var (lx, lz) = i == route.Count - 1 ? (x, z) : route[i];
-        var sw = Stopwatch.StartNew();
-        while (!t.StepToward(lx, lz))
+        w = walkers[t] = new BotWalker(t.Conn, t.PlayerId, "Social test", t.Name, ms =>
         {
-            if (sw.Elapsed.TotalSeconds > 60)
-            {
-                var seen = t.Conn.Db.PlayerPos.PlayerId.Find(t.PlayerId);
-                Console.WriteLine($"FAIL  {t.Name} stuck on leg {i + 1}/{route.Count} to ({lx:F1}, {lz:F1}): bot ({t.X:F1}, {t.Z:F1}), server ({seen?.X:F1}, {seen?.Z:F1}) (A: {a.LastError ?? "-"}, B: {b.LastError ?? "-"})\n  near: {t.Describe()}");
-                Environment.Exit(1);
-            }
-            foreach (var u in all) u.Tick();
-            Thread.Sleep(5);
-        }
+            for (var until = Stopwatch.StartNew(); until.ElapsedMilliseconds < ms; Thread.Sleep(5))
+                foreach (var u in all) u.Tick();
+        }, msg => { Console.WriteLine($"FAIL  {msg} (A: {a.LastError ?? "-"}, B: {b.LastError ?? "-"})"); Environment.Exit(1); });
     }
+    Console.WriteLine($"  walk {t.Name} ({t.X:F1}, {t.Z:F1}) -> ({x:F1}, {z:F1})");
+    w.To(ref t.X, ref t.Z, x, z, 0.3f, stand: true);
 }
 
 Pump(() => a.Ready && b.Ready, 20, "connections");
@@ -201,6 +195,9 @@ a.Conn.Reducers.SendChat("/me");
 Wait(() => b.Conn.Db.MyChat.Iter().Count() > chatCount || a.LastError != null, 1.5);
 Check(b.Conn.Db.MyChat.Iter().Count() == chatCount && a.LastError == null, "an empty /me says nothing");
 Check(Social.TownNear(0, 0, 41, 0) && !Social.TownNear(0, 0, 61, 0), "claims within 60 m can join the same town");
+Check(Social.MayBarGate(true, false, false, false, false) && Social.MayBarGate(false, true, false, false, false) && Social.MayBarGate(false, false, true, true, false), "the owner, a member and the Gatekeeper bar a gate");
+Check(!Social.MayBarGate(false, false, true, false, false) && !Social.MayBarGate(false, false, false, true, false), "a plain signer cannot bar a gate, nor a Gatekeeper outside the town");
+Check(!Social.MayBarGate(false, true, false, false, true) && !Social.MayBarGate(false, false, true, true, true) && Social.MayBarGate(true, false, false, false, true), "a ban takes the member's and the Gatekeeper's rights, never the owner's");
 Check(Social.StripControl("a\nb\u001bc") == "a b c" && Social.CleanClaimName("Wil\nlow\u0000 Hollow") == "Wil low Hollow", "control characters read as spaces in chat and names");
 Check(Social.ChatDim(2f) == 1f && MathF.Abs(Social.ChatDim(Social.ChatRange) - 0.55f) < 0.01f && Social.ChatDim(16f) < 1f, "far chat lines are dimmer");
 
@@ -265,9 +262,14 @@ long day = 86_400_000_000L, t0 = 1_000L * day;
 Check(Social.TendedLine(t0 - 2 * day - 5_000_000, t0 + day + 7_000_000, t0) == "Tended 2 days ago · stands 1 more day", $"the marker line reads well ({Social.TendedLine(t0 - 2 * day - 5_000_000, t0 + day + 7_000_000, t0)})");
 
 // claims-4: the owner adds B by name (any case), and a calm line says so.
-string bName = $"Tobin{Random.Shared.Next(10000, 99999)}";
+// Names are letters only and unique (ui-31, shared Names), so the bot's is too.
+string bName = "Tobin" + new string(Enumerable.Range(0, 6).Select(_ => (char)('a' + Random.Shared.Next(26))).ToArray());
 b.Conn.Reducers.SetName(bName);
 Pump(() => a.Conn.Db.Player.PlayerId.Find(b.PlayerId)?.Name == bName, 5, "rename");
+// ui-31: a name someone has (in any case), a name kept for the game, and digits are refused.
+ExpectError(a, () => a.Conn.Reducers.SetName(bName.ToUpperInvariant()), "taken", "a name someone else has is refused");
+ExpectError(a, () => a.Conn.Reducers.SetName("Mayor"), "kept for the game", "a town office isn't a name");
+ExpectError(a, () => a.Conn.Reducers.SetName("Ann42"), "letters", "digits aren't part of a name");
 ExpectError(a, () => a.Conn.Reducers.AddClaimMemberByName("Nobody" + bName), "Nobody called", "adding an unknown name is refused");
 ulong chatBeforeAdd = b.Conn.Db.MyChat.Iter().Select(m => m.Id).DefaultIfEmpty(0UL).Max();
 a.LastError = null;
@@ -624,6 +626,34 @@ else
             b.Conn.Reducers.VoteTownOffice(1, a.PlayerId);
             Check(Wait(() => a.Conn.Db.TownOffice.Iter().Any(o => o.TownId == townId && o.Office == 1 && o.HolderId == a.PlayerId), 5), "the signers elect a Deputy");
             ExpectError(a, () => a.Conn.Reducers.VoteTownOffice(77, a.PlayerId), "no such office", "an unknown office cannot be voted on");
+            // Terms end (the admin shortens terms to a second for this check, then restores them).
+            AsOwner("set_town_term", "1");
+            TownOffice? Seat(byte office) => a.Conn.Db.TownOffice.Iter().FirstOrDefault(o => o.TownId == townId && o.Office == office);
+            // A tie for Warden: no majority, so the term's end decides, and the longer-standing signer (A) wins.
+            a.Conn.Reducers.VoteTownOffice(4, a.PlayerId);
+            b.Conn.Reducers.VoteTownOffice(4, b.PlayerId);
+            Wait(() => a.Conn.Db.TownVote.Iter().Count(v => v.TownId == townId && v.Office == 4) == 2, 5);
+            Check(Seat(4)?.HolderId == 0, "a tied vote leaves the seat empty until the term ends");
+            Thread.Sleep(1500);
+            AsOwner("settle_town_terms_now");
+            Check(Wait(() => Seat(4)?.HolderId == a.PlayerId, 5), "at the term's end a tie goes to the longest-standing signer");
+            // The Judge breaks a tie: both vote B in as Judge (a majority), then split over the Marshal.
+            a.Conn.Reducers.VoteTownOffice(2, b.PlayerId);
+            b.Conn.Reducers.VoteTownOffice(2, b.PlayerId);
+            Check(Wait(() => Seat(2)?.HolderId == b.PlayerId, 5), "the signers elect B as Judge");
+            a.Conn.Reducers.VoteTownOffice(5, a.PlayerId);
+            b.Conn.Reducers.VoteTownOffice(5, b.PlayerId);
+            Wait(() => a.Conn.Db.TownVote.Iter().Count(v => v.TownId == townId && v.Office == 5) == 2, 5);
+            Thread.Sleep(1500);
+            AsOwner("settle_town_terms_now");
+            Check(Wait(() => Seat(5)?.HolderId == b.PlayerId, 5), "a tied vote goes to the one the Judge voted for, even over the longer-standing signer");
+            // No votes: the holder stays on, with a fresh term.
+            long judgeTermEnd = Seat(2)?.TermEndsAt.MicrosecondsSinceUnixEpoch ?? 0;
+            Thread.Sleep(1500);
+            AsOwner("settle_town_terms_now");
+            Check(Wait(() => (Seat(2)?.TermEndsAt.MicrosecondsSinceUnixEpoch ?? 0) > judgeTermEnd, 5) && Seat(2)?.HolderId == b.PlayerId, "with no votes the holder stays on for another term");
+            AsOwner("set_town_term", "0");
+
             // The Mayor: A, the founder, starts as Mayor. Only the Mayor removes; the signers vote.
             var mayorNow = a.Conn.Db.TownOffice.Iter().FirstOrDefault(o => o.TownId == townId && o.Office == Social.OfficeMayor);
             Check(mayorNow.HolderId == a.PlayerId, "A is Mayor of the signed town");
@@ -636,6 +666,26 @@ else
             Check(!a.Conn.Db.TownVote.Iter().Any(v => v.TownId == townId), "the ballot clears once the seat is filled");
             ExpectError(a, () => a.Conn.Reducers.RemoveFromTown(b.PlayerId), "Mayor", "A is no longer Mayor and cannot remove B");
             ExpectError(b, () => b.Conn.Reducers.VoteTownOffice(Social.OfficeMayor, 999999), "not on this roster", "a vote must name a signer");
+
+            // claims-21: the Marshal's ban, the Scribe's log. B is Mayor now, and also elected Marshal above.
+            Check(Towns.Get(9)!.Powers.HasFlag(TownPower.BreakTies) && Towns.Get(7)!.Powers.HasFlag(TownPower.Gates), "the Elder breaks ties and the Gatekeeper keeps the gates, as data");
+            ExpectError(a, () => a.Conn.Reducers.BanFromTown(b.PlayerId, 1), "Marshal", "only the Marshal bans");
+            ExpectError(b, () => b.Conn.Reducers.BanFromTown(b.PlayerId, 1), "yourself", "the Marshal cannot ban themselves");
+            b.Conn.Reducers.BanFromTown(a.PlayerId, 99);
+            Check(Wait(() => a.Conn.Db.TownBan.Iter().Any(x => x.TownId == townId && x.BannedId == a.PlayerId), 5), "the Marshal bans A");
+            var ban = a.Conn.Db.TownBan.Iter().First(x => x.TownId == townId && x.BannedId == a.PlayerId);
+            Check(ban.Until.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000 <= Towns.BanDaysMax * (long)WorldTime.DayLengthSeconds * 1_000_000 + 5_000_000, "a ban is cut to the longest allowed");
+            ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, tx2, tz2, 0), "claimed", "a banned A cannot build on B's land");
+            b.Conn.Reducers.LiftTownBan(a.PlayerId);
+            Check(Wait(() => !a.Conn.Db.TownBan.Iter().Any(x => x.TownId == townId), 5), "the Marshal lifts the ban");
+            Check(a.Conn.Db.TownLog.Iter().Any(l => l.TownId == townId && l.Text.Contains("kept")), "the town log records the ban");
+            ExpectError(a, () => a.Conn.Reducers.WriteTownLog("A note"), "Scribe", "only the Scribe writes in the log");
+            a.Conn.Reducers.VoteTownOffice(8, a.PlayerId);
+            b.Conn.Reducers.VoteTownOffice(8, a.PlayerId);
+            Check(Wait(() => a.Conn.Db.TownOffice.Iter().Any(o => o.TownId == townId && o.Office == 8 && o.HolderId == a.PlayerId), 5), "A is elected Scribe");
+            a.Conn.Reducers.WriteTownLog("The well was dug");
+            Check(Wait(() => a.Conn.Db.TownLog.Iter().Any(l => l.TownId == townId && l.Note && l.Text.Contains("The well was dug")), 5), "the Scribe adds a note to the log");
+            ExpectError(a, () => a.Conn.Reducers.WriteTownLog("Again"), "moment", "notes are rate limited");
 
             // The Mayor removes a signer; the rights go with them.
             b.Conn.Reducers.RemoveFromTown(a.PlayerId);
@@ -694,7 +744,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
+                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))

@@ -25,6 +25,8 @@ var clock = Stopwatch.StartNew();
 (float x, float z)? claimAt = null;
 bool bIsMember = false;
 
+const float Module_UnstuckRadius = 12.5f;
+
 void Pump(int ms)
 {
     var until = clock.Elapsed + TimeSpan.FromMilliseconds(ms);
@@ -49,6 +51,7 @@ void WaitFor(Func<bool> done, int seconds, string what)
 }
 
 WaitFor(() => bots.All(x => x.Ready), 30, "both players connected");
+foreach (var bot in bots) bot.UsePump(Pump);
 
 // Every run starts from the same place (bugfix-31): players wake at a random spot in the clearing.
 a.WalkTo(0f, 0f, 0.3f, Pump);
@@ -98,6 +101,7 @@ if (Wants("clay-hut"))
         });
     HangDoor(hut);
     LayMat(hut);
+    UnstuckInHut(hut);
     BuildHearth(hut);
 }
 if (Wants("basket"))
@@ -388,6 +392,11 @@ void UseGate(ulong gate)
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Closed: false }, 10, "the other player opened it");
     b.Conn.Reducers.ToggleDoor(gate);
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Closed: true }, 10, "and shut it again");
+    // A member of the claim bars and unbars its gate too (claims-21: owner, members and the town's Gatekeeper).
+    b.Conn.Reducers.ToggleLock(gate);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: true }, 10, "B, a member, barred the gate");
+    b.Conn.Reducers.ToggleLock(gate);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: false }, 10, "and unbarred it");
     StrangerB();
     a.Conn.Reducers.ToggleLock(gate);
     WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: true }, 10, "A barred the gate");
@@ -522,6 +531,41 @@ void LayMat(ulong hut)
         $"the waking place is the mat in the hut ({point.X:F1}, {point.Z:F1})");
 }
 
+// A stands inside the finished hut (A is at the bed after LayMat) and asks to be moved out: the server
+// puts A on free ground within its search radius; a second try inside the cooldown is refused (bugfix-44).
+void UnstuckInHut(ulong hut)
+{
+    Console.WriteLine("--- Unstuck");
+    var s = a.Conn.Db.Structure.Id.Find(hut)!;
+    var from = a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId)!;
+    Check(Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, from.X, from.Z), "A stands inside the hut");
+    a.LastError = null;
+    a.Conn.Reducers.Unstuck();
+    WaitFor(() => a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId) is { } p && (p.X != from.X || p.Z != from.Z) || a.LastError != null, 10, "the server answered unstuck");
+    Check(a.LastError == null, $"unstuck was allowed ({a.LastError ?? "-"})");
+    var to = a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId)!;
+    float moved = MathF.Sqrt((to.X - from.X) * (to.X - from.X) + (to.Z - from.Z) * (to.Z - from.Z));
+    Check(!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, to.X, to.Z), $"A now stands outside the hut ({to.X:F1}, {to.Z:F1})");
+    Check(moved <= Module_UnstuckRadius, $"A moved {moved:F1} m, within the search radius");
+    a.X = to.X; a.Z = to.Z;
+    a.LastError = null;
+    a.Conn.Reducers.Unstuck();
+    WaitFor(() => a.LastError != null, 10, "a second unstuck inside the cooldown is answered");
+    Check(a.LastError!.Contains("again in"), $"the second try is refused for the cooldown ({a.LastError})");
+
+    // B stands on free ground in the yard: unstuck still helps, moving B at least 1.5 m (and within the radius).
+    var bFrom = b.Conn.Db.PlayerPos.PlayerId.Find(b.MyId)!;
+    Check(!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, bFrom.X, bFrom.Z, 0.25f), "B stands on free ground");
+    b.LastError = null;
+    b.Conn.Reducers.Unstuck();
+    WaitFor(() => b.Conn.Db.PlayerPos.PlayerId.Find(b.MyId) is { } p && (p.X != bFrom.X || p.Z != bFrom.Z) || b.LastError != null, 10, "the server answered B's unstuck");
+    Check(b.LastError == null, $"unstuck from free ground was allowed ({b.LastError ?? "-"})");
+    var bTo = b.Conn.Db.PlayerPos.PlayerId.Find(b.MyId)!;
+    float bMoved = MathF.Sqrt((bTo.X - bFrom.X) * (bTo.X - bFrom.X) + (bTo.Z - bFrom.Z) * (bTo.Z - bFrom.Z));
+    Check(bMoved >= 1.4f && bMoved <= Module_UnstuckRadius, $"B was nudged {bMoved:F1} m");
+    b.X = bTo.X; b.Z = bTo.Z;
+}
+
 // A puts sticks in the basket; B takes one out.
 void StoreInBasket(ulong basket)
 {
@@ -557,6 +601,9 @@ sealed class Bot
     public uint MyId => myId;
     uint myId;
     ulong targetItem;
+    readonly HashSet<ulong> gone = new();
+    // What each bot is heading for, so two bots do not race for the same ground item.
+    static readonly Dictionary<string, ulong> gatherTargets = new();
     (int x, int z)? digCell;
     float actionTimer;
 
@@ -643,7 +690,9 @@ sealed class Bot
         {
             digCell ??= NearestClay();
             var (cx, cz) = digCell.Value;
-            if (StepRouted(cx * World.CellSize - 0.8f, cz * World.CellSize, dt) < 0.3f && Lag() < 0.8f && actionTimer <= 0)
+            float clayLeft = StepRouted(cx * World.CellSize - 0.8f, cz * World.CellSize, dt);
+            if (GatherStalled(clayLeft, 0.3f)) WalkTo(cx * World.CellSize - 0.8f, cz * World.CellSize, 0.3f, gatherPump!);
+            else if (clayLeft < 0.3f && Lag() < 0.8f && actionTimer <= 0)
             {
                 actionTimer = 0.7f;
                 if (DugOut(cx, cz)) digCell = null;
@@ -652,21 +701,56 @@ sealed class Bot
             return;
         }
 
-        var item = Conn.Db.WorldItem.Id.Find(targetItem);
-        if (item == null || !missing.Contains((Item)item.Item))
+        // The other bot got there first ("That item is gone"): never go for that one again, and pick another.
+        if (targetItem != 0 && LastError?.Contains("That item is gone") == true)
         {
-            item = Conn.Db.WorldItem.Iter()
-                .Where(i => missing.Contains((Item)i.Item) && i.Item != (ushort)Item.Clay)
-                .OrderBy(i => (i.X - X) * (i.X - X) + (i.Z - Z) * (i.Z - Z))
-                .FirstOrDefault();
+            gone.Add(targetItem);
+            targetItem = 0;
+            LastError = null;
+        }
+        var item = Conn.Db.WorldItem.Id.Find(targetItem);
+        if (item == null || !missing.Contains((Item)item.Item) || gone.Contains(item.Id))
+        {
+            // Nearest item neither of us has lost, and not the one the other bot is already heading for.
+            var candidates = Conn.Db.WorldItem.Iter()
+                .Where(i => missing.Contains((Item)i.Item) && i.Item != (ushort)Item.Clay && !gone.Contains(i.Id))
+                .OrderBy(i => (i.X - X) * (i.X - X) + (i.Z - Z) * (i.Z - Z)).ToList();
+            item = candidates.FirstOrDefault(i => !gatherTargets.Any(t => t.Key != name && t.Value == i.Id)) ?? candidates.FirstOrDefault();
             targetItem = item?.Id ?? 0;
+            gatherTargets[name] = targetItem;
             if (item == null) return;
         }
-        if (StepRouted(item.X, item.Z, dt) < 1.2f && Lag() < 0.8f && actionTimer <= 0)
+        float itemLeft = StepRouted(item.X, item.Z, dt);
+        if (GatherStalled(itemLeft, 1.2f)) WalkTo(item.X, item.Z, 1.0f, gatherPump!);
+        else if (itemLeft < 1.2f && Lag() < 0.8f && actionTimer <= 0)
         {
             actionTimer = 0.3f;
             Conn.Reducers.PickUp(item.Id);
         }
+    }
+
+    // Gathering is walked a tick at a time, so it cannot use the blocking walk until it is stuck: when the
+    // server has not moved the bot 0.3 m in 3 s and the bot is still out of reach of its target, hand the
+    // walk to the shared walker (sidesteps, then a logged reposition) so a wedged bot cannot fail the check.
+    // Standing at the target (digging, picking up) is not a stall.
+    readonly Stopwatch gatherStill = Stopwatch.StartNew();
+    float gatherMarkX, gatherMarkZ;
+    Action<int>? gatherPump;
+
+    public void UsePump(Action<int> pump) => gatherPump = pump;
+
+    bool GatherStalled(float left, float reach)
+    {
+        if (gatherPump == null || Seen() is not { } srv) return false;
+        if (left < reach || MathF.Abs(srv.X - gatherMarkX) + MathF.Abs(srv.Z - gatherMarkZ) >= BotWalker.StallMetres)
+        {
+            gatherMarkX = srv.X; gatherMarkZ = srv.Z;
+            gatherStill.Restart();
+            return false;
+        }
+        if (gatherStill.Elapsed.TotalSeconds < BotWalker.StallSeconds) return false;
+        gatherStill.Restart();
+        return true;
     }
 
     // A cell the load test or an earlier run already dug to the bottom gives no more clay.
@@ -761,42 +845,20 @@ sealed class Bot
         return moved > 0f ? MathF.Sqrt((tx - X) * (tx - X) + (tz - Z) * (tz - Z)) : dist;
     }
 
-    // Walks to a point and checks the SERVER has the bot there. The walk is a straight line, so a tree
-    // trunk or boulder on the way (they block movement now) can hold the server's position back while
-    // the bot believes it arrived, and every Build after that is "Out of reach". When the server is
-    // still short, adopt where it has us and go round the side, a little wider each time.
+    // Walks to a point and checks the SERVER has the bot there (the shared walk, tools/common/BotWalker.cs:
+    // routes round trunks and walls, sidesteps a stall, and as a last resort puts the bot at the target).
     public void WalkTo(float tx, float tz, float within, Action<int> pump)
     {
-        // Round trunks and boulders by a route first (bugfix-34), to a spot that can be stood on.
-        (tx, tz) = Ground.Stand(tx, tz);
-        var route = Ground.Route(X, Z, tx, tz);
-        for (int i = 0; i < route.Count - 1; i++) WalkStraight(route[i].X, route[i].Z, 0.4f, pump);
-        for (int attempt = 0; attempt < 6; attempt++)
+        if (walker == null || walkerConn != Conn)
         {
-            WalkStraight(tx, tz, within, pump);
-            if (Conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen) return;
-            float left = MathF.Sqrt((seen.X - tx) * (seen.X - tx) + (seen.Z - tz) * (seen.Z - tz));
-            if (left <= within + 0.6f) return;
-            X = seen.X;
-            Z = seen.Z;
-            float dx = tx - X, dz = tz - Z, d = MathF.Sqrt(dx * dx + dz * dz);
-            float side = (attempt % 2 == 0 ? 1f : -1f) * (3f + attempt);
-            if (d > 0.1f) WalkStraight(X - dz / d * side, Z + dx / d * side, 0.5f, pump);
+            walker = new BotWalker(Conn, myId, "Building check", name, pump, msg => { Console.WriteLine("FAIL  " + msg); Environment.Exit(1); });
+            walkerConn = Conn;
         }
+        walker.To(ref X, ref Z, tx, tz, within, stand: true);
     }
 
-    void WalkStraight(float tx, float tz, float within, Action<int> pump)
-    {
-        // The cap keeps a bot that is held in place (a wall, the pace) from waiting for ever.
-        for (int guard = 0; Step(tx, tz, 0.1f) > within && guard < 900; guard++) pump(100);
-        // The server limits the pace (bugfix-24): keep reporting until it has us here too.
-        for (int i = 0; i < 300 && Lag() > 0.3f; i++)
-        {
-            Conn.Reducers.Move(X, Z, 0f);
-            pump(100);
-        }
-        pump(300);
-    }
+    BotWalker? walker;
+    DbConnection? walkerConn;
 
     // The nearest standing tree nobody has started on.
     public (int X, int Z) NearestTree()
@@ -837,9 +899,17 @@ sealed class Bot
     // Starts a craft and waits for it to finish. The job row can reach us after the
     // inputs leave the inventory, so an empty job table alone doesn't mean done: wait
     // until the job has come and gone, or the made item has turned up.
+    // World tool actions need the tool on the bar and equipped (crafting-29). Equipping toggles, so only once.
+    bool axeEquipped;
+
     public void Craft(string processId, Action<int> pump, float score = 0.6f)
     {
         var def = Processes.Find(processId)!;
+        if (def.Outcome == Outcome.Chop)
+        {
+            Conn.Reducers.SetHotbarSlot(9, (ushort)Item.StoneAxe);
+            if (!axeEquipped) { Conn.Reducers.EquipSlot(9); axeEquipped = true; }
+        }
         uint before = CountOf(def.Makes);
         Conn.Reducers.StartCraft(processId, score);
         var until = DateTime.UtcNow.AddSeconds(def.Seconds * 1.2f + 5);
