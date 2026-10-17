@@ -1,0 +1,10 @@
+# audio-34 (PR #757): run the client connected to a server, walk for a few seconds, take one still. The check is the client log
+# ("Audio: " lines from AudioHooks), not the picture.
+client-as-puppet
+client --time-of-day=0.45
+wait 40
+keydown w
+wait 8
+keyup w
+wait 2
+snap
