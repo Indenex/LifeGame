@@ -30,7 +30,7 @@ conn.SubscriptionBuilder().OnApplied(_ => applied = true)
     .Subscribe(new[] { "SELECT * FROM forage_bush", "SELECT * FROM world_item" });
 Pump(() => applied, 30);
 
-var bushes = conn.Db.ForageBush.Iter().Select(b => (b.X, b.Z)).ToList();
+var bushes = conn.Db.ForageBush.Iter().Where(b => b.Kind == Forages.BerryBushKind).Select(b => (b.X, b.Z)).ToList();
 var items = conn.Db.WorldItem.Iter().ToList();
 var sticks = items.Where(i => i.Item == (ushort)Item.Stick).Select(i => (i.X, i.Z)).ToList();
 var fiber = items.Where(i => i.Item == (ushort)Item.Fiber).Select(i => (i.X, i.Z)).ToList();

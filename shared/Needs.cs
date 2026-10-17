@@ -34,6 +34,13 @@ namespace LifeGame.Shared
         public const int HazelnutsPerPick = 3, HazelEvery = 3;
         public static bool IsHazelBush(ulong bushId) => bushId % HazelEvery == 0;
         public static bool HazelnutsRipe(Season season) => season == Season.Autumn;
+        // Mushrooms (survival-35, a lane default): a nibble like a hazelnut, a little more
+        // water; they come back slower than berries. Placed in shade near trees, about
+        // MushroomsPerChunk patches to a chunk.
+        public const float MushroomFood = 0.07f;
+        public const float MushroomWater = 0.01f;
+        public const long MushroomRegrowMicros = 12L * 60 * 1_000_000;
+        public const int MushroomsPerChunk = 1;
         // Mutton (Justin, D-039): roast fills 40% of hunger. Burnt is a default of
         // ours; raw is not eaten for now.
         public const float RoastMuttonFood = 0.4f;
@@ -107,7 +114,6 @@ namespace LifeGame.Shared
         // refused for being a step too far.
         public const float BushReach = 2.5f;
         public const float BushRadius = 0.6f;
-        public const float BushPickDistance = BushReach + BushRadius;
         // The process id picking berries reports, so it trains Foraging. Not a crafting
         // recipe, so it lives here rather than in Processes.List (like ClayRules.FillProcess).
         public const string ForageProcess = "gather.berries";

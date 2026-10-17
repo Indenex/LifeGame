@@ -46,6 +46,7 @@ namespace LifeGame.Shared
         {
             new FoodDef { Id = Item.Berries, Food = Needs.BerryFood, Water = Needs.BerryWater },
             new FoodDef { Id = Item.Hazelnuts, Food = Needs.HazelnutFood },
+            new FoodDef { Id = Item.Mushrooms, Food = Needs.MushroomFood, Water = Needs.MushroomWater },
             new FoodDef { Id = Item.CookedMutton, Food = Needs.RoastMuttonFood, GoodMeal = true },
             new FoodDef { Id = Item.BurntMutton, Food = Needs.BurntMuttonFood },
             // Venison (animals-14) feeds like mutton for now: same numbers as the roast.

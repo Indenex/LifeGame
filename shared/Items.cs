@@ -71,6 +71,8 @@ namespace LifeGame.Shared
         WaterskinOfWater = 162,
         // Autumn wild food from some bushes (survival-30).
         Hazelnuts = 163,
+        // Wild mushrooms from shady spots near trees (survival-35).
+        Mushrooms = 164,
 
         // Animals (190-219); mutton is cooked by Crafting
         RawMutton = 190,
@@ -224,6 +226,7 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.SleepingMat, Name = "Sleeping mat", Plural = "Sleeping mats" },
             new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries", Use = UseAction.Eat },
             new ItemDef { Id = Item.Hazelnuts, Name = "Hazelnut", Plural = "Hazelnuts", Use = UseAction.Eat },
+            new ItemDef { Id = Item.Mushrooms, Name = "Mushroom", Plural = "Mushrooms", Use = UseAction.Eat },
             new ItemDef { Id = Item.RawMutton, Name = "Raw mutton", Plural = "Raw mutton", HasQuality = true },
             new ItemDef { Id = Item.CookedMutton, Name = "Roast mutton", Plural = "Roast mutton", HasQuality = true, Use = UseAction.Eat },
             new ItemDef { Id = Item.BurntMutton, Name = "Burnt mutton", Plural = "Burnt mutton", Use = UseAction.Eat },
