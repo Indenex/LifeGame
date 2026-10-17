@@ -295,7 +295,7 @@ void EnsureClaim()
     Console.WriteLine("--- Claim");
     // Outside a claim the brick house is refused (building-13).
     a.LastError = null;
-    a.Conn.Reducers.PlaceStructure(StructureKind.BrickHouse, a.X + 6f, a.Z, 0f);
+    a.Conn.Reducers.PlaceStructure(StructureKind.BrickHouse, a.X + 3f, a.Z, 0f);
     WaitFor(() => a.LastError != null, 5, "a claim-only building to be refused outside a claim");
     Check(a.LastError!.Contains("inside your claim"), $"it says it needs a claim ({a.LastError})");
     ulong marker = BuildTogether(StructureKind.ClaimMarker,
