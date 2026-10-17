@@ -31,7 +31,9 @@ public static partial class Module
         RequirePlayer(ctx);
         var row = ctx.Db.PlayerEquip.Owner.Find(Me(ctx));
         var held = index < HotbarSlots ? SlotAt(ctx, index) : null;
-        if (held is not { Item: not 0 } || (row is { } r && r.Slot == index))
+        // Only something carried in the bag comes to hand (not one on the belt, which is storage): the item in
+        // hand is what other players see, so a slot's remembered item the player does not have is not shown.
+        if (held is not { Item: not 0 } || !InBag(ctx, held.Value.Item) || (row is { } r && r.Slot == index))
         {
             if (row is not null) ctx.Db.PlayerEquip.Owner.Delete(Me(ctx));
             CheckJobTool(ctx);
@@ -43,12 +45,15 @@ public static partial class Module
         CheckJobTool(ctx);
     }
 
+    static bool InBag(ReducerContext ctx, ushort item) =>
+        ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), item)).Any(r => r.Count > 0 && !r.OnBelt);
+
     // After the hotbar changes: the item in hand follows its slot (a swap or a new item), and an
     // emptied slot puts the hand away.
     static void SyncEquip(ReducerContext ctx)
     {
         if (ctx.Db.PlayerEquip.Owner.Find(Me(ctx)) is not { } equip) return;
-        if (SlotAt(ctx, equip.Slot) is { Item: not 0 } slot)
+        if (SlotAt(ctx, equip.Slot) is { Item: not 0 } slot && InBag(ctx, slot.Item))
         {
             if (slot.Item != equip.Item) ctx.Db.PlayerEquip.Owner.Update(equip with { Item = slot.Item });
         }
