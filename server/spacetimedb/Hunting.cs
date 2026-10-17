@@ -110,6 +110,7 @@ public static partial class Module
     // and bolts away from (fromX, fromZ), leaping `leap` meters at once.
     static void HurtAnimal(ReducerContext ctx, Animal animal, AnimalMind mind, int damage, float fromX, float fromZ, float leap, long now, bool crit = false, bool ranged = false)
     {
+        damage = (int)MathF.Ceiling(damage * Traits(animal.Species).DamageTaken);
         bool kills = damage >= mind.Health;
         ctx.Db.AnimalHit.Insert(new AnimalHit { AnimalId = animal.Id, X = animal.X, Z = animal.Z, FromX = fromX, FromZ = fromZ, Crit = crit, Killed = kills, Ranged = ranged });
         if (kills)

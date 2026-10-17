@@ -5,7 +5,7 @@ using SpacetimeDB.Types;
 
 namespace LifeGame;
 
-// Emotes heard (audio-25): when a player waves, cheers, dances or bows, the sounds of the
+// Emotes heard (audio-25): when a player waves, cheers, dances, bows, claps or shrugs, the sounds of the
 // gesture, timed to Animation's poses (client/scripts/animation/WorkMotion.cs, anim-16): a swish
 // of cloth as the arm goes up and down, claps at the top of each cheer hop, a tap of the foot on
 // each dance beat, a rustle at each end of a bow. No voices. Everyone nearby hears it.
@@ -26,6 +26,21 @@ static class EmoteSounds
     static readonly (float At, CueDef Def, float Gain)[] Bow =
     {
         (0.15f, CueDefs.EmoteSwish, 0.7f), (1.25f, CueDefs.EmoteSwish, 0.8f),
+    };
+
+    // Five claps, the hands meeting at 0.25 s and then every 1/3.2 s (anim, WorkMotion.Clap).
+    static (float At, CueDef Def, float Gain)[] ClapBeats()
+    {
+        var beats = new List<(float, CueDef, float)>();
+        for (int i = 0; i < 5; i++) beats.Add((0.25f + i / 3.2f, CueDefs.EmoteHandClap, 1f));
+        return beats.ToArray();
+    }
+    static readonly (float At, CueDef Def, float Gain)[] Clap = ClapBeats();
+
+    // A shrug: a soft rustle as the shoulders go up, and another as they drop (1.4 s long).
+    static readonly (float At, CueDef Def, float Gain)[] Shrug =
+    {
+        (0.25f, CueDefs.EmoteSwish, 0.8f), (1.05f, CueDefs.EmoteSwish, 0.65f),
     };
 
     // One beat every 0.4 s through the 3.2 s dance, the foot alternating loud and soft.
@@ -53,6 +68,8 @@ static class EmoteSounds
                 WorkMotion.Cheer => Cheer,
                 WorkMotion.Dance => Dance,
                 WorkMotion.Bow => Bow,
+                WorkMotion.Clap => Clap,
+                WorkMotion.Shrug => Shrug,
                 _ => null,
             };
             if (script == null || c.Db.PlayerPos.PlayerId.Find(act.PlayerId) is not { } at) return;
