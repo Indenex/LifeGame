@@ -1,9 +1,9 @@
 # survival-17: Food as data (FoodDef)
 Lane: Survival
 Owner: Survival thread (session_014pHdaxJ7uESzsvWekpjvsH)
-Status: in_review
+Status: done
 Branch: claude/survival-fooddef
-PR: (to open)
+PR: merged, first commit 07cfd1db
 
 ## Goal
 docs/CONTENT.md rule (Justin, via Integration): content is data on shared bases. The Food row is Survival's. `shared/Foods.cs` adds `FoodDef` (item, food, water, good-meal flag, container left behind) and `PotDef` (full pot, empty pot, water), with `Foods.All` / `Foods.Pots`. `Needs.Nourishment` reads the registry; `Eat` and `DrinkFrom` use it; the old `EatenFrom`, `GoodMeal` and `PotOfWater` switches are gone. Behaviour unchanged: same numbers from the same Needs constants. CONTENT.md Food row updated.
@@ -16,4 +16,4 @@ docs/CONTENT.md rule (Justin, via Integration): content is data on shared bases.
 - Roast path (Cooking.cs, Roasting) still hard-wired to mutton; next conversion step is a cook result on FoodDef.
 
 ## Next step
-Open PR, wait for CI, send green sha to the PM (session_01CvoSQGRe3vDvDXWQu2qruU).
+Done and merged; nothing further on this ticket.

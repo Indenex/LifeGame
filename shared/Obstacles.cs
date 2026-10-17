@@ -59,6 +59,15 @@ namespace LifeGame.Shared
             radius = 0f;
             height = float.MaxValue;
 
+            // A landmark's broad trunk (a giant oak, env-5/env-10) is checked first: its cell has no
+            // forest roll of its own. Outcrops hold only stones, which are not enforced here yet.
+            if (Features.At(x, z, FeatureGround.Dry) is { } feature)
+            {
+                if (feature.Block != FeatureBlock.Trunk || g.Dug(x, z) || g.Cleared(x, z) || g.TileHeight(x, z) < World.WaterLevel + 0.1f) return false;
+                radius = TrunkRadius(Landmarks.GiantGirth(x, z));
+                return true;
+            }
+
             float roll = Trees.Hash01(x, z, 11);
             float density = Forest.Density(x, z);
             float heath = Forest.Heath(x, z), wet = Forest.Wetland(x, z);
@@ -75,7 +84,6 @@ namespace LifeGame.Shared
             if (g.Cleared(x, z)) return false;
             float top = g.TileHeight(x, z);
             if (top < World.WaterLevel + 0.1f) return false;
-            if (Features.At(x, z, FeatureGround.Dry) != null) return false;
             float scale = 1.3f + Trees.Hash01(x, z, 15) * 0.6f;
             // Trees don't grow in the spawn clearing, but boulders can.
             if (!Trees.NearSpawn(x, z) && roll < sapling)

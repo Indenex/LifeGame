@@ -1,7 +1,7 @@
 # anim-22: Chibi tiptoe sneak
 Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
-Status: in_review
+Status: done
 Branch: claude/anim-22 (from main)
 PR: #721
 

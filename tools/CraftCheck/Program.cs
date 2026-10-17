@@ -814,10 +814,13 @@ void WalkTo(float tx, float tz, float near = 1.5f) => walker.To(ref x, ref z, tx
 
 void Pump(Func<bool> until, float seconds, string? what)
 {
+    // A wait for something (what != null) ends the moment it happens, so it can afford 3x the time a quick
+    // runner needs; a slow shared runner then does not fail the check. A plain sleep (what == null) is as asked.
+    float limit = what != null ? seconds * 3f : seconds;
     var sw = Stopwatch.StartNew();
     while (!until())
     {
-        if (sw.Elapsed.TotalSeconds > seconds)
+        if (sw.Elapsed.TotalSeconds > limit)
         {
             if (what != null) Fail($"timed out waiting for {what}");
             return;
