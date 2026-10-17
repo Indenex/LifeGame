@@ -20,6 +20,8 @@ Add 'Things to try' hints (D-105, one sentence, goal not recipe) to client/scrip
 
 - 2026-10-17 03:55: #484 merged: added hide.waterskin (Survival wording). Also the harness found animal.eggs (Animals, Eggs.cs; built-in action already in Skills.cs, Husbandry) without a hint: added a line + how-to. Harness 72/72. Still waiting: cook.egg, carve.fletched_arrows, carve.spade, clay trough.
 
+- 2026-10-17 04:00: #470 merged: added cook.egg and carve.fletched_arrows (Crafting wording). Harness 74/74. Waiting only on carve.spade and the clay trough.
+
 ## Open questions / blockers
 - Waiting on #454/crafting-eggs, #484, #417 to merge.
 
