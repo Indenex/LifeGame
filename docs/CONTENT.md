@@ -71,6 +71,11 @@ points, not a promise.
 If converting would be a large change, send the PM the options first (D-059) and keep working on the
 smallest conversion that lets your member go in as data.
 
+## Shared registries that are not content families (integration-9)
+
+- **Client subscriptions.** `client/scripts/net/Subscriptions.cs` holds only the core queries. A lane that needs a table subscribed adds a file `client/scripts/net/Subscriptions.<Lane>.cs` with a static method marked `[SubscriptionQueries]` in `partial class Subscriptions`, taking `(string range, string farRange)` and returning its query strings (`range` for live things, `farRange` for slow-changing world state such as terrain and buildings). `Area` adds every such method (found by reflection, in name order); the check tools in `tools/` include `Subscriptions*.cs`, so they subscribe to the same set. Nothing in Main.cs changes.
+- **Building kinds.** `shared/structures/Structures<Lane>.cs`, one `StructureDef` per kind (see the Structure row above).
+
 ## Order of conversion (proposal)
 
 Each happens when a lane next adds to that family, not before:
