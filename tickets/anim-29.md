@@ -16,6 +16,7 @@ Options for Justin (via the PM):
 ## Progress log
 - 2026-10-17 12:10: prototype on claude/anim-jump-windup. JumpMotion holds a pending take-off for the wind-up, Main passes `jump.WindUp` to `Avatar.SetJump`, and PlayerAnimator adds WindUpPose and PushOff. Client builds. Render C has a clip request.
 - 2026-10-17 12:15: merged main (resolved a PlayerAnimator conflict with the anim-28 comment move). This branch also carries anim-28 marked done (#756), which needs to reach main through the next Animation PR if this one is dropped.
+- 2026-10-17 14:35: wrap-up. Head d96b8111 on claude/anim-jump-windup, with no PR and no CI run (client builds locally). Render C has a side-view clip request (prototype vs main) for the PM. Render C note: to light a fire in their renders, use StartCraft("fire.hand_drill", 1.0f), because a score under 0.35 silently fails.
 
 ## Open questions / blockers
 - Justin's pick (a/b/c).
@@ -25,4 +26,4 @@ Options for Justin (via the PM):
   - JumpMotion belongs to the jump owner (bugfix-25); tell them before merging.
 
 ## Next step
-Wait for Justin's pick through the PM. On (a) or (b), close the gaps above and open the PR.
+Wait for Justin's pick (a/b/c) through the PM. On (a) or (b): move conn.Reducers.Jump() to the take-off frame, show the dip on other players in JumpView, tell the jump owner (bugfix-25), merge main, open the PR, send the green sha. On (c): drop the branch, and bring the anim-28 done-marking to main in the next PR.
