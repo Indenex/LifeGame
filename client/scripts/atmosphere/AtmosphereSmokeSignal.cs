@@ -26,8 +26,9 @@ public partial class Atmosphere
 {
     // At most this many columns at once, the nearest fires first.
     const int SignalSlots = 6;
-    // Fires further than this from the player put up no column (the camera sees 300 m).
-    const float SignalReach = 320f;
+    // Fires the client holds (about 160 m round the player) are judged here from their
+    // fuel; further ones come from the server's world-wide SignalFire list, out to this.
+    const float SignalReach = 320f, SignalFarReach = 1500f;
     // Puffs are drawn out to this far; beyond it only the painted column shows.
     const float SignalPuffReach = 110f;
     // Where the puffs hand over to the painted column, in metres from the camera.
@@ -222,10 +223,11 @@ public partial class Atmosphere
         }
     }
 
-    // The most fuel this fire can hold before any hearth bonus: the cap of whoever lit
-    // it, so anyone can signal by filling their own fire (Justin). Until Crafting
-    // publishes that cap on the fire row, the Master cap stands in.
-    static float FireMost((float X, float Z, long FuelUntil) fire) => Fires.MasterMaxSeconds;
+    // The most fuel this fire can hold (Crafting's FuelCapSeconds: the lighter's cap,
+    // or a feeder's if higher, hearth bonus included), so anyone can signal by filling
+    // their own fire (Justin). 0 marks a fire from before the cap was kept. The map is
+    // AtmosphereSound's (HearFireCaps), shared with the fire's sound.
+    float FireMost(ulong id) => fireCaps.TryGetValue(id, out var cap) && cap > 0f ? cap : Fires.MaxSeconds;
 
     // The stoked fires near the player, nearest first, a few at most.
     void FindSignals(Vector3 focus)
@@ -239,25 +241,35 @@ public partial class Atmosphere
             float dist = new Vector2(f.X - focus.X, f.Z - focus.Z).Length();
             if (dist > SignalReach) continue;
             // Only fires out in the open signal (Justin): none from inside a home.
-            // A fire on an outdoor raised hearth holds half as much again
-            // (HearthFuelScale), so it counts as stoked against that larger most.
-            float most = FireMost(f);
+            float most = FireMost(id);
             bool indoors = false;
             if (homesConn != null)
                 foreach (var s in homesConn.Db.Structure.Iter())
-                {
-                    if (!s.Complete) continue;
-                    if (Structures.IsIndoor((int)s.Kind) && new Vector2(s.X - f.X, s.Z - f.Z).Length() <= Structures.HearthRadius)
-                        most *= Structures.HearthFuelScale;
-                    else if (Structures.HasDoorway((int)s.Kind) && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, f.X, f.Z))
+                    if (s.Complete && Structures.HasDoorway((int)s.Kind) && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, f.X, f.Z))
+                    {
                         indoors = true;
-                }
+                        break;
+                    }
             if (indoors) continue;
             float signal = Math.Max(Mathf.SmoothStep(0.70f, 0.80f, left / most), signalForce);
             if (signal < 0.01f) continue;
             float ground = terrain?.TileHeight(World.CellOf(f.X), World.CellOf(f.Z)) ?? World.BaseHeight(World.CellOf(f.X), World.CellOf(f.Z));
             signalPicks.Add((id, new Vector3(f.X, ground + 0.9f, f.Z), signal, dist, false));
         }
+        // Far fires the server says are signalling (SignalFire): full until their fuel
+        // drops below the line, then fading over ten seconds.
+        if (homesConn != null)
+            foreach (var row in homesConn.Db.SignalFire.Iter())
+            {
+                if (fires.ContainsKey(row.FireId)) continue;
+                float dist = new Vector2(row.X - focus.X, row.Z - focus.Z).Length();
+                if (dist > SignalFarReach) continue;
+                float left = (row.Until.MicrosecondsSinceUnixEpoch - now) / 1_000_000f;
+                float signal = Math.Max(Mathf.Clamp(left / 10f, 0f, 1f), signalForce);
+                if (signal < 0.01f) continue;
+                float ground = terrain?.TileHeight(World.CellOf(row.X), World.CellOf(row.Z)) ?? World.BaseHeight(World.CellOf(row.X), World.CellOf(row.Z));
+                signalPicks.Add((row.FireId, new Vector3(row.X, ground + 0.9f, row.Z), signal, dist, false));
+            }
         // For screenshots with no live fire about: one column where the preview campfire goes.
         if (signalForce > 0f && signalPicks.Count == 0 && signalClock > 3f)
         {
