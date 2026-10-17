@@ -35,6 +35,8 @@ quality setting. Stills at noon, golden hour and rain through Render.
   tops, lavender-grey bases and crisper bands. A brighter cyan sky is a palette change
   (D-154): offered to the PM as options, not built.
 
+- 2026-10-17: sky option 2 (PM/Justin): daytime top and noon horizon moved halfway toward the Stylized Nature kit's cyan; dawn, dusk and night unchanged.
+
 ## Open questions / blockers
 - (none)
 
