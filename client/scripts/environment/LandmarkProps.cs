@@ -110,13 +110,13 @@ public static class LandmarkProps
         }
     }
 
-    // A huge old trunk lying across a glade (env-33): Modeling's fallen log made giant,
-    // straight with a splintered end or broken with its root plate torn up. Each has its
+    // A huge old trunk lying across a glade (env-33): one of Modeling's giant logs (model-19),
+    // straight or broken in two, each with its own root plate torn up. Each has its
     // own length, girth, direction and lie on the slope, its own rot (from fresh bark to
     // a soft, moss-green hulk), ferns crowding along its sides and the odd stone.
     public static void FallenGiant(int x, int z, Vector3 at, Func<float, float, float> heightAt, Lists into, Color custom)
     {
-        int variant = Pick(x, z, 500, PropMeshes.FallenLogVariants);
+        int variant = Pick(x, z, 500, PropMeshes.FallenGiantLogVariants);
         float yaw = H(x, z, 501) * Mathf.Tau;
         float length = Range(x, z, 502, 3.0f, 4.3f), girth = Range(x, z, 503, 2.6f, 3.7f);
         float rot = H(x, z, 504);
@@ -128,8 +128,10 @@ public static class LandmarkProps
         var basis = new Basis(Vector3.Up, yaw) * new Basis(Vector3.Back, pitch)
             * Basis.FromScale(new Vector3(length, girth * Range(x, z, 505, 0.85f, 1.05f), girth));
         var middle = new Vector3(at.X, (h0 + h1) * 0.5f - 0.12f * girth - 0.1f * rot, at.Z);
-        var bark = Look.Bark.Darkened(Range(x, z, 506, 0.08f, 0.25f)).Lerp(Look.Moss, rot * 0.35f);
-        into.Put(PropMeshes.FallenLog(variant), Painted.Bark, (new Transform3D(basis, middle), bark, custom));
+        // Modeling's giant log paints its own bark, earth and moss, so the tint only darkens it a
+        // little, more on an old rotten one.
+        var tint = PropMeshes.GiantTint.Darkened(Range(x, z, 506, 0f, 0.12f) + rot * 0.08f);
+        into.Put(PropMeshes.FallenGiantLog(variant), Painted.Bark, (new Transform3D(basis, middle), tint, custom));
 
         // It blocks the way along its whole length, a circle every metre or so.
         float radius = 0.2f * girth;

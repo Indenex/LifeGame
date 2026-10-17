@@ -1,8 +1,8 @@
 # env-33: Fallen giant, a new world feature (D-166)
 Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
-Status: in_review
-Branch: claude/environment-fallen-giant
+Status: in_progress
+Branch: claude/environment-fallen-giant (merged #718); follow-up claude/environment-giant-log
 PR: (none yet)
 
 ## Goal
@@ -28,8 +28,13 @@ Files: `shared/Features.cs` (FeatureId.FallenGiant = 4, appended), `shared/Landm
   stands on it (the usual tree ghost).
 - PM: fallen giant first is a PM default (D-323).
 
+- 2026-10-17 11:08: #718 merged.
+- 2026-10-17 11:20: follow-up on claude/environment-giant-log: Modeling's FallenGiantLog (#730,
+  6 variants with root plates, own colours) swapped in, tint PropMeshes.GiantTint darkened by
+  rot; preloaded in ChunkWorker. Blocking circles unchanged (bugfix-49 folds them into shared).
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for PR CI; send the green sha to the PM; Render still request for (149,-63) and (-73,-129).
+Render (149,-54) zoom 4 to check the new log, open the follow-up PR, send the Render request.
