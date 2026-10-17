@@ -130,10 +130,26 @@ public partial class Terrain : Node3D
         {
             GD.Print($"[view] radius {r}: {chunks.Count} chunks in place {loading.Elapsed.TotalMilliseconds:F0} ms after the first was asked for");
             loading = null;
+            if (LoadedShot is { } shot) TakeLoadedShot(shot);
         }
     }
 
     System.Diagnostics.Stopwatch? loading;
+
+    // --screenshot-when-loaded=path.png saves one frame once every chunk in view is in
+    // place, then quits: for renders of the far view, where a fixed delay may fire
+    // before the outer chunks land (slow software renderers build only a few a frame).
+    static readonly string? LoadedShot = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs())
+        .FirstOrDefault(a => a.StartsWith("--screenshot-when-loaded="))?["--screenshot-when-loaded=".Length..];
+
+    async void TakeLoadedShot(string path)
+    {
+        // A few frames for the last chunks to draw and the fade to settle.
+        for (int i = 0; i < 4; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        GetViewport().GetTexture().GetImage().SavePng(path);
+        GD.Print($"[view] saved {path}");
+        GetTree().Quit();
+    }
 
     // Grass tufts only near the player: they fade out before ViewDistance.GrassChunks,
     // so a chunk gaining or losing them on a rebuild never shows.
