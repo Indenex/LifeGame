@@ -9,9 +9,11 @@ namespace LifeGame;
 
 // The in-game bug report (bugfix-42). F8 (or the Esc menu) takes a screenshot of what you
 // were looking at, then asks what went wrong. Send writes a zip to user://bug-reports/
-// (report.md, screenshot.png, log.txt), opens that folder, copies a one-line summary to the
-// clipboard, and sends the summary and report text to the server (submit_bug_report) so
-// the admin can read it with /bugs. The auth token is never part of a report.
+// (report.md, screenshot.png, log.txt), copies a one-line summary to the clipboard, and
+// sends the summary and report text to the server (submit_bug_report) so the admin can read
+// it with /bugs. Then it sends the log tail and a smaller JPEG of the screenshot in parts
+// (attach_bug_report), and the server opens a GitHub issue with them (bugfix-64); the window
+// shows how that went from my_bug_report_sends. The auth token is never part of a report.
 // Main sets Conn and Facts; UX styles the window.
 public partial class BugReportPanel : CanvasLayer
 {
@@ -22,6 +24,9 @@ public partial class BugReportPanel : CanvasLayer
     public bool IsOpen => panel.Visible;
 
     const int LogLines = 200;
+    // The GitHub copy of the screenshot: at most this wide, sent in parts of this many bytes.
+    const int ShotWidth = 1280;
+    const int ShotPart = 60_000;
 
     Control panel = null!;
     LineEdit what = null!;
@@ -29,6 +34,11 @@ public partial class BugReportPanel : CanvasLayer
     TextureRect picture = null!;
     Control asking = null!;
     Image? shot;
+    // Reports with a higher id than this are the one just sent; 0 while nothing is being watched.
+    ulong watchAbove;
+    bool watching;
+    double watchClock;
+    Label sending = null!;
 
     public override void _Ready()
     {
@@ -53,6 +63,24 @@ public partial class BugReportPanel : CanvasLayer
         GetViewport().SetInputAsHandled();
     }
 
+    public override void _Process(double delta)
+    {
+        if (!watching || !panel.Visible) return;
+        watchClock -= delta;
+        if (watchClock > 0) return;
+        watchClock = 0.5;
+        if (Conn() is not { } conn) return;
+        var row = conn.Db.MyBugReportSends.Iter().Where(r => r.ReportId > watchAbove).OrderByDescending(r => r.ReportId).FirstOrDefault();
+        if (row == null) return;
+        sending.Text = row.State switch
+        {
+            "sent" => $"It's on GitHub as issue #{row.Issue}.",
+            "waiting" => "Sending it to GitHub...",
+            _ => $"{row.Note}.",
+        };
+        if (row.State != "waiting") watching = false;
+    }
+
     public void Open()
     {
         // The picture is of the world as it was, before this window covers it.
@@ -61,6 +89,8 @@ public partial class BugReportPanel : CanvasLayer
         what.Text = "";
         result.Text = "";
         thanks.Visible = false;
+        sending.Text = "";
+        watching = false;
         asking.Visible = true;
         // The picture that goes with the report, small, so you can see what is sent.
         picture.Texture = shot == null ? null : ImageTexture.CreateFromImage(shot);
@@ -126,6 +156,10 @@ public partial class BugReportPanel : CanvasLayer
         thanks.Modulate = new Color(0.8f, 1f, 0.75f);
         thanks.Visible = false;
         box.AddChild(thanks);
+        sending = Hud.Text("", 14);
+        sending.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        sending.Modulate = new Color(1, 1, 1, 0.85f);
+        box.AddChild(sending);
         result = Hud.Text("", 13);
         result.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         result.Modulate = new Color(1, 1, 1, 0.75f);
@@ -163,18 +197,52 @@ public partial class BugReportPanel : CanvasLayer
         string report = Report(said);
         string summary = Summary(said);
         string zip = $"user://bug-reports/{stamp}.zip";
-        string? error = WriteZip(zip, report, shot, Tail(LogLines));
+        string log = Tail(LogLines);
+        string? error = WriteZip(zip, report, shot, log);
         DisplayServer.ClipboardSet(summary);
-        try { Conn()?.Reducers.SubmitBugReport(summary, report); }
-        catch (Exception e) { GD.PushWarning($"bug report not sent: {e.Message}"); }
+        sending.Text = "";
+        watching = false;
+        if (Conn() is { } conn)
+        {
+            try
+            {
+                watchAbove = conn.Db.MyBugReportSends.Iter().Select(r => r.ReportId).DefaultIfEmpty(0UL).Max();
+                watchAbove = Math.Max(watchAbove, conn.Db.MyBugReports.Iter().Select(r => r.Id).DefaultIfEmpty(0UL).Max());
+                conn.Reducers.SubmitBugReport(summary, report);
+                Attach(conn, log, GitHubShot(shot));
+                watching = true;
+                watchClock = 0.5;
+            }
+            catch (Exception e) { GD.PushWarning($"bug report not sent: {e.Message}"); }
+        }
         string folder = ProjectSettings.GlobalizePath("user://bug-reports");
-        if (error == null) OS.ShellOpen(folder);
         result.Text = error == null
-            ? $"A copy is saved in {folder} (that folder just opened), and a one-line summary is on your clipboard."
+            ? $"A copy is saved in {folder}, and a one-line summary is on your clipboard."
             : $"Saving a copy on this computer failed ({error}), but the server has it.";
         thanks.Visible = true;
         asking.Visible = false;
         what.Text = "";
+    }
+
+    // The log tail goes with the first part, and the last part says the report may go.
+    static void Attach(DbConnection conn, string log, byte[] jpg)
+    {
+        int parts = Math.Max(1, (jpg.Length + ShotPart - 1) / ShotPart);
+        for (int i = 0; i < parts; i++)
+        {
+            int from = i * ShotPart, to = Math.Min(jpg.Length, from + ShotPart);
+            conn.Reducers.AttachBugReport(i == 0 ? log : "", jpg[from..to].ToList(), i == parts - 1);
+        }
+    }
+
+    // A smaller JPEG of the screenshot for the GitHub issue; the zip keeps the full PNG.
+    static byte[] GitHubShot(Image? shot)
+    {
+        if (shot == null || shot.IsEmpty()) return Array.Empty<byte>();
+        var small = (Image)shot.Duplicate();
+        if (small.GetWidth() > ShotWidth)
+            small.Resize(ShotWidth, Math.Max(1, small.GetHeight() * ShotWidth / small.GetWidth()), Image.Interpolation.Lanczos);
+        return small.SaveJpgToBuffer(0.8f);
     }
 
     // --- Contents ----------------------------------------------------------

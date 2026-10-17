@@ -19,3 +19,13 @@ That player is now an admin. Admins can add others the same way (`make_admin` ne
 - `/time hh:mm` (06:30), `/time dawn|noon|dusk|night`, or `/time 0-1`; `/day`, `/night`.
 - `/season spring|summer|autumn|winter` (or 0 to 1 through the year); `/season-speed days`.
 - Every one is checked by the server; a player who isn't an admin gets "Only the world's admin can...".
+
+## Bug reports to GitHub (bugfix-64)
+
+F8 reports open a GitHub issue on Indenex/LifeGame by themselves once the server has a token; the screenshot goes on the `bug-reports` branch. From the machine that published the database:
+
+```
+spacetime call <database> set_bug_report_token '"github_pat_..."'
+```
+
+The token is kept only in a private server table and survives republishing; `'""'` clears it. Without one, reports stay on the server for `/bugs`. Each player may send 3 reports an hour and 10 a day, and the server 40 a day; reports past that are kept for `/bugs` too. Setup clicks for the token: `/mnt/project-files/bugfix/github-token-setup.md`.
