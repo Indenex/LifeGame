@@ -63,7 +63,8 @@ public partial class ControlsPage : Control
         grid.AddThemeConstantOverride("h_separation", 28);
         grid.AddThemeConstantOverride("v_separation", 6);
         scroll.AddChild(grid);
-        column.AddChild(scroll);
+        // On paper, a fade at the bottom shows the list goes on (ui-68).
+        column.AddChild(WarmLook.On ? ScrollFade.Wrap(scroll, WarmLook.Paper) : scroll);
         scrollBox = scroll;
 
         turn = SliderRow(column, "Turn speed", 3.5, 14, 0.5, Settings.Get("camera", "turn_ease", DefaultEase), v =>
