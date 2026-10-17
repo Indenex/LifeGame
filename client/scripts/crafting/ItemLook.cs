@@ -14,7 +14,8 @@ public static class ItemLook
     public static Mesh MeshFor(Item item)
     {
         if (Meshes.TryGetValue(item, out var mesh)) return mesh;
-        mesh = ItemModels.GroundMesh(item) ?? OldMeshFor(item);
+        // The painted look (Modeling's painted-6) for the meshes made elsewhere too.
+        mesh = ItemModels.GroundMesh(item) ?? PaintedItems.Paint(OldMeshFor(item), PaintedItems.FamilyOf(item));
         Meshes[item] = mesh;
         return mesh;
     }
