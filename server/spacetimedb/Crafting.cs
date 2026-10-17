@@ -295,9 +295,17 @@ public static partial class Module
             for (int dz = -1; dz <= 1; dz++)
                 foreach (var fire in ctx.Db.Fire.ByChunk.Filter((cx + dx, cz + dz)))
                     if (fire.FuelUntil.MicrosecondsSinceUnixEpoch > now)
-                        warmth = Math.Max(warmth, Fires.WarmthFrom(fire.X, fire.Z, x, z));
+                    {
+                        float radius = Fires.WarmthRadius;
+                        FireWarmthRadiusHook(ctx, fire.X, fire.Z, ref radius);
+                        warmth = Math.Max(warmth, Fires.WarmthFrom(fire.X, fire.Z, x, z, radius));
+                    }
         return warmth;
     }
+
+    // How far a fire's warmth reaches (default Fires.WarmthRadius). House building's
+    // stone-ringed hearth sets Fires.StoneRingWarmthRadius for a fire burning on it.
+    static partial void FireWarmthRadiusHook(ReducerContext ctx, float fireX, float fireZ, ref float radius);
 
     // Survival asks how warm a spot is through this hook (see Survival.cs).
     static partial void FireWarmthAt(ReducerContext ctx, float x, float z, ref float warmth) =>
