@@ -1,9 +1,9 @@
 # bugfix-40: "Placing a sleeping mat, it just disappears"
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_progress
+Status: done
 Branch: claude/bugfix-40
-PR: (to open)
+PR: #539 (merged)
 
 ## Report
 Justin, on a recent release: "when placing a sleeping mat, it just disappears."
@@ -21,4 +21,4 @@ Justin, on a recent release: "when placing a sleeping mat, it just disappears."
 Where exactly did he place it (G inside a hut, or dragged from the bag), what message appeared, did the mat leave his bag, did it come back after rejoining, was he on a slope? If it left the bag and the row exists (`spacetime sql ... select * from sleeping_mat`), it is drawing; if the row is missing, the server refused or removed it.
 
 ## Next step
-Get Justin's answers via the PM; if the row exists, look at the draw path with Render's screenshot; if not, look at the server log for the LayMat call.
+Done: Justin confirmed (2026-10-17) the sleeping mat no longer vanishes; fixed in #539. Nothing left on this ticket.
