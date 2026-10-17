@@ -30,6 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
+        if (view == "coop") { Coop(); return; }
         if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster" or "animals" or "structures" or "faces" or "pots" or "turntable" or "art")
         {
             if (view == "faces") ChibiFaces();
@@ -920,6 +921,20 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 35f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0.6f, 1.7f, 7.4f), new Vector3(0.6f, 0.85f, 0), Vector3.Up);
+    }
+
+    // The hen coop (model-7) at each build stage, frame, walls and roof, left to right,
+    // turned a little so the pop-hole, ramp and side show.
+    void Coop()
+    {
+        int kind = (int)SpacetimeDB.Types.StructureKind.HenCoop;
+        for (int c = 0; c < 3; c++)
+            foreach (var piece in StructureModel.Pieces(kind))
+                if (piece.Stage >= 0 && piece.Stage <= c)
+                    AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material, Position = new Vector3(-2.6f + c * 2.6f, 0, 0), Rotation = new Vector3(0, 0.55f, 0) });
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 2.4f, 6.2f), new Vector3(0, 0.55f, 0), Vector3.Up);
     }
 
     // One chibi look turned through five views in a row (art-rnd-1): front three-quarter,
