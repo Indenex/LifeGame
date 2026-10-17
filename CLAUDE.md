@@ -15,7 +15,26 @@ Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111
 
 - **Justin** owns the game. He wants to be very involved in design: frequent progress updates with screenshots, and design questions (how something looks, feels or plays, rules and numbers players notice) brought to him rather than decided silently.
 - **PM** (Project Manager) assigns lanes and tickets, keeps `STATUS.md` accurate, answers technical questions itself, takes design questions, merges, spending and anything irreversible to Justin, and records his answers in `DECISIONS.md`.
-- **Lane sessions** each own one lane (see `STATUS.md`) and work one ticket at a time on their own branch. Questions go to the PM; meanwhile keep working on a stated default.
+- **Feature lanes** (designers/workers) each own one feature lane (see `STATUS.md`) and build game features, one ticket at a time on their own branch. Questions go to the PM; meanwhile keep working on a stated default.
+- **Integration lane** is a dedicated worker that owns integration, CI and builds: the shared files, `.github/workflows/`, build and bindings tooling, the Use dispatcher, and merge-readiness of PRs (resolving cross-lane conflicts, keeping `main` building). Feature lanes do not edit CI; they ask Integration.
+- **Audio lane** owns all sound and music (D-079). Other lanes send it audio requests and never make sounds themselves.
+- **Environment** and **Atmosphere** lanes together own cosy immersion: Environment builds the world (terrain, plants, rocks, water edges), Atmosphere sets light, sky, weather and mood (D-078).
+- **Render lane** is a dedicated worker that makes everything Justin looks at: screenshots, short clips, mockups. Other lanes never render their own work; they send a render request (see `WORKER_LOOP.md`) and the Render lane sends the images plus the requester's work summary to the PM, who presents them to Justin (D-059).
+
+## Ideas become choices (D-059)
+
+Whenever the PM or any worker has an idea (a feature, a look, a number, a different approach), it reaches Justin as a short question with 2 to 4 concrete options, the recommended one first and marked, each with a one-line trade-off, answerable in a word. Workers send ideas to the PM in that shape; the PM batches them and asks Justin. Until he answers, keep working on the recommended option.
+
+## Models (D-058)
+
+- **Opus** for any session or agent that writes or designs code: the PM, every lane session, and coding subagents.
+- **Sonnet** for small, basic tasks: searching, reading logs, summarizing, ticket and status bookkeeping, mechanical one-file edits, running checks.
+- A lane session acts as **coordinator** for its own work: it breaks a ticket into small, clearly specified tasks and hands the basic ones to Sonnet subagents (Agent tool `model: "sonnet"`), keeping design and non-trivial code with Opus (`model: "opus"`). The coordinator reviews each result before committing it.
+- New sessions started for a lane (e.g. `create_session`) use Opus.
+
+## Design principles
+
+- **Start low, grow slowly (D-075).** Every number (gear bonuses, skill gains, yields, speeds, capacities) starts low and rises slowly; the curve is quicker through about the first 15% of progression, then flattens. The game is meant to take a long time. Propose numbers to the PM with where they sit on that curve.
 
 ## The no-handoff rule
 
@@ -32,7 +51,7 @@ Each lane works in its own files so lanes don't collide:
 
 - Server code in `server/spacetimedb/<Feature>.cs` as `partial class Module`.
 - Client code under `client/scripts/<feature>/`.
-- Shared files (`client/scripts/Main.cs`, `client/scripts/Hud.cs`, `server/spacetimedb/Tables.cs`, `shared/World.cs`) only get small hooks: add a node or a call, no rewrites. The Crafting lane is the integration owner for these, CI and builds.
+- Shared files (`client/scripts/Main.cs`, `client/scripts/Hud.cs`, `server/spacetimedb/Tables.cs`, `shared/World.cs`) only get small hooks: add a node or a call, no rewrites. The Integration lane owns these, CI and builds.
 - Items are `LifeGame.Shared.Item` ids in `shared/Items.cs`; process ids are dotted strings in `shared/Processes.cs`. Add new ones with new numbers; never renumber or rename.
 - `client/module_bindings/` is generated, not committed. Run `tools/gen-bindings.sh` after cloning, after merging main, and after changing the server module, before building the client or tools.
 

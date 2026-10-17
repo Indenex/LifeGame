@@ -298,7 +298,9 @@ int KilnCheck()
         if (lastError != null) Fail($"picking up: {lastError}");
     }
     if (CountOf(Item.UnfiredPinchPot) != 2) Fail($"expected 2 unfired pots, have {CountOf(Item.UnfiredPinchPot)}");
-    byte quality = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.UnfiredPinchPot).Quality;
+    // The two pots can differ by a point and sit in separate stacks.
+    var loaded = conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)Item.UnfiredPinchPot)
+        .SelectMany(r => Enumerable.Repeat(ClayRules.KilnFired(r.Quality), (int)r.Count)).OrderBy(q => q).ToList();
 
     WalkTo(kiln.X, kiln.Z, 1.6f);
     lastError = null;
@@ -328,9 +330,9 @@ int KilnCheck()
     Log($"Kiln done after {watch.Elapsed.TotalSeconds:F0} s: {news.Last()}");
     Pump(() => false, 1, null);
     var fired = conn.Db.WorldItem.Iter().Where(w => w.Item == (ushort)Item.PinchPot && DistanceTo(w.X, w.Z, kiln.X, kiln.Z) < 2f).ToList();
-    foreach (var w in fired)
-        if (w.Quality != ClayRules.KilnFired(quality)) Fail($"kiln pot quality {w.Quality}, expected {ClayRules.KilnFired(quality)}");
-    Log($"{fired.Count} kiln-fired pots at quality {ClayRules.KilnFired(quality)} (shaped at {quality})");
+    var got = fired.Select(w => w.Quality).OrderBy(q => q).ToList();
+    if (!got.SequenceEqual(loaded)) Fail($"kiln pot qualities {string.Join(",", got)}, expected {string.Join(",", loaded)}");
+    Log($"{fired.Count} kiln-fired pots at quality {string.Join(",", got)}");
     Log("STAGE kiln-done");
     Log("Kiln check passed: bricks to a kiln to kiln-fired pots");
     conn.Disconnect();

@@ -208,3 +208,119 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-050 — 2026-10-15 — Right-drag turns the camera
 **Decision:** Holding the right mouse button and moving the mouse turns the camera. Q/E still turn it. The UX/UI lane builds it.
 **Who:** Justin
+
+## D-051 — 2026-10-16 — Ship firelight and the moonlit early night
+**Decision:** Atmosphere's warmer firelight and the moonlit early night (#32) ship as shown.
+**Who:** Justin ("Ship it")
+
+## D-052 — 2026-10-16 — Carrying too much slows you down
+**Decision:** Over the carrying limit (D-042) you can still pick things up, but you walk slower: easing down to half speed at the overload cap, never slower. This is what survival-3 (#39) already does.
+**Who:** Justin ("Slower walk")
+
+## D-053 — 2026-10-16 — Player fighting: as proposed, and killers are marked
+**Decision:** PvP follows Claims' proposal: left click strikes a player in reach (fists ~12 hits to kill, hand axe ~6); fighting is open in the wild, blocked inside claims unless the owner allows it and within 20 m of spawn; new players are protected for 10 minutes; dying to a player is like any death (drop what you carry, keep skills); one chat line says who struck whom. Added: a killer's name shows red to others for 30 minutes. Being hurt shows as a soft dark-red screen edge instead of a health ring (Claims' change, shown to Justin).
+**Who:** Justin ("Mark killers")
+
+## D-054 — 2026-10-16 — A new fire burns 15 minutes
+**Decision:** A newly lit fire burns for 15 minutes before it needs feeding (was 60 s; Crafting had proposed 180 s). Each stick fed still adds 90 s.
+**Who:** Justin ("15 minutes for the fire length")
+
+## D-055 — 2026-10-16 — Skill titles stay every 20 ranks
+**Decision:** Titles stay Apprentice 20, Journeyman 40, Expert 60, Artisan 80, Master 100 (the design doc's 25/50/75/90 is not used). The Journeyman focus choice opens at rank 50.
+**Who:** Justin ("Keep the game's"; the PM had recommended the doc's)
+
+## D-056 — 2026-10-16 — Cleared trees fall in a random direction
+**Decision:** When ground is cleared, trees topple and settle in a random direction (seeded per tree so all players see the same), rocks sink, grass thins. The PM had recommended away-from-camera.
+**Who:** Justin ("Random")
+
+## D-057 — 2026-10-16 — Mud-brick house costs
+**Decision:** The mud-brick house (building-4) costs footings 6 stone + 4 sticks, walls 16 bricks + 6 daub, rafters 12 sticks + 2 cordage, thatch 14 fiber. Full rain cover, warmth 0.85 (0.9 door shut), a fire inside makes it fully warm, weathers after 7 days untouched. The PM had recommended 10 bricks.
+**Who:** Justin ("16 bricks"); the other numbers are Building's defaults, shown to him
+
+## D-058 — 2026-10-16 — Dedicated Integration lane; Opus codes, Sonnet does small tasks
+**Decision:** Crafting no longer owns integration, CI and builds; a dedicated Integration lane does (shared-file hooks, CI workflows, build and bindings tooling, the Use dispatcher, PR merge-readiness). Crafting and the other feature lanes only build features. Every session or agent that writes or designs code runs on Opus; small, basic tasks run on Sonnet, handed out by a coordinator (the lane session) that breaks its ticket down and reviews the results. Supersedes "Crafting (integration owner)" in D-025; the Bug fixes lane (D-040) still takes cross-lane bugs.
+**Who:** Justin
+
+## D-059 — 2026-10-16 — Ideas come as choices; a dedicated Render lane
+**Decision:** (1) Whenever the PM or a worker has an idea, it goes to Justin as a short question with 2 to 4 concrete options, recommended first, answerable in a word; work continues on the recommended option meanwhile. (2) A dedicated Render lane makes all screenshots, clips and mockups. Other lanes send it a render request (ticket, branch, sha, what to show, short summary) instead of rendering themselves; when done, the Render lane sends the images and the requester's summary to the PM, who presents them to Justin. Images still go under /mnt/project-files/screenshots/ (D-034).
+**Who:** Justin
+
+## D-060 — 2026-10-16 — Chopped trees fall
+**Decision:** Chopping a tree with the stone axe fells it after 3 logs; it regrows in 2 hours (`Trees.Felling` on, crafting-9, #70).
+**Who:** Justin ("Fell it", which the PM recommended)
+
+## D-061 — 2026-10-16 — Keep the sleeping mat
+**Decision:** The woven grass mat (8 fiber, laid inside a finished hut or house) stays: you wake there after dying (building-5, #61).
+**Who:** Justin ("Keep it", which the PM recommended)
+
+## D-062 — 2026-10-16 — Wetness numbers as proposed
+**Decision:** Heavy rain soaks you in 2 minutes, drizzle in 10, wading in 10 seconds; drying takes 5 minutes, 2.5 by a fire; cold is multiplied by 1 + 0.5 x wetness (survival-5, #75).
+**Who:** Justin ("As proposed", which the PM recommended)
+
+## D-063 — 2026-10-16 — A player wiki, light on spoilers
+**Decision:** A Wiki lane (a Sonnet worker) writes and keeps current a player wiki under `wiki/`. It gives direction, basic tips and the spirit of play (e.g. "being wet chills you faster; there are ways to dry off quicker") without exact numbers, full recipes or solutions to discoveries. It follows `main`: when a merged decision or PR changes what players experience, the wiki is updated.
+**Who:** Justin
+
+## D-064 — 2026-10-16 — The wiki moves to Opus, in a plainer voice (amends D-063)
+**Decision:** The Wiki lane runs on Opus, not Sonnet. The wiki is rewritten in a plain, direct voice like a good game manual: no cosy or affectionate tone, no "be kind", no cute one-liners. The spoiler rule from D-063 stays.
+**Who:** Justin ("the sonnet worker's writing style is weird and oddly affectionate")
+
+## D-065 — 2026-10-16 — Leatherwork becomes its own specialty later
+**Decision:** Hide work (scrape, stretch, dry into leather) will train a new capped Leatherwork specialty once leather has more uses. Until that skill exists, hide work trains Husbandry (PM default, so it trains something meanwhile).
+**Who:** Justin ("Leatherwork later"; the PM had recommended Husbandry)
+
+## D-066 — 2026-10-16 — Ceramics builds a storage jar next
+**Decision:** ceramics-6 is a large kiln-fired storage jar set down as a store: ~6 stacks, keeps contents dry, 4 tempered clay, coil minigame, pit firing usually cracks it.
+**Who:** Justin ("Storage jar", which the PM recommended)
+
+## D-067 — 2026-10-16 — Skill toasts only at new titles
+**Decision:** Rank-ups show a toast with a chime only at a new title; other ranks show as dots in the journal (skills-8 as built).
+**Who:** Justin ("Titles only", which the PM recommended)
+
+## D-068 — 2026-10-16 — Burnt mutton gives 10% hunger
+**Decision:** Burnt mutton restores 10% hunger (roast 40%), as survival-4 built it.
+**Who:** Justin ("10%", which the PM recommended)
+
+## D-069 — 2026-10-16 — Player trading
+**Decision:** Players can trade. Claims builds the server side (claims-7, replacing the one-way hand-over); UX/UI builds the trade window (ui-9). PM defaults, Justin's to change: face a player and press Use to ask to trade; they accept or decline. A window shows both players' offers side by side; each adds items from what they carry. Both must press Accept; any change to either offer clears both accepts. The swap is all-or-nothing and checked on the server (items still held, carry limits respected, D-042). Walking away (beyond ~4 m), Esc, or either player dying cancels it. An empty side is a gift. One trade at a time per player; a chat line says when a trade completes. Claims writes the reducer and table contract into its ticket first so UX can build against it.
+**Who:** Justin ("Do a trading interface"); the flow above is the PM's default
+
+## D-070 — 2026-10-16 — Spinning gets its own minigame
+**Decision:** Spinning wool into yarn is a new minigame: flick the spindle and keep it turning (animals-8). Weaving stays a timed craft.
+**Who:** Justin ("New spin minigame"; the PM had recommended a plain timed craft)
+
+## D-071 — 2026-10-16 — Weaver becomes its own specialty later
+**Decision:** Spinning and weaving will train a capped Weaver specialty that later grows into dyes and clothing, like Leatherwork (D-065). Until it exists they train Toolmaking.
+**Who:** Justin ("Weaver later"; the PM had recommended Toolmaking)
+
+## D-072 — 2026-10-16 — Hear other players' work, quieter
+**Decision:** Crafting work sounds play for everyone nearby, not only your own; other players' work sounds play about 60% quieter than your own (atmosphere-12). Needs other players' running jobs to be visible to clients; Atmosphere agrees the table or hook with Crafting and Integration.
+**Who:** Justin ("Everyone's sounds, but make it other player ones like 60% quieter than your own")
+
+## D-073 — 2026-10-16 — Animation and Modeling lanes
+**Decision:** Two new Opus lanes for look and immersion. **Modeling** makes and upgrades the 3D models (player, animals, tools, items, structures, plants); it owns `client/assets/models/` and `client/scripts/models/`, and may change the existing in-code meshes owned by other lanes (e.g. `Sheep.cs`, `StructureModel*.cs`, `PotMesh.cs`, `ItemLook.cs`) in small PRs, telling the owning lane. **Animation** makes characters and creatures move well (player walk/idle/work/gather, sheep, felling, crafting gestures); it owns `client/scripts/animation/` and takes over `client/scripts/Avatar.cs` from Integration. Both send their work to the Render lane, and Justin sees it before it merges. Both keep to Linux and Windows performance budgets (32 players, CI load test).
+**Who:** Justin ("start an animation worker, and a dedicated modeler")
+
+## D-074 — 2026-10-16 — Clothes go on through an equipment panel
+**Decision:** Players wear clothing through a paper-doll equipment panel (slots such as body and feet), not automatically. Animals builds the worn-slots server side (animals-9); UX/UI builds the panel; Modeling and Animation show worn clothes on the figure.
+**Who:** Justin ("Equipment panel"; the PM had recommended auto-worn)
+
+## D-075 — 2026-10-16 — Start low, grow slowly (all numbers)
+**Decision:** Every number and stat in the game (gear bonuses, skill gains, yields, speeds, capacities, durability) starts on the low end and grows slowly, so each new piece of equipment or step up is worth having. The game is meant to take a long time to progress through. The curve rises faster through roughly the first 15% of progression, so new players feel early gains, and then flattens into a slow climb. Applies to all new numbers; lanes re-check existing numbers against it and propose changes to the PM. First case: clothing warmth starts small (well under the 25%/10% proposed).
+**Who:** Justin ("ALL numbers, Stats, etc. should start on the lower ends and scale up slowly ... faster at the first 15% or so")
+
+## D-076 — 2026-10-16 — Storage jar is kiln-only
+**Decision:** The storage jar can only be fired in a kiln; a campfire refuses it.
+**Who:** Justin ("Kiln only", which the PM recommended)
+
+## D-077 — 2026-10-16 — Trades may overload you
+**Decision:** A trade that takes a player over their carry limit is allowed; they walk slower, as with picking things up.
+**Who:** Justin ("Allow, walk slower", which the PM recommended)
+
+## D-078 — 2026-10-16 — Environment lane, paired with Atmosphere for cosy immersion
+**Decision:** A new Opus Environment lane builds the world itself: terrain shape and ground cover, trees, bushes, grass, rocks, water edges, paths and natural props, placed so the forest feels lived-in and cosy. It works hand in hand with Atmosphere (light, sky, weather, time of day, mood); the two lanes together own comfy immersion. Environment owns `client/scripts/environment/` and `client/scripts/Terrain.cs`; gameplay rules for trees and resources stay with their lanes (e.g. Crafting's `shared/Trees.cs`), and world-generation changes in `shared/World.cs` go through Integration as small hooks.
+**Who:** Justin
+
+## D-079 — 2026-10-16 — Dedicated Audio lane takes all audio
+**Decision:** A new Opus Audio lane owns all sound and music: `client/scripts/atmosphere/audio/` (SoundMix), `client/scripts/atmosphere/SoundScape.cs`, `tools/SoundPreview/`, music and any future `client/scripts/audio/`. Other lanes no longer make audio; they send the Audio lane a request (what event, where, how it should feel), as with render requests. Atmosphere hands its in-progress work sounds (atmosphere-12, branch `claude/atmosphere-12-work-sounds`, incl. D-072 other players at about 60% quieter) to Audio and keeps the visual side.
+**Who:** Justin ("a dedicated audio worker ... that takes anyone's audio work from them")

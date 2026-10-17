@@ -3,7 +3,7 @@ Lane: World atmosphere and sound
 Owner: Atmosphere thread
 Status: in_review
 Branch: claude/atmosphere-sound-hlqfke (local atmosphere-10-wip)
-PR: (none yet)
+PR: #66 (with atmosphere-11)
 
 ## Goal
 From the PM, 2026-10-16 (D-036 immersion): wherever there is water (ponds below Look.WaterLevel, which is also where Survival's drinking works) it gets a gentle shimmer, soft lapping by distance, rain rings on its surface while it rains, and frogs near water at night. Wind: trees sway and grass waves in slow gusts whose strength follows the weather, matched to the wind sound, so sight and sound move together. All crossfaded and subtle; no shiny ground. Done means screenshots of a pond (calm, windy, rain, night) and a short clip sent to the PM, and a PR green.
