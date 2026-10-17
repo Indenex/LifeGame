@@ -36,6 +36,17 @@ public partial class OptionsPage : Control
     Button markButton = null!;
     Label viewName = null!;
     Label sizeName = null!;
+    ScrollContainer scroll = null!;
+    VBoxContainer column = null!;
+
+    void Fit()
+    {
+        if (scroll == null) return;
+        var inside = column.GetCombinedMinimumSize();
+        // The window's own frame and margins (Ui.Window, roomy) plus a little air.
+        float room = Mathf.Max(200f, Size.Y - 2 * 18f - 48f);
+        scroll.CustomMinimumSize = new Vector2(inside.X + (inside.Y > room ? 12f : 0f), Mathf.Min(inside.Y, room));
+    }
 
     public override void _Ready()
     {
@@ -48,8 +59,15 @@ public partial class OptionsPage : Control
         // The same soft dark panel as the other windows (trade, equipment), centred (D-125).
         var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         column.AddThemeConstantOverride("separation", 12);
-        var panel = Ui.Window(column, roomy: true);
+        // The page scrolls when it's taller than the window (ui-67: at 720p the title and the
+        // last rows were cut off); Fit sizes it on opening and when the window changes.
+        scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, MouseFilter = MouseFilterEnum.Pass };
+        scroll.AddChild(column);
+        this.column = column;
+        var panel = Ui.Window(scroll, roomy: true);
         AddChild(panel);
+        Resized += Fit;
+        column.MinimumSizeChanged += Fit;
 
         var title = new Label { Text = "Options", HorizontalAlignment = HorizontalAlignment.Center };
         Hud.Soft(title, 26, 1f);
@@ -220,6 +238,7 @@ public partial class OptionsPage : Control
         vignette.Text = OnOff("Vignette", Atmosphere.Vignette);
         shadows.Text = ShadowsText();
         Visible = true;
+        Fit();
     }
 
     public void Close() => Visible = false;
