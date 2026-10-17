@@ -105,10 +105,13 @@ public partial class LookPicker : CanvasLayer
         cancelled = cancel;
         Open(first: true);
         title.Text = "Someone new";
-        look = HumanFigure.Appearance.Default;
+        // A fresh start: the first race, its first choices.
+        race = 0;
+        Array.Clear(values);
+        Fit();
         if (refused == null) nameField.Fill("");
         else nameField.Refused(refused);
-        Show(look);
+        Show();
         UpdateDone();
     }
 
@@ -179,7 +182,7 @@ public partial class LookPicker : CanvasLayer
             creating = null;
             cancelled = null;
             Close();
-            create(nameField.Value, look);
+            create(nameField.Value, Appearance);
             return;
         }
         if (first)

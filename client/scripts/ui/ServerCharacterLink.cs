@@ -27,13 +27,14 @@ public sealed class ServerCharacterLink : ICharacterLink
     public IReadOnlyList<CharacterCard> Characters => Me.Characters(conn).Select(c =>
     {
         var look = conn.Db.MyCharacterLooks.Iter().FirstOrDefault(l => l.PlayerId == c.PlayerId) is { } l
-            ? HumanFigure.Appearance.From(l.Skin, l.Hair, l.Cut, l.Beard)
+            ? HumanFigure.Appearance.From(l.Skin, l.Hair, l.Cut, l.Beard, l.Race)
             : HumanFigure.Appearance.For(c.PlayerId);
         // Never played: LastPlayed equals Created.
         DateTime? played = c.LastPlayed.MicrosecondsSinceUnixEpoch > c.Created.MicrosecondsSinceUnixEpoch
             ? DateTimeOffset.FromUnixTimeMilliseconds(c.LastPlayed.MicrosecondsSinceUnixEpoch / 1000).LocalDateTime
             : null;
-        return new CharacterCard(c.PlayerId, c.Name, "", look, played);
+        string race = look.Race < Looks.Races.Length ? Looks.Races[look.Race].Name : "";
+        return new CharacterCard(c.PlayerId, c.Name, race, look, played);
     }).ToList();
 
     public int Slots => LifeGame.Shared.Characters.MaxPerLogin;

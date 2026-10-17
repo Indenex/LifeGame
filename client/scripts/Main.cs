@@ -549,7 +549,13 @@ public partial class Main : Node3D
     {
         characterMenu.Close();
         lookPicker.OpenNew(
-            (name, look) => conn?.Reducers.CreateCharacter(name, (byte)look.Skin, (byte)look.Hair, (byte)look.Cut, (byte)(look.Beard ? 1 : 0)),
+            (name, look) =>
+            {
+                conn?.Reducers.CreateCharacter(name, (byte)look.Skin, (byte)look.Hair, (byte)look.Cut, (byte)(look.Beard ? 1 : 0));
+                // CreateCharacter takes no race yet; the new character is the active one when
+                // this arrives (same connection, in order), so its race lands right after.
+                conn?.Reducers.SetRaceLook((byte)look.Race, (byte)look.Skin, (byte)look.Hair, (byte)look.Cut, (byte)(look.Beard ? 1 : 0));
+            },
             () => characterMenu.Open(),
             refused);
     }

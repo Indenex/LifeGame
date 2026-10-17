@@ -237,7 +237,7 @@ public partial class CharacterMenu : CanvasLayer
         frame.AddChild(view);
         var camera = new Camera3D { Fov = 26f };
         view.AddChild(camera);
-        camera.LookAtFromPosition(new Vector3(0, 0.95f, 3.9f), new Vector3(0, 0.85f, 0), Vector3.Up);
+        camera.LookAtFromPosition(new Vector3(0, 0.8f, 3.3f), new Vector3(0, 0.66f, 0), Vector3.Up);
         view.AddChild(new DirectionalLight3D { RotationDegrees = new Vector3(-30, 35, 0), LightEnergy = 1.0f, LightColor = new Color(1f, 0.93f, 0.84f) });
         view.AddChild(new WorldEnvironment
         {
@@ -250,7 +250,8 @@ public partial class CharacterMenu : CanvasLayer
                 AmbientLightEnergy = 0.7f,
             },
         });
-        var figure = PlayerModel.Build(c.Look);
+        // The race figures, as the look picker shows them (D-249).
+        var figure = ChibiFigure.Create(PlayerModel.ChibiLook(c.Look));
         view.AddChild(figure);
         figures.Add(figure);
         column.AddChild(frame);
