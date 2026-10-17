@@ -40,9 +40,11 @@ Justin found Pebble's turtle shell (#594, renders/model-11-pebble-shell-*.png on
 
 - 2026-10-17: merged tree variants (2dd8bc7d); one sheet per piece; showcase index in docs/art-pipeline.md; list sent to the PM.
 
+- 2026-10-17: merged rough-edge fixes (Pebble temple dip from the brow ridge, sheep wool -8% and blended puff seams, birch Spacing 4.7, Bramble side locks tucked in); sheets pebble-head, faces, bramble, sheep, birch changed; the PM told.
+
 ## Open questions / blockers
 - Justin (morning): tree palette (a) fresh greens, recommended, (b) partway to olive, (c) mixed; D-154, not defaulted.
 - Justin: is this the direction (painted texture on authored meshes) to roll out to other hero pieces?
 
 ## Next step
-Wait for Justin's morning answers via the PM (tree palette, rollout). Meanwhile (D-145): fix the small known rough edges listed in docs/art-pipeline.md "Showcase" (Pebble temple mark, sheep wool brightness, birch spacing).
+Wait for Justin's morning answers via the PM (tree palette A, rollout B). Then do what he picks; if rollout (a), start with the heads: a plan with Modeling (ChibiFigure.AuthoredHeads) and Animation (ChibiFace.SetExpression for blinks).
