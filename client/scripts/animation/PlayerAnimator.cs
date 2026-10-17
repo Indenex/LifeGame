@@ -9,7 +9,7 @@ namespace LifeGame;
 public sealed class PlayerAnimator
 {
     readonly PlayerRig rig;
-    readonly Pose idle = new(), walk = new(), work = new(), act = new(), swim = new(), gesture = new(), pose = new();
+    readonly Pose idle = new(), walk = new(), work = new(), act = new(), swim = new(), gesture = new(), pose = new(), restFrom = new(), restTo = new();
     // Set while a craft job runs; the figure kneels into it and back out.
     public WorkMotion Work;
     WorkMotion shownWork;
@@ -62,6 +62,75 @@ public sealed class PlayerAnimator
     // the body floats, treading water, or swims slowly when moving.
     public float WaterDepth;
     float wade, afloat;
+
+    // Sitting or lying down (anim-12), from the player's rest state. Seat is how high
+    // the hips sit when sitting (0 on the ground, a log's height on a log). Getting
+    // down passes through a kneel, then a sit, then lying; getting up runs it backwards.
+    public RestKind Rest;
+    public float Seat;
+    public bool Asleep;
+    float restStage;
+
+    // Roughly how much of the figure's standing height resting takes away (0 standing,
+    // most of it lying down), for lowering the nameplate with the head.
+    public float RestLowering
+    {
+        get
+        {
+            int from = Mathf.Min((int)restStage, 2);
+            float a = Lowered(from), b = Lowered(from + 1);
+            return Mathf.Lerp(a, b, Mathf.SmoothStep(0f, 1f, restStage - from));
+        }
+    }
+
+    float Lowered(int stage) => stage switch
+    {
+        0 => 0f,
+        1 => 0.3f,
+        2 => Rest == RestKind.Lie || Seat <= 0f ? 0.42f : 0.42f * (1f - Mathf.Clamp(Seat / rig.LegLength, 0f, 1f)),
+        _ => 0.75f,
+    };
+    const float RestStageSeconds = 0.55f;
+
+    float RestTarget => walkBlend > 0.5f || airborne ? 0f : Rest switch { RestKind.Sit => 2f, RestKind.Lie => 3f, _ => 0f };
+
+    // Already resting when first seen (a player who sat down before you arrived).
+    public void SettleRest() => restStage = Rest switch { RestKind.Sit => 2f, RestKind.Lie => 3f, _ => 0f };
+
+    void Resting(float dt)
+    {
+        float target = RestTarget;
+        restStage = Mathf.MoveToward(restStage, target, dt / RestStageSeconds);
+        if (restStage <= 0f) return;
+        int from = Mathf.Min((int)restStage, 2);
+        float f = Mathf.SmoothStep(0f, 1f, restStage - from);
+        if (from == 0) restFrom.Blend(pose, pose, 0f);
+        else RestStage(restFrom, from);
+        RestStage(restTo, from + 1);
+        pose.Blend(restFrom, restTo, f);
+    }
+
+    void RestStage(Pose p, int stage)
+    {
+        switch (stage)
+        {
+            case 1:
+                p.Clear();
+                WorkMotions.Kneel(p, rig.LegLength);
+                p[Joint.Spine].X = 0.3f;
+                p[Joint.ShoulderL] = new Vector3(-0.4f, 0, 0.12f);
+                p[Joint.ShoulderR] = new Vector3(-0.4f, 0, -0.12f);
+                p[Joint.ElbowL].X = -0.3f;
+                p[Joint.ElbowR].X = -0.3f;
+                break;
+            case 2:
+                RestPoses.Sit(p, rig, Rest == RestKind.Lie ? 0f : Seat, time + seed * 13f);
+                break;
+            default:
+                RestPoses.Lie(p, rig, time + seed * 13f, Asleep);
+                break;
+        }
+    }
 
     public void Jump(bool airborne, bool rising, float landing)
     {
@@ -135,6 +204,7 @@ public sealed class PlayerAnimator
         }
         else if (Work == WorkMotion.None) shownWork = WorkMotion.None;
 
+        Resting(dt);
         Carry(dt);
         Gestures(dt);
         if (shownAct != WorkMotion.None) PlayAct(dt);
@@ -195,7 +265,7 @@ public sealed class PlayerAnimator
 
     void Gestures(float dt)
     {
-        bool still = walkBlend < 0.05f && workBlend < 0.05f && shownAct == WorkMotion.None && afloat < 0.05f && !airborne;
+        bool still = walkBlend < 0.05f && workBlend < 0.05f && shownAct == WorkMotion.None && afloat < 0.05f && !airborne && restStage <= 0f;
         stillFor = still ? stillFor + dt : 0f;
         float cold = Breath.Coldness;
         if (shownGesture == Gesture.None && still && stillFor > nextGesture)

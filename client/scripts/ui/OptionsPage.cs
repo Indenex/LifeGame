@@ -30,6 +30,7 @@ public partial class OptionsPage : Control
     Button music = null!;
     Button lightRays = null!;
     Button softGlow = null!, vignette = null!;
+    Button shadows = null!;
     HSlider view = null!;
     Button markButton = null!;
     Label viewName = null!;
@@ -118,6 +119,34 @@ public partial class OptionsPage : Control
         });
         vignette.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(vignette);
+        // Bouncy windows, squishy buttons, wiggling items (D-314); off for a calmer screen.
+        Button motion = null!;
+        motion = ControlsPage.TextButton(OnOff("Reduce motion", Bounce.Reduce), () =>
+        {
+            Bounce.Reduce = !Bounce.Reduce;
+            motion.Text = OnOff("Reduce motion", Bounce.Reduce);
+        });
+        motion.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(motion);
+
+        // Water reflections (Atmosphere, atmosphere-31): off, normal or high.
+        Button reflections = null!;
+        reflections = ControlsPage.TextButton(ReflectText(), () =>
+        {
+            Atmosphere.WaterReflections = (Atmosphere.WaterReflections + 1) % 3;
+            Settings.Set("graphics", "water_reflections", Atmosphere.WaterReflections);
+            reflections.Text = ReflectText();
+        });
+        reflections.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(reflections);
+        // Sun shadow quality (SunShadows): Low for slower PCs.
+        shadows = ControlsPage.TextButton(ShadowsText(), () =>
+        {
+            SunShadows.Setting = (SunShadows.Level)(((int)SunShadows.Setting + 1) % SunShadows.Names.Length);
+            shadows.Text = ShadowsText();
+        });
+        shadows.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(shadows);
 
         // How you look (ui-21): the same picker as at first join.
         var lookButton = ControlsPage.TextButton("Your look", () => LookPicker.OpenFromMenu?.Invoke());
@@ -136,7 +165,9 @@ public partial class OptionsPage : Control
 
     static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
 
+    static string ReflectText() => $"Water reflections: {new[] { "Off", "Normal", "High" }[Atmosphere.WaterReflections]}";
     static string OnOff(string name, bool on) => $"{name}: {(on ? "On" : "Off")}";
+    static string ShadowsText() => $"Shadows: {SunShadows.Names[(int)SunShadows.Setting]}";
 
     static string RaysText() => $"Light rays: {new[] { "Off", "Normal", "High" }[Atmosphere.GodRays]}";
 
@@ -154,6 +185,7 @@ public partial class OptionsPage : Control
         lightRays.Text = RaysText();
         softGlow.Text = OnOff("Soft glow", Atmosphere.SoftGlow);
         vignette.Text = OnOff("Vignette", Atmosphere.Vignette);
+        shadows.Text = ShadowsText();
         Visible = true;
     }
 

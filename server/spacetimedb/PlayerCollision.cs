@@ -67,6 +67,12 @@ public static partial class Module
 
         public bool Dug(int x, int z) => ctx.Db.TerrainEdit.CellKey.Find(World.CellKey(x, z)) != null;
 
+        // How far a felled tree's cell has grown back (env-29): its stump and young regrowth block.
+        public float FelledProgress(int x, int z) =>
+            ctx.Db.ChoppedTree.CellKey.Find(World.CellKey(x, z)) is { Felled: true } row
+                ? (float)Math.Clamp(SecondsBetween(row.LastChop, ctx.Timestamp) / Trees.RegrowSeconds, 0.0, 1.0)
+                : -1f;
+
         public bool Cleared(int x, int z) =>
             ctx.Db.ChoppedTree.CellKey.Find(World.CellKey(x, z)) is { Felled: true } || UnderStructure(ctx, x, z);
     }

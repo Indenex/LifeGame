@@ -67,6 +67,10 @@ public sealed class PlayerRig
         hipsRest = RestPosition(Joint.Hips);
         LegLength = -(RestPosition(Joint.KneeL).Y + RestPosition(Joint.FootL).Y);
         if (LegLength < 0.2f) LegLength = 0.8f;
+        Thigh = -RestPosition(Joint.KneeL).Y;
+        if (Thigh < 0.05f || Thigh > LegLength - 0.05f) Thigh = LegLength * 0.5f;
+        HipHeight = Mathf.Max(BodyPosition(Joint.Hips).Y, LegLength);
+        HipWidth = Mathf.Abs(RestPosition(Joint.HipL).X);
         UpperArm = RestPosition(Joint.ElbowL).Length();
         Forearm = RestPosition(Joint.HandL).Length();
         if (UpperArm < 0.05f || Forearm < 0.05f) (UpperArm, Forearm) = (0.3f, 0.27f);
@@ -74,6 +78,7 @@ public sealed class PlayerRig
         ShoulderR = BodyPosition(Joint.ShoulderR);
         // Until the figure says where its mouth is: a little in front of the head joint.
         Mouth = BodyPosition(Joint.Head) + new Vector3(0, 0.08f, 0.1f);
+        Height = Mouth.Y + 0.2f;
     }
 
     Vector3 RestPosition(Joint j) => skeleton != null
@@ -96,6 +101,12 @@ public sealed class PlayerRig
 
     // Hip joint to ankle at rest, for keeping the feet on the ground.
     public float LegLength { get; private set; }
+    // Hip to knee (the rest of LegLength is the shin), how high the hips stand off the
+    // ground and how far each hip joint is from the middle: for sitting and lying down.
+    public float Thigh { get; private set; }
+    public float Shin => LegLength - Thigh;
+    public float HipHeight { get; private set; }
+    public float HipWidth { get; private set; }
     // Arm bone lengths and where the shoulders and mouth are on the resting figure,
     // so hands can reach the face on any body (a 1.75 m adult or a 1.35 m chibi).
     public float UpperArm { get; private set; }
@@ -103,6 +114,8 @@ public sealed class PlayerRig
     public Vector3 ShoulderL { get; private set; }
     public Vector3 ShoulderR { get; private set; }
     public Vector3 Mouth { get; set; }
+    // Top of the head at rest (the avatar sets it from the body mesh).
+    public float Height { get; set; }
 
     public void Apply(Pose pose)
     {

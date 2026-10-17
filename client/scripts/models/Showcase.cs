@@ -9,7 +9,7 @@ namespace LifeGame;
 // A standalone scene that lines up the model styles side by side under the game's
 // light, so the Render lane can capture them for Justin (model-1). No server.
 //   godot --path client res://scripts/models/Showcase.tscn -- --view=row --shot=out.png
-// Views: row (everyone), people, faces, sheep, walk, items (--old for today's, --compare for today vs painted), held, clothes, stations, props, env, hearth, (people mid-stride, from the side).
+// Views: row (everyone), people, stylefaces (model-1 heads), faces (chibi face states), sheep, walk, items (--old for today's, --compare for today vs painted), held, clothes, stations, props, env, hearth, (people mid-stride, from the side).
 // --yaw=<degrees> turns every model; --shot saves a PNG after the scene settles and quits.
 public partial class Showcase : Node3D
 {
@@ -30,8 +30,10 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster" or "animals" or "structures")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster" or "animals" or "structures" or "faces" or "pots")
         {
+            if (view == "faces") ChibiFaces();
+            else
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
             else if (view == "props") Props();
@@ -46,6 +48,7 @@ public partial class Showcase : Node3D
             else if (view == "animals") Animals();
             else if (view == "bushes") Bushes();
             else if (view == "logs") Logs();
+            else if (view == "pots") Pots();
             else if (view == "wear") WearRows();
             else if (view == "devices") Devices();
             else if (view == "crowd") Crowd();
@@ -64,7 +67,7 @@ public partial class Showcase : Node3D
         wool.SetShaderParameter("cavity", 0.08f);
 
         // Today's figure first, for comparison, then each style.
-        float gap = view == "faces" ? 0.75f : 2.2f;
+        float gap = view == "stylefaces" ? 0.75f : 2.2f;
         float x0 = -gap * 1.5f;
         var today = new Avatar("") { Position = new Vector3(x0, 0, 0), Rotation = new Vector3(0, yaw, 0), Visible = view != "sheep" };
         AddChild(today);
@@ -96,13 +99,13 @@ public partial class Showcase : Node3D
             person.Visible = view != "sheep";
             AddChild(sheep);
             int tris = HumanFigure.Build(style).Triangles;
-            Label(view == "faces" ? $"{style.Key}  {style.Name}"
+            Label(view == "stylefaces" ? $"{style.Key}  {style.Name}"
                 : view == "sheep" ? $"{style.Key}  {fleece}\n{SheepFigure.Build(fleece, wool).Triangles:N0} tris"
                 : $"{style.Key}  {style.Name}\nperson {tris:N0} tris, sheep {SheepFigure.Build(fleece, wool).Triangles:N0}", new Vector3(x, view == "sheep" ? -1.1f : 0, 0));
         }
         if (view == "walk") Stride();
         // The faces view is close enough that the labels would cover the heads.
-        if (view == "faces")
+        if (view == "stylefaces")
             foreach (var child in GetChildren())
                 if (child is Label3D label) label.Position += new Vector3(0, -2.15f + 0.1f, 0.3f);
 
@@ -111,7 +114,7 @@ public partial class Showcase : Node3D
         var (from, at) = view switch
         {
             "people" => (new Vector3(0f, 1.3f, 8.4f), new Vector3(0f, 0.95f, 0f)),
-            "faces" => (new Vector3(0f, 1.6f, 4.2f), new Vector3(0f, 1.45f, 0f)),
+            "stylefaces" => (new Vector3(0f, 1.6f, 4.2f), new Vector3(0f, 1.45f, 0f)),
             "sheep" => (new Vector3(0.6f, 1.5f, 6.2f), new Vector3(0.6f, 0.5f, 0f)),
             "walk" => (new Vector3(0f, 1.2f, 8.4f), new Vector3(0f, 0.95f, 0f)),
             _ => (new Vector3(0.4f, 3.2f, 10.5f), new Vector3(0.4f, 0.7f, 0f)),
@@ -564,6 +567,29 @@ public partial class Showcase : Node3D
         if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 
+    // Ceramics' clay under ClayLook (painted-8): one row per form, wet, dry, pit-fired,
+    // kiln-fired and cracked left to right, and a slip-banded coil pot at the end.
+    void Pots()
+    {
+        var forms = new[] { ClayForm.CoilPot, ClayForm.PinchPot, ClayForm.Lamp };
+        var looks = new[]
+        {
+            ClayLook.For(ClayStage.Drying, FireKind.Pit, 1f, 0), ClayLook.For(ClayStage.Drying, FireKind.Pit, 0f, 0),
+            ClayLook.For(ClayStage.Fired, FireKind.Pit, 0f, 1), ClayLook.For(ClayStage.Fired, FireKind.Kiln, 0f, 2),
+            ClayLook.For(ClayStage.Cracked, FireKind.Pit, 0f, 0),
+        };
+        for (int f = 0; f < forms.Length; f++)
+        {
+            for (int s = 0; s < looks.Length; s++)
+                AddChild(new MeshInstance3D { Mesh = PotMesh.For(forms[f], (ulong)s), Scale = Vector3.One * PotView.Size, MaterialOverride = looks[s], Position = new Vector3((s - 2.5f) * 0.55f, 0, (f - 1) * 0.6f) });
+        }
+        var slip = ClayLook.Decorate(looks[3], ClayForm.CoilPot, -1, Colors.White, 3, 2);
+        AddChild(new MeshInstance3D { Mesh = PotMesh.For(ClayForm.CoilPot, 9), Scale = Vector3.One * PotView.Size, MaterialOverride = slip, Position = new Vector3(3 * 0.55f, 0, -0.6f) });
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 1.6f, 2.6f), new Vector3(0, 0.1f, 0), Vector3.Up);
+    }
+
     // Ceramics' cooking pot at a fire's edge, on its stones, with each dish
     // floating in it, roughly as SimmerView draws it.
     void Cooking()
@@ -826,6 +852,34 @@ public partial class Showcase : Node3D
         GetViewport().GetTexture().GetImage().SavePng(shot);
         GD.Print($"Showcase: saved {shot}");
         GetTree().Quit();
+    }
+
+    // The chibi face states (model-15), close up: Bramble's row above Pebble's, each
+    // open, blink, happy and sleepy. --far steps the camera back to a play distance.
+    void ChibiFaces()
+    {
+        float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", "-12"), System.Globalization.CultureInfo.InvariantCulture));
+        var races = new[] { new ChibiFigure.Look(ChibiFigure.Race.Bramble, 0, 2, 0), new ChibiFigure.Look(ChibiFigure.Race.Pebble, 0, 0, 0) };
+        const float gap = 0.9f, lift = 1.55f;
+        for (int r = 0; r < races.Length; r++)
+            for (int f = 0; f < 4; f++)
+            {
+                var figure = ChibiFigure.Create(races[r]);
+                figure.Position = new Vector3((f - 1.5f) * gap, r == 0 ? lift : 0f, 0);
+                figure.Rotation = new Vector3(0, yaw, 0);
+                AddChild(figure);
+                PlayerModel.SetFace(figure, (Face)f);
+                // The upper row floats; it casts no shadow onto the heads below.
+                if (r == 0)
+                    foreach (var child in figure.GetChildren())
+                        if (child is GeometryInstance3D g) g.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+                if (r == 1) Label(((Face)f).ToString(), new Vector3((f - 1.5f) * gap, -1.17f, 0.4f));
+            }
+        var camera = new Camera3D { Fov = 35f, Current = true };
+        AddChild(camera);
+        float back = args.ContainsKey("far") ? 9f : 4f;
+        camera.LookAtFromPosition(new Vector3(0f, 2f, back), new Vector3(0f, 1.95f, 0f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 
     // The chibi player base (model-6) beside today's figure and a 0.75 m table:

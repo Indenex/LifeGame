@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 using LifeGame.Shared;
@@ -13,7 +14,8 @@ public partial class Terrain
 
     // Placement radii, one helper per kind so they follow the meshes in Terrain.EnsureMeshes.
     // The trunk mesh's bottom radius is 0.2 and the boulder mesh's is about 0.45, times the instance scale.
-    static float TrunkRadius(float scale) => Obstacles.TrunkRadius(scale);
+    static float TrunkRadius(float scale) => 0.2f * scale;
+    static float RockRadius(float scale) => 0.4f * scale;
 
     // Pushes a step out of any trunk or boulder, sliding along its edge instead of stopping dead.
     public Vector3 CollideVegetation(Vector3 to, float airHeight = 0f)
@@ -79,39 +81,55 @@ public partial class Terrain
         return stones;
     }
 
-    // How likely a bank cell holds a stone (env-21); the rule lives in shared/Obstacles.cs so the
-    // server and the check bots agree, and AddVegetation uses the same.
-    static float ShoreStones(int x, int z) => Obstacles.ShoreStones(x, z);
-
-    // The ground as the shared obstacle rule sees it (bugfix-34).
-    sealed class Ground : ICellGround
-    {
-        readonly Terrain t;
-        public Ground(Terrain terrain) => t = terrain;
-        public float TileHeight(int x, int z) => t.TileHeight(x, z);
-        public bool Dug(int x, int z) => t.depths.ContainsKey(World.CellKey(x, z));
-        public bool Cleared(int x, int z) => t.Cleared?.Invoke(x, z) == true;
-    }
-
-    Ground? ground;
+    // How far a felled tree on a cell has grown back (0 to 1), or -1 (TreeFall sets it).
+    public Func<int, int, float>? FelledProgress;
 
     // The solid circle standing on cell (x, z): a tree trunk or a boulder. Crowns, small
-    // stones, ferns and fallen trunks never block. Landmarks are handled here; ordinary
-    // trunks and boulders follow the rule in shared/Obstacles.cs, which the server uses too.
+    // stones, ferns and fallen trunks never block.
     bool ObstacleAt(int x, int z, out float ox, out float oz, out float radius, out float height)
     {
         (ox, oz) = Trees.Trunk(x, z);
         radius = 0f;
         height = float.MaxValue; // trunks are never hopped
+        if (depths.ContainsKey(World.CellKey(x, z))) return false;
+        // A felled tree's stump, then its regrowth, blocks by the shared rule (env-29).
+        if (FelledProgress?.Invoke(x, z) is float felled and >= 0f) return Obstacles.Regrowing(x, z, felled, out radius, out height);
+        if (Cleared?.Invoke(x, z) == true) return false;
+        float top = TileHeight(x, z);
+        if (top < Look.WaterLevel + 0.1f) return false;
+        // Features (env-5, env-10): a giant tree's broad trunk; an outcrop's middle cell
+        // holds only its stones, which CollideFeatures handles.
         if (Features.At(x, z, FeatureGround.Dry) is { } feature)
         {
-            // Features (env-5, env-10): a giant tree's broad trunk; an outcrop's middle cell
-            // holds only its stones, which CollideFeatures handles.
-            if (depths.ContainsKey(World.CellKey(x, z)) || Cleared?.Invoke(x, z) == true) return false;
-            if (TileHeight(x, z) < Look.WaterLevel + 0.1f || feature.Block != FeatureBlock.Trunk) return false;
+            if (feature.Block != FeatureBlock.Trunk) return false;
             radius = TrunkRadius(LandmarkProps.For(feature).Girth?.Invoke(x, z) ?? 1f);
             return true;
         }
-        return Obstacles.At(ground ??= new Ground(this), x, z, out ox, out oz, out radius, out height);
+        float roll = Trees.Hash01(x, z, 11);
+        float density = Forest.Density(x, z);
+        float heath = Forest.Heath(x, z), wet = Forest.Wetland(x, z);
+        float tree = Forest.TreeChance(density, heath);
+        float sapling = tree + 0.03f * Forest.Edge(density) * (1f - heath);
+        float scale = 1.3f + Hash01(x, z, 15) * 0.6f;
+        // Trees don't grow in the spawn clearing, but boulders can (as in AddVegetation).
+        if (!Trees.NearSpawn(x, z) && roll < sapling)
+        {
+            if (roll >= tree) scale *= 0.45f + Hash01(x, z, 21) * 0.3f;
+            // Birch by the water is slim; the odd heath tree is a broad oak (env-4).
+            float girth = 1f;
+            if (wet > 0.4f && Hash01(x, z, 23) < 0.8f) girth = 0.6f;
+            else if (heath > 0.5f && roll < tree) girth = 1.35f;
+            radius = TrunkRadius(scale * girth);
+            return true;
+        }
+        bool shore = NearWater(x, z, top);
+        float rocky = Mathf.SmoothStep(0.7f, 0.85f, World.Noise(x, z, 16f, 65));
+        float rock = sapling + 0.004f + 0.07f * rocky + (shore ? Obstacles.ShoreStones(x, z) : 0f);
+        if (roll >= rock) return false;
+        float size = shore && rocky < 0.5f ? 0.2f + Hash01(x, z, 22) * 0.2f : 0.3f + Hash01(x, z, 22) * 0.55f;
+        radius = RockRadius(scale * size);
+        height = Jumping.RockHeight(radius);
+        // Pebbles are stepped over.
+        return radius >= 0.2f;
     }
 }

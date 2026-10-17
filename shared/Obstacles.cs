@@ -14,6 +14,9 @@ namespace LifeGame.Shared
         float TileHeight(int x, int z);
         bool Dug(int x, int z);
         bool Cleared(int x, int z);
+        // How far a felled tree on the cell has grown back, 0 just felled to 1 regrown
+        // (Trees.RegrowSeconds), or -1 where no tree is felled (env-29).
+        float FelledProgress(int x, int z);
     }
 
     public static class Obstacles
@@ -31,8 +34,9 @@ namespace LifeGame.Shared
             return t * t * (3f - 2f * t);
         }
 
-        // How likely a bank cell holds a stone: pebbles gather in beds along the waterline with bare
-        // stretches between (env-21). The client's AddVegetation draws with the same number.
+        // How likely a bank cell holds a stone: pebbles gather in beds along the waterline with
+        // bare stretches between (env-21), about as many in all as a flat 8% (env-28: the client
+        // drew these while the server still used the flat chance).
         public static float ShoreStones(int x, int z) => 0.02f + 0.24f * Smooth(0.55f, 0.75f, World.Noise(x - 3121, z + 1877, 5f, 100));
 
         // Whether any ground within two cells is under water (a shore: rocks are smaller there).
@@ -63,7 +67,12 @@ namespace LifeGame.Shared
             // Most cells hold nothing: leave before asking the ground anything (the server looks
             // that up in its tables). 0.334 is the most a boulder's chance can add to a sapling's.
             if (roll >= sapling + 0.334f) return false;
-            if (g.Dug(x, z) || g.Cleared(x, z)) return false;
+            if (g.Dug(x, z)) return false;
+            // A felled tree's stump blocks until it rots, then its regrowth once it is big
+            // enough (env-29, Justin: "stumps don't have collision, they should").
+            float felled = g.FelledProgress(x, z);
+            if (felled >= 0f) return Regrowing(x, z, felled, out radius, out height);
+            if (g.Cleared(x, z)) return false;
             float top = g.TileHeight(x, z);
             if (top < World.WaterLevel + 0.1f) return false;
             if (Features.At(x, z, FeatureGround.Dry) != null) return false;
@@ -88,6 +97,40 @@ namespace LifeGame.Shared
             height = Jumping.RockHeight(radius);
             // Pebbles are stepped over.
             return radius >= 0.2f;
+        }
+
+        // The full-grown trunk's radius at the foot on a cell where Trees.GrowsAt (birches by
+        // the water slim, the odd heath tree broad), as At works it out for a standing tree.
+        public static float TrunkFoot(int x, int z)
+        {
+            float scale = 1.3f + Trees.Hash01(x, z, 15) * 0.6f, girth = 1f;
+            float heath = Forest.Heath(x, z);
+            if (Forest.Wetland(x, z) > 0.4f && Trees.Hash01(x, z, 23) < 0.8f) girth = 0.6f;
+            else if (heath > 0.5f) girth = 1.35f;
+            return TrunkRadius(scale * girth);
+        }
+
+        // What blocks on a felled tree's cell at regrowth stage p: the stump (low enough to
+        // hop) while more than half of it is left, else the young tree once it is a third
+        // grown, its trunk scaled with it.
+        public static bool Regrowing(int x, int z, float p, out float radius, out float height)
+        {
+            radius = 0f;
+            height = float.MaxValue;
+            float foot = TrunkFoot(x, z);
+            float size = Trees.RegrowSize(p);
+            if (size >= 0.33f)
+            {
+                radius = foot * size;
+                return true;
+            }
+            if (Trees.StumpLeft(p) > 0.5f)
+            {
+                radius = foot * 1.05f;
+                height = Trees.StumpHeight;
+                return true;
+            }
+            return false;
         }
 
         // Whether a step from (fx, fz) to (tx, tz) walks into an obstacle: it ends inside the body

@@ -20,7 +20,7 @@ public partial class TownPanel : CanvasLayer
     public Func<uint> MyId = () => 0;
     public bool IsOpen => window?.Visible == true;
     // True while a name or announcement is being typed, so Main stops walking.
-    public bool Typing => nameBox.HasFocus() || sayBox.HasFocus();
+    public bool Typing => nameBox.HasFocus() || sayBox.HasFocus() || logBox.HasFocus();
 
     // Window sizes, readable at 1280x720.
     const float MapSize = 380f, SideWidth = 430f, SideHeight = 470f;
@@ -41,6 +41,8 @@ public partial class TownPanel : CanvasLayer
     readonly Button nameButton = new();
     readonly LineEdit sayBox = new();
     readonly HBoxContainer sayRow = new();
+    readonly LineEdit logBox = new();
+    readonly HBoxContainer logRow = new();
 
     bool dirty, confirmLeave;
     byte? votingFor;     // an office chosen to vote for; the next signer clicked gets the vote
@@ -142,6 +144,21 @@ public partial class TownPanel : CanvasLayer
         sayRow.AddThemeConstantOverride("separation", 6);
         sayRow.AddChild(sayBox);
         sayRow.AddChild(Small("Speak", Announce));
+
+        StyleField(logBox, "A note for the town's log", Towns.LogNoteMax);
+        logBox.TextSubmitted += _ => WriteLog();
+        logRow.AddThemeConstantOverride("separation", 6);
+        logRow.AddChild(logBox);
+        logRow.AddChild(Small("Write", WriteLog));
+    }
+
+    void WriteLog()
+    {
+        string text = logBox.Text.Trim();
+        if (Conn == null || text.Length == 0) return;
+        Conn.Reducers.WriteTownLog(text);
+        logBox.Text = "";
+        logBox.ReleaseFocus();
     }
 
     // Starts a town when you are on no roster, renames it when you are its Mayor.
@@ -254,7 +271,7 @@ public partial class TownPanel : CanvasLayer
         foreach (var child in side.GetChildren())
         {
             side.RemoveChild(child);
-            if (child != nameRow && child != sayRow) child.QueueFree();
+            if (child != nameRow && child != sayRow && child != logRow) child.QueueFree();
         }
         var s = Read();
         if (s.Me == null) votingFor = null;
@@ -423,6 +440,7 @@ public partial class TownPanel : CanvasLayer
             KeepFocus(nameRow, nameBox);
         }
         if (HasPower(s.Seats, me, TownPower.Announce)) KeepFocus(sayRow, sayBox);
+        if (s.Town != null) BuildLog(s, me);
         side.AddChild(Button(confirmLeave ? "Really leave the roster?" : "Leave the town", () =>
         {
             if (!confirmLeave) { confirmLeave = true; dirty = true; return; }
@@ -431,6 +449,21 @@ public partial class TownPanel : CanvasLayer
         }));
         side.AddChild(Note("Leaving takes away your building rights on the others' claims, and theirs on yours."));
     }
+
+    // The latest lines of the town's log; the Scribe can add a note.
+    void BuildLog(Snapshot s, uint me)
+    {
+        side.AddChild(Heading("The town's log", 16));
+        var lines = Conn!.Db.TownLog.ByTown.Filter(s.Town!.Id).OrderByDescending(l => l.Id).Take(LogShown).ToList();
+        if (lines.Count == 0) side.AddChild(Note("Nothing written yet."));
+        foreach (var line in lines) side.AddChild(Note(line.Text));
+        if (HasPower(s.Seats, me, TownPower.Log)) KeepFocus(logRow, logBox);
+        var bans = Conn.Db.TownBan.ByTown.Filter(s.Town.Id).Where(b => b.Until.MicrosecondsSinceUnixEpoch > SocialLayer.NowMicros).ToList();
+        foreach (var ban in bans)
+            side.AddChild(Note($"{ban.BannedName} is kept off the town's claims {Until(ban.Until.MicrosecondsSinceUnixEpoch - SocialLayer.NowMicros)}."));
+    }
+
+    const int LogShown = 6;
 
     // The card under the map for the claim last clicked.
     void BuildCard(Snapshot s, TownMap.Spot? spot)
@@ -458,6 +491,13 @@ public partial class TownPanel : CanvasLayer
                     actions.AddChild(Small($"Vote for {def.Name}", () => Vote(office, spot.OwnerId)));
                 if (!spot.Mine && HasPower(s.Seats, me, TownPower.Remove))
                     actions.AddChild(Small("Remove from town", () => Conn?.Reducers.RemoveFromTown(spot.OwnerId)));
+                if (!spot.Mine && HasPower(s.Seats, me, TownPower.Ban))
+                {
+                    bool banned = Conn?.Db.TownBan.ByTown.Filter(s.Me!.TownId).Any(b => b.BannedId == spot.OwnerId && b.Until.MicrosecondsSinceUnixEpoch > SocialLayer.NowMicros) == true;
+                    actions.AddChild(banned
+                        ? Small("Lift the ban", () => Conn?.Reducers.LiftTownBan(spot.OwnerId))
+                        : Small("Ban for a day", () => Conn?.Reducers.BanFromTown(spot.OwnerId, Towns.BanDaysDefault)));
+                }
                 if (actions.GetChildCount() > 0) card.AddChild(actions);
                 else actions.Free();
                 break;
