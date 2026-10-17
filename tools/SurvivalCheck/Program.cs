@@ -202,3 +202,5 @@ Pump(() => Endurance() > e1, 5, "Endurance to rise after moving on");
 Ok("a report after moving on trains Endurance again");
 
 Console.WriteLine("Survival check passed");
+conn.Disconnect();
+return 0;

@@ -127,10 +127,12 @@ jobs:
         with:
           spacetime-version: ${{ env.SPACETIME_VERSION }}
       - uses: ./.github/actions/start-server
-      - name: Short load test and spawn check
+      - name: Short load test, spawn and survival checks
         run: |
           (cd tools/LoadTest && dotnet run -c Release -- 5 5)
           (cd tools/SpawnCheck && dotnet run -c Release)
+          (cd tools/SurvivalCheck && timeout 300 dotnet run -c Release)
+          (cd tools/CharacterCheck && timeout 300 dotnet run -c Release)
       - name: Check chat, claim and PvP rules with two players
         run: |
           (cd server && spacetimedb-cli call lifegame --server local set_claim_lifetime 30)
@@ -274,6 +276,14 @@ jobs:
           if [ "${{ matrix.preset }}" = Windows ]; then go='${{ needs.changes.outputs.windows }}'; else go='${{ needs.changes.outputs.linux }}'; fi
           echo "go=$go" >> "$GITHUB_OUTPUT"
           [ "$go" = true ] || echo "Nothing this export depends on changed."
+
+      # Quick source checks (no server, a few seconds): every journal process has a skill and a Things-to-try
+      # line; the server module only reads the caller through Me(ctx).
+      - name: Journal coverage and caller checks
+        if: matrix.preset == 'Linux' && steps.gate.outputs.go == 'true'
+        run: |
+          dotnet run -c Release --project tools/JournalCheck
+          tools/check-ctx-sender.sh
 
       - uses: ./.github/actions/setup-stdb
         if: steps.gate.outputs.go == 'true'
