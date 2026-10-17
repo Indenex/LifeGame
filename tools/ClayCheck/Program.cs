@@ -108,7 +108,7 @@ Gather(Item.Fiber, (kilnRun ? 12u : 4u) + 3 + Social.MarkerFiber);
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);
 int cell = 0;
-uint clayWanted = jarRun ? 46u : kilnRun ? 38u : potRun ? 12u : lampRun ? (tallowRun ? 12u : 4u) : 12u;
+uint clayWanted = jarRun ? 54u : kilnRun ? 38u : potRun ? 12u : lampRun ? (tallowRun ? 12u : 4u) : 12u;
 while (CountOf(Item.Clay) < clayWanted)
 {
     int cx = clayX + cell % 5 - 2, cz = clayZ + cell / 5 % 5 - 2;
@@ -243,7 +243,7 @@ return 0;
 // dried in the open are loaded and fired in it.
 int KilnCheck()
 {
-    while (CountOf(Item.CleanClay) < (jarRun ? 23 : 19)) Craft("clay.clean", 0, Item.CleanClay);
+    while (CountOf(Item.CleanClay) < (jarRun ? 27 : 19)) Craft("clay.clean", 0, Item.CleanClay);
     Craft("clay.grit", 0, Item.Grit);
     Craft("clay.temper_grit", 0, Item.TemperedClay);
     if (jarRun)
@@ -251,6 +251,7 @@ int KilnCheck()
         Craft("clay.grit", 0, Item.Grit);
         Craft("clay.temper_grit", 0, Item.TemperedClay);
         Craft("clay.temper_grit", 0, Item.TemperedClay);
+        Craft("clay.temper_grit", 0, Item.TemperedClay); // two more tempered clay, for a roof tile
     }
 
     // Two pots shaped at the bench, away from any fire, so picking them up doesn't fire them.
@@ -260,7 +261,7 @@ int KilnCheck()
     Craft("clay.daub", 0, Item.Daub);
     var kilnPots = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.PinchPot).Select(p => p.Id).ToList();
     if (kilnPots.Count != 2) Fail($"expected 2 pots drying, have {kilnPots.Count}");
-    ulong jarPiece = 0;
+    ulong jarPiece = 0, tilePiece = 0;
     if (jarRun)
     {
         AtBench();
@@ -268,12 +269,17 @@ int KilnCheck()
         jarPiece = conn.Db.ClayPiece.Iter().FirstOrDefault(p => p.MadeBy == myId && p.Form == (byte)ClayForm.StorageJar)?.Id ?? 0;
         if (jarPiece == 0) Fail("no storage jar drying");
         Log("STAGE jar-drying");
+        // A roof tile too (ceramics-10): kiln-fired only, like the jar.
+        Craft("clay.tile", 0.9f, null);
+        tilePiece = conn.Db.ClayPiece.Iter().FirstOrDefault(p => p.MadeBy == myId && p.Form == (byte)ClayForm.Tile)?.Id ?? 0;
+        if (tilePiece == 0) Fail("no roof tile drying");
+        Log("STAGE tile-drying");
     }
 
     // Eight bricks round a fire, where they dry twice as fast. Bricks need no bench;
     // the fire is well clear of the pots by the bench.
     LightFireNear(bench.X + 4f, bench.Z + 1.3f);
-    foreach (var id in kilnPots.Append(jarPiece).Where(id => id != 0))
+    foreach (var id in kilnPots.Append(jarPiece).Append(tilePiece).Where(id => id != 0))
         if (conn.Db.ClayPiece.Id.Find(id) is { } p && DistanceTo(p.X, p.Z, fire.X, fire.Z) <= ClayRules.FireReach + 0.5f)
             Fail("the brick fire is lit too close to the drying pots");
     KeepFireGoing();
@@ -331,7 +337,7 @@ int KilnCheck()
 
     // Wait for the pots, pick them up, load them.
     watch.Restart();
-    while (kilnPots.Append(jarPiece).Where(id => id != 0).Any(id => MoistureOf(id) > ClayRules.SafeToFire))
+    while (kilnPots.Append(jarPiece).Append(tilePiece).Where(id => id != 0).Any(id => MoistureOf(id) > ClayRules.SafeToFire))
     {
         if (watch.Elapsed > TimeSpan.FromMinutes(12)) Fail("pots never dried");
         Pump(() => false, 5, null);
@@ -353,6 +359,14 @@ int KilnCheck()
         Pump(() => lastError != null, 3, "the campfire to refuse the jar");
         if (lastError == null || !lastError.Contains("kiln")) Fail($"campfire took the jar: {lastError}");
         Log($"Campfire: {lastError}");
+        // The tile is picked up too, and also refused by a campfire.
+        var tp = conn.Db.ClayPiece.Id.Find(tilePiece)!;
+        WalkTo(tp.X, tp.Z, 1.2f);
+        lastError = null;
+        conn.Reducers.TendClay(tilePiece, false);
+        Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(tilePiece) == null, 3, "picking up the dry tile");
+        if (lastError != null) Fail($"picking up the tile: {lastError}");
+        if (CountOf(Item.UnfiredRoofTile) != 1) Fail("expected an unfired roof tile");
     }
     foreach (var id in kilnPots)
     {
@@ -371,7 +385,7 @@ int KilnCheck()
     WalkTo(kiln.X, kiln.Z, 1.6f);
     lastError = null;
     conn.Reducers.UseKiln(kiln.Id);
-    int loadWanted = jarRun ? 3 : 2;
+    int loadWanted = jarRun ? 4 : 2;
     Pump(() => lastError != null || (conn.Db.Kiln.StructureId.Find(kiln.Id)?.Load?.Count ?? 0) == loadWanted, 3, "the kiln to be loaded");
     if (lastError != null) Fail($"loading: {lastError}");
     Log($"Loaded {loadWanted} pieces");
@@ -401,6 +415,14 @@ int KilnCheck()
     if (!got.SequenceEqual(loaded)) Fail($"kiln pot qualities {string.Join(",", got)}, expected {string.Join(",", loaded)}");
     Log($"{fired.Count} kiln-fired pots at quality {string.Join(",", got)}");
     Log("STAGE kiln-done");
+    if (jarRun)
+    {
+        // The roof tile comes out by the door as a fired roof tile (or sherds, 2% of the time).
+        var tile = conn.Db.WorldItem.Iter().FirstOrDefault(w => w.Item == (ushort)Item.RoofTile && DistanceTo(w.X, w.Z, kiln.X, kiln.Z) < 2.5f);
+        if (tile == null) Log("The roof tile cracked in the kiln (2% chance); tile not checked this run");
+        else Log($"Kiln-fired roof tile at quality {tile.Quality}");
+        if (tile != null) Log("STAGE tile-fired");
+    }
     if (jarRun) JarCheck(kiln);
     Log("Kiln check passed: bricks to a kiln to kiln-fired pots");
     conn.Disconnect();

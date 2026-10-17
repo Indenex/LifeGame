@@ -52,6 +52,20 @@ public static class PaintedGround
 
     // A square metre of thick painted grass: five tufts, each a crossed pair of
     // cards of a different grass sprite, at their own heights and turns.
+    // Everything the prototype's chunk builds touch, made on the main thread first
+    // (chunks build on worker threads, env-12). Card meshes are cached by sprite, at
+    // the size they are first asked for, so these sizes are the ones Terrain uses.
+    public static void Prewarm()
+    {
+        _ = BroadTuft; _ = Twig; _ = GrassMaterial; _ = CardMaterial;
+        _ = PropMeshes.Stump; _ = Look.BarkSurface;
+        for (int i = 0; i < 4; i++) Card(MushroomCards + i, 0.22f);
+        for (int i = 0; i < 3; i++) Card(CloverCards + i, 0.3f);
+        Card(FernCards, 0.75f);
+        Card(FlowerCards, 0.35f);
+        Card(FlowerCards + 1, 0.5f); Card(FlowerCards + 2, 0.5f);
+    }
+
     // Cards for the scattered plants.
     public static ShaderMaterial CardMaterial => cardMaterial ??= MakeCardMaterial(0f);
 
