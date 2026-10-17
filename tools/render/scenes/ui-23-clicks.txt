@@ -1,0 +1,22 @@
+# ui-23 maker's mark picker (--screenshot-mark opens it): click through the tabs and a colour.
+# Positions from the 1280x720 stills: tabs at y=133 (Nature 369, Fantasy 438, Alchemical 520, Geometric 611),
+# first glyph at (368,186), second (432,186), colour presets row 1 y=375 (x=695,731,767,803,839,875), row 2 y=411.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --screenshot-mark
+wait 40
+snap
+click 438 133
+wait 4
+click 368 186
+wait 4
+snap
+click 767 375
+wait 4
+snap
+click 611 133
+wait 4
+click 432 186
+wait 4
+click 766 411
+wait 4
+snap
