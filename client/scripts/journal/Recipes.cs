@@ -27,6 +27,7 @@ public static class Recipes
         ["build.roof"] = "Thatch a shelter with plant fiber using {use}.",
         ["build.weave"] = "{build_mode} to lay out a storage basket, then weave it with {use}.",
         ["build.door"] = "Hang a door on a finished hut with {use}.",
+        [Skills.Eggs] = "{use} beside a hen that has been sitting a while.",
         [Skills.Shear] = "{use} beside a calm sheep while you carry something sharp. Sneak up with {sneak}.",
         [Skills.Kill] = "{strike} to strike an animal. A spear hits harder.",
         [Skills.Sneak] = "Hold {sneak} and creep toward a wary animal. The closer you get before it bolts, the better you learn.",
