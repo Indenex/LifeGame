@@ -61,7 +61,7 @@ def paint_plates(pal, dist, maxd, direc, region, worn, uvx, uvy, rings=(0.42,), 
     """Shared plate painting. dist: m to the nearest seam; maxd: that plate's largest
     dist; direc: unit direction towards the seam (y up)."""
     f = dist / np.maximum(maxd, 1e-6)
-    wob = (value_noise(uvx * 60, uvy * 60, 3) - 0.5) * 0.08
+    wob = (value_noise(uvx * 16, uvy * 16, 3) - 0.5) * 0.06
     contrast = 0.45 if worn else 1.0
     centre = 0.62
     col = pal["mid"][None] * np.ones_like(dist)[:, None]
