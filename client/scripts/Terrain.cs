@@ -561,7 +561,10 @@ public partial class Terrain : Node3D
                     // line up into a grid.
                     float sx = (TileHeight(x + 1, z) - TileHeight(x - 1, z)) * 0.5f;
                     float sz = (TileHeight(x, z + 1) - TileHeight(x, z - 1)) * 0.5f;
-                    float tall = (0.75f + Hash01(x, z, 42) * 0.5f) * (1f - 0.35f * density) * (1f - 0.45f * heath) * (1f - 0.5f * trail) * Mathf.Lerp(0.45f, 1f, cover);
+                    // Height drifts smoothly across the field with only a little jitter per
+                    // patch, so neighbouring patches meet at nearly the same height: a random
+                    // height per cell read as flat stepped bands from the follow camera.
+                    float tall = (0.8f + 0.4f * World.Noise(x + 1733, z - 2411, 5f, 120) + (Hash01(x, z, 42) - 0.5f) * 0.12f) * (1f - 0.35f * density) * (1f - 0.45f * heath) * (1f - 0.5f * trail) * Mathf.Lerp(0.45f, 1f, cover);
                     var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, tall, 0), new Vector3(0, sz, 1)) * new Basis(Vector3.Up, Hash01(x, z, 45) * Mathf.Tau);
                     var g = new Transform3D(slope, new Vector3(x + (Hash01(x, z, 46) - 0.5f) * 0.3f, top, z + (Hash01(x, z, 47) - 0.5f) * 0.3f));
                     tufts!.Add((g, TileColor(x, z, top, cleared: false), custom));
