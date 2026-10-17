@@ -30,3 +30,5 @@ Modeling builds every model in code with MeshKit on a shared 16-bone humanoid ri
 - **Quick:** Bramble (HumanFigure's "Soft" style, made shorter), Pip, Clover, Capling (the cap rides on Head), Sprout, Mossle, Puddle.
 - **Quick with a stiff tail:** Kit. The tail is fixed to Hips; a swaying tail would need its own bones later.
 - **Some work:** Hearthling, because the jar body has to bend with the Spine. Dumpling has no visible legs, so walking would be squash-and-bob on hidden legs, which needs Animation's help.
+
+**World scale flag (Modeling):** the world is built for a 1.75 m player, with work stations at 0.66–0.8 m, doors, held tools, camera and reach all sized to match. Modeling recommends keeping these proportions but building the picked concept at about 1.3–1.4 m. The alternative, scaling the whole world down, is a large job across many lanes. The heights on the sheets show the intended feel, not final in-game sizes. Kit's tail could later get a single extra bone so it can swing.
