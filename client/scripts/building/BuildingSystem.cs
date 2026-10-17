@@ -244,10 +244,10 @@ public partial class BuildingSystem : Node
         for (int x = cx - r; x <= cx + r; x++)
             for (int z = cz - r; z <= cz + r; z++)
             {
-                if (!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, 0.4f)) continue;
+                if (!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, 0.4f + ShapeOf(s).ClearExtra)) continue;
                 long key = World.CellKey(x, z);
                 if (on) cleared.Add(key);
-                else if (!rows.Values.Any(o => Structures.Contains((int)o.Kind, o.X, o.Z, o.Yaw, x, z, 0.4f))) cleared.Remove(key);
+                else if (!rows.Values.Any(o => Structures.Contains((int)o.Kind, o.X, o.Z, o.Yaw, x, z, 0.4f + ShapeOf(o).ClearExtra))) cleared.Remove(key);
                 terrain.Refresh(x, z);
             }
     }
