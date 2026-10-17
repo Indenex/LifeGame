@@ -185,6 +185,16 @@ public static class WorkMotions
         _ => 0f,
     };
 
+    // Where an action repeated while it plays loops back to: from loopAt seconds to
+    // loopTo, two moments with the same pose (hands back at the water, at the side).
+    public static (float loopAt, float loopTo) ActLoop(WorkMotion m) => m switch
+    {
+        WorkMotion.Drink => (2.3f, 0.3f),
+        WorkMotion.Eat => (1.15f, 0.15f),
+        WorkMotion.Pluck => (0.85f, 0f),
+        _ => (ActSeconds(m), 0f),
+    };
+
     // Seconds to blend in and out; a pick-up is quick and light so it never slows play.
     public static float ActFade(WorkMotion m) => m == WorkMotion.PickUp ? 0.12f : 0.25f;
 
@@ -221,7 +231,7 @@ public static class WorkMotions
                 // Standing: the right hand brings the food to the mouth, then a few chews.
                 float lift = Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.15f) / 0.35f, 0f, 1f))
                     * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.85f) / 0.3f, 0f, 1f)));
-                float chew = t > 0.6f ? Mathf.Max(0f, Mathf.Sin((t - 0.6f) * 16f)) * (1f - Mathf.Clamp((t - 1.2f) / 0.3f, 0f, 1f)) : 0f;
+                float chew = t > 0.6f ? Mathf.Max(0f, Mathf.Sin((t - 0.6f) * 16f)) * (1f - Mathf.Clamp((t - 0.8f) / 0.3f, 0f, 1f)) : 0f;
                 Arm(p, false, Mathf.Lerp(-0.1f, -0.85f, lift), Mathf.Lerp(0.05f, 0.4f, lift), Mathf.Lerp(-0.3f, -2.3f, lift));
                 Arm(p, true, -0.05f, 0.02f, -0.2f);
                 p[Joint.Spine].X = 0.04f;

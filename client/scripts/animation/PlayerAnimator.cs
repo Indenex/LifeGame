@@ -26,12 +26,21 @@ public sealed class PlayerAnimator
     // whatever else is going on, fading in and out.
     WorkMotion shownAct;
     float actTime, actBlend;
+    // The same action again while it plays (another sip): it loops back round at its
+    // natural point instead of jumping to the start.
+    bool again;
 
     public void Act(WorkMotion motion)
     {
         if (!WorkMotions.IsAct(motion)) return;
+        if (motion == shownAct && actBlend > 0f)
+        {
+            again = true;
+            return;
+        }
         shownAct = motion;
         actTime = 0f;
+        again = false;
     }
 
     // Seconds left of the action playing now, 0 when none.
@@ -105,10 +114,16 @@ public sealed class PlayerAnimator
     void PlayAct(float dt)
     {
         actTime += dt;
+        var (loopAt, loopTo) = WorkMotions.ActLoop(shownAct);
+        if (again && actTime >= loopAt)
+        {
+            actTime = loopTo + (actTime - loopAt);
+            again = false;
+        }
         float length = WorkMotions.ActSeconds(shownAct), fade = WorkMotions.ActFade(shownAct);
         bool legs = WorkMotions.ActUsesLegs(shownAct);
         // Walking off ends a whole-body action early: it blends out as you go.
-        float target = actTime < length - fade && !(legs && walkBlend > 0.5f) ? 1f : 0f;
+        float target = (actTime < length - fade || again) && !(legs && walkBlend > 0.5f) ? 1f : 0f;
         actBlend = Mathf.MoveToward(actBlend, target, dt / fade);
         if (actBlend <= 0f && (target == 0f || actTime >= length))
         {

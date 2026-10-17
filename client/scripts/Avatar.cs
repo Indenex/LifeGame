@@ -81,12 +81,46 @@ public partial class Avatar : Node3D
     readonly ushort[] worn = new ushort[2];
 
     // Puts items in the hands (null for empty), in the ToolR and ToolL fist frames.
+    // A quick action (Act) borrows the right hand and gives it back after.
     public void Hold(Item? right, Item? left)
     {
-        Grip("ToolR", right, ref heldRight);
+        (workRight, workLeft) = (right, left);
+        if (actItem == null) Grip("ToolR", right, ref heldRight);
         Grip("ToolL", left, ref heldLeft);
     }
-    Item? heldRight, heldLeft;
+    Item? heldRight, heldLeft, workRight, workLeft;
+
+    // A quick action from the server's player_act (anim-4): drinking, eating, picking
+    // berries, picking something up. item shows in the right hand for its part of it:
+    // food on its way to the mouth, berries and finds once they are in the hand.
+    public void Act(WorkMotion motion, Item? item)
+    {
+        animator.Act(motion);
+        actItem = item;
+        actMotion = motion;
+    }
+    Item? actItem;
+    WorkMotion actMotion;
+
+    void ShowActItem()
+    {
+        float left = animator.ActLeft, length = WorkMotions.ActSeconds(actMotion);
+        if (left <= 0f || actItem == null)
+        {
+            actItem = null;
+            Grip("ToolR", workRight, ref heldRight);
+            return;
+        }
+        float t = length - left;
+        bool show = actMotion switch
+        {
+            WorkMotion.Eat => t < 0.9f,
+            WorkMotion.Pluck => t > 0.4f,
+            WorkMotion.PickUp => t > length * 0.5f,
+            _ => false,
+        };
+        Grip("ToolR", show ? actItem : workRight, ref heldRight);
+    }
 
     void Grip(string hand, Item? item, ref Item? held)
     {
@@ -128,6 +162,10 @@ public partial class Avatar : Node3D
             SneakChanged?.Invoke(sneaking);
         }
         // Hidden avatars (offline players) cost nothing.
-        if (IsVisibleInTree()) animator.Update(dt, speed, turnRate, sneaking);
+        if (IsVisibleInTree())
+        {
+            animator.Update(dt, speed, turnRate, sneaking);
+            if (actItem != null) ShowActItem();
+        }
     }
 }
