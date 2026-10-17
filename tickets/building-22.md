@@ -12,6 +12,8 @@ The next House-building structure, picked from the options sent to the PM (the P
 - 2026-10-17: Def (Kind 21 provisional), `ChestStacks`, StageProcess rule (framing), `StructureModel.Chest.cs` (posts and floor boards, side boards, lid with battens), Showcase view `chest` in `Showcase.House.cs`, BuildTest part `chest` (two players chop logs, build it, store and take; passes locally in 195 s, run alone like log-cabin), upgrade check passes locally, client builds (0 errors).
 - Kind number: 21 now (the enum position after Sundial = 20). Crafting's devices are fixed at 21 to 23 and the chest at 24, so renumber when the devices land (the startup check catches a mismatch).
 
+- 2026-10-17 12:10: PM: chest is the overnight default (#759); renumber to 24 once #285 lands, don't hold; make it look clearly unlike a basket in the Build tab and the world (real boards, a lid, iron-free joinery). Model reworked: dark core, four lapped board courses (corners lapped like a log cabin's), dowel pegs, a two-board lid with a crown board, end cleats and a toggle. Client builds (0 errors); needs a Render still (Showcase `--view=chest`, and the Build tab tile).
+
 ## Open questions / blockers
 - PM: confirm the options (chest recommended; smoking rack, straw bed, well, log palisade are the others) and the claim-only default.
 - CI's "Building check" matrix runs only lean-to, basket and fence, so the coop, stone hearth, sundial (and town path) and chest checks run only locally; Integration owns the workflow.

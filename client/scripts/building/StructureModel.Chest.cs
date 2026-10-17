@@ -4,7 +4,7 @@ using Godot;
 namespace LifeGame;
 
 // The wooden chest (building-22), in two stages: 0 the frame (four corner posts and the bottom boards),
-// 1 the boards and the lid (side boards, a lid of two boards with battens across).
+// 1 the boards and the lid (a core, lapped board courses with dowel pegs, a lid with cleats and a toggle).
 public static partial class StructureModel
 {
     static List<Piece> Chest()
@@ -33,30 +33,47 @@ public static partial class StructureModel
         floor.GenerateNormals();
         Add(list, 0, PaleWood, floor.Commit());
 
-        // Side boards: three to a side, just outside the posts.
+        // Stage 1: a dark core, then four courses of pale boards with the corners lapped like a log cabin's (the
+        // front and back boards run long on one course, the end boards on the next), and dowel pegs through them.
+        var core = Begin();
+        Board(core, new Vector3(-hw + 0.03f, 0, 0), new Vector3(hw - 0.03f, 0, 0), hd - 0.03f, 0.08f, h, 11);
+        core.GenerateNormals();
+        Add(list, 1, Wood, core.Commit());
         var walls = Begin();
-        for (int row = 0; row < 3; row++)
+        for (int row = 0; row < 4; row++)
         {
-            float y0 = 0.1f + row * 0.12f, y1 = y0 + 0.11f;
+            float y0 = 0.1f + row * 0.09f, y1 = y0 + 0.085f;
+            bool longFront = row % 2 == 0;
+            float fl = longFront ? hw + 0.04f : hw - 0.03f, el = longFront ? hd - 0.03f : hd + 0.04f;
             foreach (float z in new[] { -hd, hd })
-                Board(walls, new Vector3(-hw - 0.02f, 0, z), new Vector3(hw + 0.02f, 0, z), 0.025f, y0, y1, row * 7 + (z > 0 ? 1 : 2));
+                Board(walls, new Vector3(-fl, 0, z), new Vector3(fl, 0, z), 0.026f, y0, y1, row * 7 + (z > 0 ? 1 : 2));
             foreach (float x in new[] { -hw, hw })
-                Board(walls, new Vector3(x, 0, -hd), new Vector3(x, 0, hd), 0.025f, y0 + 0.01f, y1 + 0.01f, row * 7 + (x > 0 ? 3 : 4));
+                Board(walls, new Vector3(x, 0, -el), new Vector3(x, 0, el), 0.026f, y0, y1, row * 7 + (x > 0 ? 3 : 4));
         }
         walls.GenerateNormals();
         Add(list, 1, PaleWood, walls.Commit());
+        foreach (var (px, pz) in new[] { (-hw + 0.07f, hd), (hw - 0.07f, hd), (-hw + 0.07f, -hd), (hw - 0.07f, -hd) })
+            foreach (float py in new[] { 0.19f, 0.37f })
+            {
+                float dir = pz > 0 ? 1f : -1f;
+                Add(list, 1, Wood, Stick(new Vector3(px, py, pz - dir * 0.03f), new Vector3(px, py, pz + dir * 0.075f), 0.014f));
+            }
 
-        // The lid: two boards laid along the length with a little overhang, and two battens across.
+        // The lid: a broad board lid with a narrower crown board on top, cleats across both ends, and a
+        // wooden toggle on a cordage loop at the front.
         var lid = Begin();
         foreach (float z in new[] { -hd * 0.5f, hd * 0.5f })
-            Board(lid, new Vector3(-hw - 0.05f, 0, z), new Vector3(hw + 0.05f, 0, z), hd * 0.5f + 0.015f, h, h + 0.06f, z > 0 ? 5 : 6);
+            Board(lid, new Vector3(-hw - 0.05f, 0, z), new Vector3(hw + 0.05f, 0, z), hd * 0.5f + 0.012f, h, h + 0.05f, z > 0 ? 5 : 6);
+        Board(lid, new Vector3(-hw + 0.02f, 0, 0), new Vector3(hw - 0.02f, 0, 0), hd * 0.55f, h + 0.05f, h + 0.085f, 7);
         lid.GenerateNormals();
         Add(list, 1, PaleWood, lid.Commit());
-        var battens = Begin();
-        foreach (float x in new[] { -hw + 0.08f, hw - 0.08f })
-            Board(battens, new Vector3(x, 0, -hd - 0.03f), new Vector3(x, 0, hd + 0.03f), 0.03f, h + 0.06f, h + 0.09f, x > 0 ? 8 : 9);
-        battens.GenerateNormals();
-        Add(list, 1, Wood, battens.Commit());
+        var cleats = Begin();
+        foreach (float x in new[] { -hw - 0.01f, hw + 0.01f })
+            Board(cleats, new Vector3(x, 0, -hd - 0.03f), new Vector3(x, 0, hd + 0.03f), 0.03f, h - 0.02f, h + 0.05f, x > 0 ? 8 : 9);
+        cleats.GenerateNormals();
+        Add(list, 1, Wood, cleats.Commit());
+        Add(list, 1, Wood, Stick(new Vector3(0, h - 0.07f, hd + 0.045f), new Vector3(0.0f, h + 0.02f, hd + 0.045f), 0.02f));
+        Add(list, 1, PaleWood, Stick(new Vector3(-0.07f, h + 0.045f, hd + 0.045f), new Vector3(0.07f, h + 0.045f, hd + 0.045f), 0.014f));
         return list;
     }
 }
