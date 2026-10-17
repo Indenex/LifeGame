@@ -121,12 +121,15 @@ public partial class Terrain : Node3D
                     chunks.Remove(key);
                     tufted.Remove(key);
                     ghostHolders.Remove(key);
+                    Dropped(key);
                 }
+            Regroup();
             foreach (var key in keep)
                 if (!chunks.ContainsKey(key) || tufted.Contains(key) != WantsTufts(key))
                     dirty.Add(key);
         }
 
+        PumpRegions();
         // Chunks build on worker threads, nearest first (env-12); the main thread only
         // snapshots what they need and puts finished ones in place.
         if (dirty.Count == 0 && pending.Count == 0) return;
@@ -134,7 +137,7 @@ public partial class Terrain : Node3D
         PumpBuilds(chunkX, chunkZ, r);
         if (dirty.Count == 0 && pending.Count == 0)
         {
-            GD.Print($"[view] radius {r}: {chunks.Count} chunks in place {loading.Elapsed.TotalMilliseconds:F0} ms after the first was asked for");
+            GD.Print($"[view] radius {r}: {chunks.Count} chunks in place {loading.Elapsed.TotalMilliseconds:F0} ms after the first was asked for; {inRegion.Count} far chunks drawn in {regions.Count} regions");
             loading = null;
             if (LoadedShot is { } shot) TakeLoadedShot(shot);
         }
