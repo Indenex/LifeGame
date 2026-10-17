@@ -18,6 +18,8 @@ public partial class SocialLayer
 
     void AttachTown(DbConnection c)
     {
+        // The --screenshot-town preview keeps its pretend town, whatever the server holds.
+        if (town.Previewing) return;
         town.Conn = c;
         town.MyId = () => myId;
         Action dirty = town.MarkDirty;

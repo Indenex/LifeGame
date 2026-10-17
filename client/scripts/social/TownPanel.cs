@@ -63,6 +63,7 @@ public partial class TownPanel : CanvasLayer
         root.AddChild(window);
         ReadyBoxes();
         ReadyStore();
+        ReadyPreview();
         map.Picked += Pick;
     }
 
@@ -225,6 +226,7 @@ public partial class TownPanel : CanvasLayer
 
     Snapshot Read()
     {
+        if (preview) return PreviewSnapshot();
         var s = new Snapshot { Me = Mine(), MyClaim = MyClaim() };
         if (Conn == null || s.Me == null) return s;
         ulong townId = s.Me.TownId;
@@ -239,6 +241,7 @@ public partial class TownPanel : CanvasLayer
     // and every standing claim within Social.TownNearMetres of one of them.
     List<TownMap.Spot> Spots(Snapshot s)
     {
+        if (preview) return PreviewSpots(s);
         var spots = new List<TownMap.Spot>();
         if (Conn == null) return spots;
         long now = SocialLayer.NowMicros;
@@ -269,7 +272,7 @@ public partial class TownPanel : CanvasLayer
     void Rebuild()
     {
         dirty = false;
-        if (Conn == null) return;
+        if (Conn == null && !preview) return;
         foreach (var child in side.GetChildren())
         {
             side.RemoveChild(child);
@@ -277,7 +280,7 @@ public partial class TownPanel : CanvasLayer
         }
         var s = Read();
         if (s.Me == null) votingFor = null;
-        var invites = Conn.Db.MyTownInvites.Iter().ToList();
+        var invites = preview ? PreviewInvites() : Conn!.Db.MyTownInvites.Iter().ToList();
 
         title.Text = s.Town?.Name ?? "Town";
         var spots = Spots(s);
@@ -456,6 +459,7 @@ public partial class TownPanel : CanvasLayer
     // The latest lines of the town's log; the Scribe can add a note.
     void BuildLog(Snapshot s, uint me)
     {
+        if (preview) { BuildPreviewLog(); return; }
         side.AddChild(Heading("The town's log", 16));
         var lines = Conn!.Db.TownLog.ByTown.Filter(s.Town!.Id).OrderByDescending(l => l.Id).Take(LogShown).ToList();
         if (lines.Count == 0) side.AddChild(Note("Nothing written yet."));
