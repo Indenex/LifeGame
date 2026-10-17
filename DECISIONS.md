@@ -1007,3 +1007,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-248 — 2026-10-17 — Speed up merges, CI, builds and releases: all four measures approved
 **Decision:** To speed up merges, CI, builds and releases, Justin approved all four of: (1) a GitHub merge queue plus auto-merge (integration-8); (2) splitting the hot shared files into per-lane files with fixed ids (integration-9); (3) smarter, parallel CI with path filters, parallel server tests and caching (integration-10); (4) a flaky-test rule. The flaky-test rule and a no-push-after-green rule are added to Section 2 of `WORKER_LOOP.md`. Owner: Integration.
 **Who:** Justin (asked how to speed these up and approved all four options; relayed by the PM, no direct quote).
+
+## D-249 — 2026-10-17 — Character concepts round 2: 10 more, with multiple themes on one shared skeleton and base body (follows D-247)
+**Decision:** After seeing the 10 round-1 concepts (Kit, Capling, Bramble, Clover, Pip, Mossle, Puddle, Sprout, Dumpling, Hearthling), Justin wants another 10. Multiple player themes or races are welcome, built on one shared skeleton and base body with swappable parts (ears, tails, hats, heads, colours), so animation and modelling are shared and modelling work is minimised. Round 2 is 10 more concepts on a shared base. Owner: Character concepts.
+**Who:** Justin ("give me another 10. Multiple character models/themes would be nice too I think. I do want a shared model/skeleton etc. though as much as possible to minimize modeling work etc.")
