@@ -30,12 +30,19 @@ public sealed class PlayerAnimator
     // natural point instead of jumping to the start.
     bool again;
 
-    WorkMotions.StrikeStyle actStyle;
+    // The action's variant (WorkMotions.VariantOf: a strike's style, a dig's tool).
+    byte actVariant;
 
-    public void Act(WorkMotion motion, WorkMotions.StrikeStyle style = WorkMotions.StrikeStyle.Fist)
+    // When a tool meets its work (an axe biting the trunk, a spade going in, a strike
+    // landing), and a spade's dirt leaving the blade (second argument true), so chips,
+    // dirt and thunks land on the frame.
+    public System.Action<WorkMotion, bool>? Impact;
+    float lastWorkCycle;
+
+    public void Act(WorkMotion motion, byte variant = 0)
     {
         if (!WorkMotions.IsAct(motion)) return;
-        actStyle = style;
+        actVariant = variant;
         if (motion == shownAct && actBlend > 0f)
         {
             again = true;
@@ -47,7 +54,8 @@ public sealed class PlayerAnimator
     }
 
     // Seconds left of the action playing now, 0 when none.
-    public float ActLeft => shownAct == WorkMotion.None ? 0f : Mathf.Max(WorkMotions.ActSeconds(shownAct) - actTime, 0f);
+    public float ActLeft => shownAct == WorkMotion.None ? 0f : Mathf.Max(ActLength - actTime, 0f);
+    public float ActLength => WorkMotions.ActSeconds(shownAct, actVariant);
 
     // How far the feet are below the water line (0 or less on land), set each frame by
     // the avatar. Wading lifts the knees and holds the arms out; past Wading.FloatDepth
@@ -109,6 +117,15 @@ public sealed class PlayerAnimator
             workTime = 0f;
         }
         workTime += dt;
+        // The tool's bite in a craft loop (chopping, knapping).
+        var (rate, hit) = WorkMotions.WorkImpact(shownWork);
+        if (rate > 0f)
+        {
+            float cycle = Mathf.PosMod(workTime * rate, 1f);
+            bool crossed = lastWorkCycle < hit ? cycle >= hit || cycle < lastWorkCycle : cycle >= hit && cycle < lastWorkCycle;
+            if (crossed && workBlend > 0.7f) Impact?.Invoke(shownWork, false);
+            lastWorkCycle = cycle;
+        }
         bool working = Work != WorkMotion.None && Work == shownWork && walkBlend < 0.5f;
         workBlend = Mathf.Lerp(workBlend, working ? 1f : 0f, 1f - Mathf.Exp(-8f * dt));
         if (workBlend > 0.005f)
@@ -133,14 +150,21 @@ public sealed class PlayerAnimator
 
     void PlayAct(float dt)
     {
+        float before = actTime;
         actTime += dt;
-        var (loopAt, loopTo) = WorkMotions.ActLoop(shownAct);
+        if (actBlend > 0.5f)
+        {
+            float hit = WorkMotions.ActImpact(shownAct, actVariant), thrown = WorkMotions.ActThrow(shownAct, actVariant);
+            if (hit >= 0f && before < hit && actTime >= hit) Impact?.Invoke(shownAct, false);
+            if (thrown >= 0f && before < thrown && actTime >= thrown) Impact?.Invoke(shownAct, true);
+        }
+        var (loopAt, loopTo) = WorkMotions.ActLoop(shownAct, actVariant);
         if (again && actTime >= loopAt)
         {
             actTime = loopTo + (actTime - loopAt);
             again = false;
         }
-        float length = WorkMotions.ActSeconds(shownAct), fade = WorkMotions.ActFade(shownAct);
+        float length = ActLength, fade = WorkMotions.ActFade(shownAct);
         bool legs = WorkMotions.ActUsesLegs(shownAct);
         // Walking off ends a whole-body action early: it blends out as you go.
         float target = (actTime < length - fade || again) && !(legs && walkBlend > 0.5f) ? 1f : 0f;
@@ -150,7 +174,7 @@ public sealed class PlayerAnimator
             shownAct = WorkMotion.None;
             return;
         }
-        WorkMotions.ActPose(act, shownAct, actTime, rig, actStyle);
+        WorkMotions.ActPose(act, shownAct, actTime, rig, actVariant);
         float w = Mathf.SmoothStep(0f, 1f, actBlend);
         if (legs)
         {

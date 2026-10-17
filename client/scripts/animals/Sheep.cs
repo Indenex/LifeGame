@@ -39,6 +39,8 @@ public partial class Sheep : Node3D
     float glide = 1f, targetHeading, speed, gait, hop = HopSeconds, pitch, yaw, turnRate, hipHeight;
     Vector3 lastPosition;
     AnimalState state = AnimalState.Graze;
+    // The hen figure (model-7): same bones, but its "legs" 2 and 3 are wings and its head pecks.
+    readonly bool hen;
     Color woolColor;
     float wool = 1f, woolTarget = 1f;
     // Grown size (varies per sheep), and how grown up this one is (lambs are small).
@@ -99,14 +101,13 @@ public partial class Sheep : Node3D
         seed = Terrain.Hash01((int)id, 7, 33) * 100f;
         var def = AnimalDefs.Get((byte)species);
         bool deer = def.Model == "deer";
-        // Until Modeling's hen figure lands (animals-19), a hen is drawn as a small sheep.
-        if (def.Model == "hen") Scale = Vector3.One * 0.4f;
+        hen = def.Model == "hen";
         // About a third of deer are antlered stags (AnimalDef.AntlerShare).
         bool stag = deer && IsStag(id);
         BuildMeshes();
         if (deer) BuildDeerMeshes();
-        var headAt = deer ? DeerHeadAt : HeadAt;
-        var hips = deer ? DeerHips : Hips;
+        var headAt = hen ? HenFigure.HeadAt : deer ? DeerHeadAt : HeadAt;
+        var hips = hen ? HenFigure.Hips : deer ? DeerHips : Hips;
 
         int color = (int)(Terrain.Hash01((int)id, 11, 5) * Fleeces.Length) % Fleeces.Length;
         if (!WoolMaterials.TryGetValue(color, out var wool))
@@ -137,7 +138,7 @@ public partial class Sheep : Node3D
         }
         skeleton.ResetBonePoses();
         AddChild(skeleton);
-        var mesh = new MeshInstance3D { Mesh = deer ? (stag ? stagMesh : deerMesh) : sheepMesh, Skeleton = new NodePath("..") };
+        var mesh = new MeshInstance3D { Mesh = hen ? HenFigure.Build(wool) : deer ? (stag ? stagMesh : deerMesh) : sheepMesh, Skeleton = new NodePath("..") };
         mesh.SetSurfaceOverrideMaterial(0, wool);
         skeleton.AddChild(mesh);
 
@@ -263,6 +264,13 @@ public partial class Sheep : Node3D
         Leg(1, new Vector3(Mathf.Lerp(-s, front, run), 0, 0));
         Leg(2, new Vector3(Mathf.Lerp(-s, back, run), 0, 0));
         Leg(3, new Vector3(Mathf.Lerp(s, back, run), 0, 0));
+        // A running hen flaps both wings out (left negative, right positive about Z), about 1.1 rad.
+        if (hen && run > 0f)
+        {
+            float flap = (0.7f + 0.4f * Mathf.Sin(time * 34f)) * run;
+            Leg(2, new Vector3(0, 0, -flap));
+            Leg(3, new Vector3(0, 0, flap));
+        }
 
         // A lamb at rest gives a little skip every so often.
         if (growthTarget < 0.95f && state != AnimalState.Run && speed < 0.4f && (frolic -= dt) <= 0f)
@@ -306,7 +314,8 @@ public partial class Sheep : Node3D
         {
             // Every so often a grazing sheep looks up to chew and glance around.
             bool lookUp = Mathf.Sin(time * 0.31f) > 0.82f;
-            targetPitch = lookUp ? 0.05f : 0.95f + Mathf.Sin(time * 7f) * 0.05f;
+            // A hen pecks in quick jabs, down about 1.2 rad; a sheep nibbles.
+            targetPitch = lookUp ? 0.05f : hen ? 1.2f * Mathf.Max(0f, Mathf.Sin(time * 7f + seed)) : 0.95f + Mathf.Sin(time * 7f) * 0.05f;
             if (lookUp) targetYaw = Mathf.Sin(time * 0.7f) * 0.5f;
         }
         else if (state == AnimalState.Run)
@@ -373,7 +382,8 @@ public partial class Sheep : Node3D
 
     void Leg(int i, Vector3 euler) => skeleton.SetBonePoseRotation(FirstLegBone + i, Quaternion.FromEuler(euler));
 
-    void Fleece(float scale) => skeleton.SetBonePoseScale(FleeceBone, Vector3.One * scale);
+    // A hen's "fleece" bone holds its tail, so it stays full size.
+    void Fleece(float scale) => skeleton.SetBonePoseScale(FleeceBone, Vector3.One * (hen ? 1f : scale));
 
     void Tufts()
     {
