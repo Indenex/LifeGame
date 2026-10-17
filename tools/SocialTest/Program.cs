@@ -78,12 +78,17 @@ void Check(bool ok, string what)
     if (!ok) failures++;
 }
 
-void ExpectError(Tester t, Action call, string contains, string what)
+// The server paces some reducers per player (PlaceStructure 0.4 s, Dismantle 0.3 s, SetName 1 s, bugfix-51), and
+// a refusal counts as a call: after the answer, hold until `gap` seconds have passed since the call, so the next
+// one is not refused as too fast instead of for the reason under test.
+void ExpectError(Tester t, Action call, string contains, string what, double gap = 0.5)
 {
     t.LastError = null;
+    var since = Stopwatch.StartNew();
     call();
     Wait(() => t.LastError != null, 5);
     Check(t.LastError?.Contains(contains) == true, $"{what} ({t.LastError ?? "no error"})");
+    Wait(() => false, Math.Max(0, gap - since.Elapsed.TotalSeconds));
 }
 
 // The shared walk (tools/common/BotWalker.cs): routes round trunks and walls, sidesteps a stall, and as a
@@ -267,9 +272,9 @@ string bName = "Tobin" + new string(Enumerable.Range(0, 6).Select(_ => (char)('a
 b.Conn.Reducers.SetName(bName);
 Pump(() => a.Conn.Db.Player.PlayerId.Find(b.PlayerId)?.Name == bName, 5, "rename");
 // ui-31: a name someone has (in any case), a name kept for the game, and digits are refused.
-ExpectError(a, () => a.Conn.Reducers.SetName(bName.ToUpperInvariant()), "taken", "a name someone else has is refused");
-ExpectError(a, () => a.Conn.Reducers.SetName("Mayor"), "kept for the game", "a town office isn't a name");
-ExpectError(a, () => a.Conn.Reducers.SetName("Ann42"), "letters", "digits aren't part of a name");
+ExpectError(a, () => a.Conn.Reducers.SetName(bName.ToUpperInvariant()), "taken", "a name someone else has is refused", 1.1);
+ExpectError(a, () => a.Conn.Reducers.SetName("Mayor"), "kept for the game", "a town office isn't a name", 1.1);
+ExpectError(a, () => a.Conn.Reducers.SetName("Ann42"), "letters", "digits aren't part of a name", 1.1);
 ExpectError(a, () => a.Conn.Reducers.AddClaimMemberByName("Nobody" + bName), "Nobody called", "adding an unknown name is refused");
 ulong chatBeforeAdd = b.Conn.Db.MyChat.Iter().Select(m => m.Id).DefaultIfEmpty(0UL).Max();
 a.LastError = null;
