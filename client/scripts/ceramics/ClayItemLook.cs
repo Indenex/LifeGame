@@ -26,6 +26,8 @@ public static class ClayItemLook
             Item.UnfiredLamp => Pot(ClayForm.Lamp, ClayStage.Drying, false),
             Item.RoofTile => Tile(ClayStage.Fired),
             Item.UnfiredRoofTile => Tile(ClayStage.Drying),
+            Item.ClayTrough => Trough(ClayStage.Fired),
+            Item.UnfiredClayTrough => Trough(ClayStage.Drying),
             Item.Tallow => Look.Faceted(new SphereMesh { Radius = 0.07f, Height = 0.08f, RadialSegments = 8, Rings = 4 }, new Color(0.93f, 0.88f, 0.72f)),
             Item.PotOfBroth => Pot(ClayForm.CoilPot, ClayStage.Fired, true, Look.Solid(SimmerView.Broth)),
             Item.PotOfStew => Pot(ClayForm.CoilPot, ClayStage.Fired, true, Look.Solid(SimmerView.Stew)),
@@ -96,6 +98,10 @@ public static class ClayItemLook
         }
         return mesh;
     }
+
+    // A trough is kiln-fired too (ceramics-13).
+    static Mesh Trough(ClayStage stage) =>
+        Baked(PotMesh.For(ClayForm.Trough, 2), ClayLook.For(stage, FireKind.Kiln, 0f, 2), PotView.Size);
 
     // Roof tiles are kiln-fired too.
     static Mesh Tile(ClayStage stage) =>
