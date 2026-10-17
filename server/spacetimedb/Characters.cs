@@ -41,6 +41,18 @@ public static partial class Module
     public static List<ActiveCharacter> MyActiveCharacter(ViewContext ctx) =>
         ctx.Db.ActiveCharacter.Login.Find(ctx.Sender) is { } a ? new List<ActiveCharacter> { a } : new List<ActiveCharacter>();
 
+    // The Player row and position of the character the login is on, online or not (a login at
+    // the character menu still sees its own name). Replaces "WHERE identity = :sender", which
+    // names the login and so finds nobody once a login has a second character.
+    [SpacetimeDB.View(Accessor = "MyPlayer", Public = true)]
+    public static List<Player> MyPlayer(ViewContext ctx) =>
+        ctx.Db.Player.Identity.Find(Me(ctx)) is { } p ? new List<Player> { p } : new List<Player>();
+
+    [SpacetimeDB.View(Accessor = "MyPlayerPos", Public = true)]
+    public static List<PlayerPos> MyPlayerPos(ViewContext ctx) =>
+        ctx.Db.Player.Identity.Find(Me(ctx)) is { } p && ctx.Db.PlayerPos.PlayerId.Find(p.PlayerId) is { } pos
+            ? new List<PlayerPos> { pos } : new List<PlayerPos>();
+
     // The key of the character the caller plays. A login with no active row is playing its
     // first character, whose key is the login itself.
     static Identity Me(ReducerContext ctx) =>
