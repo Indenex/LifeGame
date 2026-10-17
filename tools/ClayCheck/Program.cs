@@ -109,7 +109,7 @@ Gather(Item.Fiber, (kilnRun ? 12u : 4u) + 3 + Social.MarkerFiber);
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);
 int cell = 0;
-uint clayWanted = jarRun ? 54u : kilnRun ? 38u : potRun ? 12u : lampRun ? (tallowRun ? 12u : 4u) : 12u;
+uint clayWanted = jarRun ? 70u : kilnRun ? 38u : potRun ? 12u : lampRun ? (tallowRun ? 12u : 4u) : 12u;
 while (CountOf(Item.Clay) < clayWanted)
 {
     int cx = clayX + cell % 5 - 2, cz = clayZ + cell / 5 % 5 - 2;
@@ -244,7 +244,7 @@ return 0;
 // dried in the open are loaded and fired in it.
 int KilnCheck()
 {
-    while (CountOf(Item.CleanClay) < (jarRun ? 27 : 19)) Craft("clay.clean", 0, Item.CleanClay);
+    while (CountOf(Item.CleanClay) < (jarRun ? 33 : 19)) Craft("clay.clean", 0, Item.CleanClay);
     Craft("clay.grit", 0, Item.Grit);
     Craft("clay.temper_grit", 0, Item.TemperedClay);
     if (jarRun)
@@ -253,6 +253,12 @@ int KilnCheck()
         Craft("clay.temper_grit", 0, Item.TemperedClay);
         Craft("clay.temper_grit", 0, Item.TemperedClay);
         Craft("clay.temper_grit", 0, Item.TemperedClay); // two more tempered clay, for a roof tile
+        // Six more tempered clay for a clay trough (ceramics-13): three batches, two more grit.
+        Craft("clay.grit", 0, Item.Grit);
+        Craft("clay.grit", 0, Item.Grit);
+        Craft("clay.temper_grit", 0, Item.TemperedClay);
+        Craft("clay.temper_grit", 0, Item.TemperedClay);
+        Craft("clay.temper_grit", 0, Item.TemperedClay);
     }
 
     // Two pots shaped at the bench, away from any fire, so picking them up doesn't fire them.
@@ -262,7 +268,7 @@ int KilnCheck()
     Craft("clay.daub", 0, Item.Daub);
     var kilnPots = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.PinchPot).Select(p => p.Id).ToList();
     if (kilnPots.Count != 2) Fail($"expected 2 pots drying, have {kilnPots.Count}");
-    ulong jarPiece = 0, tilePiece = 0;
+    ulong jarPiece = 0, tilePiece = 0, troughPiece = 0;
     if (jarRun)
     {
         AtBench();
@@ -275,12 +281,17 @@ int KilnCheck()
         tilePiece = conn.Db.ClayPiece.Iter().FirstOrDefault(p => p.MadeBy == myId && p.Form == (byte)ClayForm.Tile)?.Id ?? 0;
         if (tilePiece == 0) Fail("no roof tile drying");
         Log("STAGE tile-drying");
+        // And a clay trough (ceramics-13), kiln-fired only too.
+        Craft("clay.trough", 0.9f, null);
+        troughPiece = conn.Db.ClayPiece.Iter().FirstOrDefault(p => p.MadeBy == myId && p.Form == (byte)ClayForm.Trough)?.Id ?? 0;
+        if (troughPiece == 0) Fail("no clay trough drying");
+        Log("STAGE trough-drying");
     }
 
     // Eight bricks round a fire, where they dry twice as fast. Bricks need no bench;
     // the fire is well clear of the pots by the bench.
     LightFireNear(bench.X + 4f, bench.Z + 1.3f);
-    foreach (var id in kilnPots.Append(jarPiece).Append(tilePiece).Where(id => id != 0))
+    foreach (var id in kilnPots.Append(jarPiece).Append(tilePiece).Append(troughPiece).Where(id => id != 0))
         if (conn.Db.ClayPiece.Id.Find(id) is { } p && DistanceTo(p.X, p.Z, fire.X, fire.Z) <= ClayRules.FireReach + 0.5f)
             Fail("the brick fire is lit too close to the drying pots");
     KeepFireGoing();
@@ -338,7 +349,7 @@ int KilnCheck()
 
     // Wait for the pots, pick them up, load them.
     watch.Restart();
-    while (kilnPots.Append(jarPiece).Append(tilePiece).Where(id => id != 0).Any(id => MoistureOf(id) > ClayRules.SafeToFire))
+    while (kilnPots.Append(jarPiece).Append(tilePiece).Append(troughPiece).Where(id => id != 0).Any(id => MoistureOf(id) > ClayRules.SafeToFire))
     {
         if (watch.Elapsed > TimeSpan.FromMinutes(12)) Fail("pots never dried");
         Pump(() => false, 5, null);
@@ -368,6 +379,14 @@ int KilnCheck()
         Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(tilePiece) == null, 3, "picking up the dry tile");
         if (lastError != null) Fail($"picking up the tile: {lastError}");
         if (CountOf(Item.UnfiredRoofTile) != 1) Fail("expected an unfired roof tile");
+        // And the trough.
+        var trp = conn.Db.ClayPiece.Id.Find(troughPiece)!;
+        WalkTo(trp.X, trp.Z, 1.2f);
+        lastError = null;
+        conn.Reducers.TendClay(troughPiece, false);
+        Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(troughPiece) == null, 3, "picking up the dry trough");
+        if (lastError != null) Fail($"picking up the trough: {lastError}");
+        if (CountOf(Item.UnfiredClayTrough) != 1) Fail("expected an unfired clay trough");
     }
     foreach (var id in kilnPots)
     {
@@ -386,7 +405,7 @@ int KilnCheck()
     WalkTo(kiln.X, kiln.Z, 1.6f);
     lastError = null;
     conn.Reducers.UseKiln(kiln.Id);
-    int loadWanted = jarRun ? 4 : 2;
+    int loadWanted = jarRun ? 5 : 2;
     Pump(() => lastError != null || (conn.Db.Kiln.StructureId.Find(kiln.Id)?.Load?.Count ?? 0) == loadWanted, 3, "the kiln to be loaded");
     if (lastError != null) Fail($"loading: {lastError}");
     Log($"Loaded {loadWanted} pieces");
@@ -425,6 +444,7 @@ int KilnCheck()
         if (tile != null) Log("STAGE tile-fired");
     }
     if (jarRun) JarCheck(kiln);
+    if (jarRun) TroughCheck(kiln);
     Log("Kiln check passed: bricks to a kiln to kiln-fired pots");
     conn.Disconnect();
     return 0;
@@ -655,6 +675,95 @@ int TileCheck()
     Log("Tile check passed: tiles pressed at the bench, dried, and refused by a campfire (they need a kiln)");
     conn.Disconnect();
     return 0;
+}
+
+// The fired clay trough comes out of the kiln; set it down, pour a pot of water in, scoop
+// a pot back out, and have a drink (ceramics-13).
+void TroughCheck(Structure kiln)
+{
+    var trough = conn.Db.WorldItem.Iter().FirstOrDefault(w => w.Item == (ushort)Item.ClayTrough && DistanceTo(w.X, w.Z, kiln.X, kiln.Z) < 2.5f);
+    if (trough == null)
+    {
+        Log("The trough cracked in the kiln (2% chance); trough not checked this run");
+        return;
+    }
+    WalkTo(trough.X, trough.Z, 1.0f);
+    lastError = null;
+    conn.Reducers.PickUp(trough.Id);
+    Pump(() => lastError != null || CountOf(Item.ClayTrough) == 1, 3, "picking up the trough");
+    if (lastError != null) Fail($"picking up the fired trough: {lastError}");
+    Log($"Fired trough at quality {trough.Quality}");
+    Log("STAGE trough-fired");
+
+    var site = FindSite(StructureKind.ClayTrough, kiln.X + 3.5f, kiln.Z, 0f, (sx, sz) =>
+        DistanceTo(sx, sz, kiln.X, kiln.Z) >= 2.5f && DistanceTo(sx, sz, fire.X, fire.Z) >= 2f
+        && conn.Db.Structure.Iter().All(o => DistanceTo(sx, sz, o.X, o.Z) >= 2.5f)
+        && InMyClaim(sx, sz, 1f) && ClearGround(sx, sz, -1, 1, -1, 1)) ?? FailAt("no ground for the trough");
+    WalkTo(site.X - 1.4f, site.Z, 0.2f);
+    float tx = site.X, tz = site.Z;
+    lastError = null;
+    conn.Reducers.PlaceStructure(StructureKind.ClayTrough, tx, tz, 0f);
+    Pump(() => lastError != null || conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.ClayTrough && s.Owner == me), 5, "the trough site");
+    if (lastError != null) Fail($"placing the trough: {lastError}");
+    var placed = conn.Db.Structure.Iter().First(s => s.Kind == StructureKind.ClayTrough && s.Owner == me);
+    for (int i = 0; i < 10 && conn.Db.Structure.Id.Find(placed.Id) is { Complete: false }; i++)
+    {
+        lastError = null;
+        conn.Reducers.Build(placed.Id);
+        Pump(() => lastError != null || conn.Db.Structure.Id.Find(placed.Id) is { Complete: true }, 3, "the trough to be set down");
+        if (lastError == "Still working") { Pump(() => false, 0.5f, null); continue; }
+        if (lastError != null) Fail($"setting the trough down: {lastError}");
+    }
+    if (conn.Db.Structure.Id.Find(placed.Id) is not { Complete: true }) Fail("trough never set down");
+    if (CountOf(Item.ClayTrough) != 0) Fail("the trough is still in the bag");
+    int capacity = Structures.TroughLitres(conn.Db.StructureProgress.StructureId.Find(placed.Id)?.Quality ?? Items.RawQuality);
+    Log($"Trough set down; it holds {capacity} L");
+    Log("STAGE trough-placed");
+
+    // Pouring with no water pot is refused.
+    WalkTo(placed.X - 1.2f, placed.Z, 0.2f);
+    lastError = null;
+    conn.Reducers.PourIntoTrough(placed.Id);
+    Pump(() => lastError != null, 3, "pouring nothing to be refused");
+    if (lastError?.Contains("pot of water") != true) Fail($"pouring with no water: {lastError}");
+
+    // Fill a fired pot at the water, bring it back and pour it in.
+    var pinch = conn.Db.WorldItem.Iter().Where(w => w.Item == (ushort)Item.PinchPot && DistanceTo(w.X, w.Z, kiln.X, kiln.Z) < 3f).FirstOrDefault();
+    if (pinch == null) { Log("No fired pot by the kiln to carry water; pouring not checked this run"); return; }
+    Gather(Item.PinchPot, 1);
+    WalkTo(waterX, waterZ, 1.5f);
+    lastError = null;
+    conn.Reducers.FillPots();
+    Pump(() => lastError != null || CountOf(Item.PinchPotOfWater) == 1, 3, "a pot of water");
+    if (lastError != null) Fail($"filling a pot: {lastError}");
+    WalkTo(placed.X - 1.2f, placed.Z, 0.2f);
+    lastError = null;
+    conn.Reducers.PourIntoTrough(placed.Id);
+    Pump(() => lastError != null || conn.Db.TroughWater.StructureId.Find(placed.Id) is { Litres: 2 }, 3, "the trough to fill");
+    if (lastError != null) Fail($"pouring: {lastError}");
+    if (CountOf(Item.PinchPot) != 1 || CountOf(Item.PinchPotOfWater) != 0) Fail("the emptied pot did not come back");
+    Log("Poured a pot in: the trough holds 2 L");
+    Log("STAGE trough-poured");
+
+    // A drink: either a sip, or "not thirsty" if the bot is not.
+    lastError = null;
+    conn.Reducers.DrinkFromTrough(placed.Id);
+    Pump(() => lastError != null || conn.Db.TroughWater.StructureId.Find(placed.Id) is { Litres: 1 }, 3, "a drink");
+    if (lastError != null && !lastError.Contains("not thirsty")) Fail($"drinking: {lastError}");
+    int litres = (int)(conn.Db.TroughWater.StructureId.Find(placed.Id)?.Litres ?? 0);
+    Log(lastError != null ? $"Drink: {lastError}" : $"Drank a sip; {litres} L left");
+
+    // Scoop the empty pot full again from what's left (a pinch pot holds 2 L).
+    if (litres >= 2)
+    {
+        lastError = null;
+        conn.Reducers.ScoopFromTrough(placed.Id);
+        Pump(() => lastError != null || CountOf(Item.PinchPotOfWater) == 1, 3, "a pot scooped full");
+        if (lastError != null) Fail($"scooping: {lastError}");
+        if ((conn.Db.TroughWater.StructureId.Find(placed.Id)?.Litres ?? 0) != litres - 2) Fail("the trough level did not drop by a pot");
+        Log("Scooped a pot back out");
+    }
+    Log("STAGE trough-done");
 }
 
 int PotCheck()
