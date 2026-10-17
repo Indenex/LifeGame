@@ -156,6 +156,9 @@ public partial class SocialLayer : Node
         }
     }
 
+    // Opens the chat line already started, for the player menu's Whisper (ui-35).
+    public void OpenChat(string prefill) => chat.Open(prefill);
+
     public override void _UnhandledInput(InputEvent e)
     {
         if (conn == null || Typing) return;

@@ -21,6 +21,7 @@ using LifeGame.Shared;
 using SpacetimeDB;
 using SpacetimeDB.Types;
 
+bool axeEquipped = false; // World tool actions need the tool equipped (crafting-29)
 string uri = args.Length > 0 ? args[0] : "http://127.0.0.1:3000";
 string db = args.Length > 1 ? args[1] : "lifegame";
 string? tokenPath = args.FirstOrDefault(a => a.StartsWith("--token="))?[8..];
@@ -618,6 +619,7 @@ void HuntMutton()
         }
         if (a == null) continue;
         lastError = null;
+        EquipAxe();
         conn.Reducers.StrikeAnimal(id);
         Pump(() => false, 1.1f, null);
         if (lastError != null && !lastError.Contains("Too far")) Fail($"striking the sheep: {lastError}");
@@ -625,6 +627,7 @@ void HuntMutton()
     var carcass = conn.Db.AnimalCarcass.Iter().First(c => c.AnimalId == id);
     WalkTo(carcass.X, carcass.Z, 1.5f);
     lastError = null;
+    EquipAxe();
     conn.Reducers.ButcherCarcass(carcass.Id);
     Pump(() => lastError != null || CountOf(Item.RawMutton) >= 2 || conn.Db.WorldItem.Iter().Count(w => w.Item == (ushort)Item.RawMutton) >= 3, 5, "the butchering");
     if (lastError != null) Fail($"butchering: {lastError}");
@@ -1172,8 +1175,18 @@ short DepthAt(int cx, int cz) => conn.Db.TerrainEdit.CellKey.Find(World.CellKey(
 
 static float DistanceTo(float ax, float az, float bx, float bz) => MathF.Sqrt((ax - bx) * (ax - bx) + (az - bz) * (az - bz));
 
+// World tool actions need the tool on the bar and equipped (crafting-29). Equipping toggles, so only once.
+void EquipAxe()
+{
+    conn.Reducers.SetHotbarSlot(9, (ushort)Item.StoneAxe);
+    if (axeEquipped) return;
+    conn.Reducers.EquipSlot(9);
+    axeEquipped = true;
+}
+
 void Craft(string processId, float score, Item? expect)
 {
+    if (Processes.Find(processId) is { Outcome: Outcome.Chop }) EquipAxe();
     uint before = expect is { } e ? CountOf(e) : 0;
     lastError = null;
     conn.Reducers.StartCraft(processId, score);

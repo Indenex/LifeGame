@@ -380,7 +380,7 @@ namespace LifeGame.Shared
             {
                 Id = "clay.lamp", Name = "Pinch a lamp", Doing = "Pinching a lamp", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay) },
-                Seconds = 6, Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 0.5f), Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
