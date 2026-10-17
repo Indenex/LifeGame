@@ -117,7 +117,7 @@ Gather(Item.Fiber, (kilnRun ? 12u : 4u) + 3 + Social.MarkerFiber);
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);
 int cell = 0;
-uint clayWanted = jarRun ? 70u : kilnRun ? 38u : potRun ? 12u : lampRun ? (tallowRun ? 12u : 4u) : 12u;
+uint clayWanted = jarRun ? 70u : kilnRun ? 38u : potRun ? 17u : lampRun ? (tallowRun ? 12u : 4u) : 12u;
 while (CountOf(Item.Clay) < clayWanted)
 {
     int cx = clayX + cell % 5 - 2, cz = clayZ + cell / 5 % 5 - 2;
@@ -827,7 +827,7 @@ int PotCheck()
     // Slip round the rim (ceramics-14): a band count other than one or two is refused; both wet pots
     // get two bands in a free colour that is clamped and snapped; each takes one clean clay; and the
     // slip rides on the same number as the maker, so it must survive the fire, pick-up and filling.
-    while (CountOf(Item.CleanClay) < 2 && CountOf(Item.Clay) > 0) Craft("clay.clean", 0, Item.CleanClay);
+    while (CountOf(Item.CleanClay) < 2 && CountOf(Item.Clay) >= 2) Craft("clay.clean", 0, Item.CleanClay);
     if (CountOf(Item.CleanClay) < 2) Log("Not enough clean clay for slip; slip not checked this run");
     else
     {
