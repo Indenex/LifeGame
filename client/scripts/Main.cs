@@ -373,6 +373,15 @@ public partial class Main : Node3D
         if (token != null) builder = builder.WithToken(token);
         conn = builder.Build();
         journal.Attach(conn, () => me.Position, terrain.HeightAt, hud.Note);
+        // A maker's mark carries 16 bits of the maker's id; this finds their name (ceramics-15).
+        ItemLook.MakerName = id => conn.Db.Player.Iter().FirstOrDefault(p => (p.PlayerId & 0xFFFFu) == id)?.Name;
+        ClayLook.MarkLookup = id =>
+        {
+            var m = conn.Db.PlayerMark.Iter().FirstOrDefault(r => (r.PlayerId & 0xFFFFu) == id);
+            int slot = m == null ? -1 : MakerStamp.SlotOf(m.Glyph);
+            if (m == null || slot < 0) return null;
+            return (slot, new Color(((m.Color >> 16) & 0xFF) / 255f, ((m.Color >> 8) & 0xFF) / 255f, (m.Color & 0xFF) / 255f));
+        };
 
         conn.Db.Player.OnInsert += (_, p) => OnPlayer(p);
         conn.Db.Player.OnUpdate += (_, _, p) => OnPlayer(p);
@@ -569,7 +578,7 @@ public partial class Main : Node3D
         if (items.Has(item.Id)) return;
         float yaw = item.Placed ? item.Yaw : Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
         var at = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
-        items.Add(item.Id, (Item)item.Item, new Transform3D(new Basis(Vector3.Up, yaw), at));
+        items.Add(item.Id, (Item)item.Item, new Transform3D(new Basis(Vector3.Up, yaw), at), item.Wear);
     }
 
     void RemoveItem(ulong id) => items.Remove(id);
