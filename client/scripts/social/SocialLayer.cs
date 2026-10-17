@@ -137,12 +137,24 @@ public partial class SocialLayer : Node
     }
 
     public Func<bool> HideChip = () => false;
+    const float ChipHoldAfterWaking = 4f;
+    bool wasMourning, chipSlow;
+    float chipHold;
 
     public override void _Process(double delta)
     {
         foreach (var marker in markers.Values) marker.Near(myPos);
         // Step aside while a full panel (journal, claim panel, menu) or the death card is up.
-        chipAlpha = Mathf.MoveToward(chipAlpha, Panels.Open() || HideChip() ? 0f : 1f, (float)delta * 6f);
+        // After the death card the chip waits a few seconds and drifts in, so waking reads calm.
+        bool mourning = HideChip();
+        if (wasMourning && !mourning) chipHold = ChipHoldAfterWaking;
+        wasMourning = mourning;
+        chipHold = Mathf.Max(chipHold - (float)delta, 0f);
+        bool hide = Panels.Open() || mourning || chipHold > 0f;
+        if (chipHold > 0f) chipSlow = true;
+        else if (chipAlpha >= 1f) chipSlow = false;
+        float rate = !hide && chipSlow ? 0.5f : 6f;
+        chipAlpha = Mathf.MoveToward(chipAlpha, hide ? 0f : 1f, (float)delta * rate);
         landChip.Modulate = new Color(1, 1, 1, chipAlpha);
         ProcessFighting((float)delta);
         landTimer -= (float)delta;
@@ -174,6 +186,10 @@ public partial class SocialLayer : Node
             if (marker == null) hud.Note("Walk up to a claim marker first");
             else if (!IsOwnerOrMember(marker)) hud.Note($"This marker belongs to {marker.OwnerName}");
             else panel.Open(marker, IsMine(marker));
+        }
+        else if (e.IsActionPressed("strike"))
+        {
+            StrikePressed();
         }
         else if (e.IsActionPressed("ui_cancel") && (panel.IsOpen || town.IsOpen))
         {

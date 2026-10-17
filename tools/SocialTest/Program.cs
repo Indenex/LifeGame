@@ -128,7 +128,7 @@ Console.WriteLine($"A gathered {a.Count(Item.Stick)} sticks, {a.Count(Item.Fiber
 
 // Markers are refused in the waking clearing.
 Walk(a, 2, 2);
-ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.ClaimMarker, 3, 2, 0), "clearing", "no claims in the waking clearing");
+ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.ClaimMarker, 3, 2, 0), "newcomers wake", "no claims in the waking clearing");
 
 // A lays out a marker like any structure and builds it; the claim starts when it stands.
 // Other checks share this database and may have built near here, so take the first

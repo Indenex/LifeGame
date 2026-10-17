@@ -194,6 +194,8 @@ public partial class Main : Node3D
         herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning || hud.Hotbar.ClickUsesHeld;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         herd.ClaimGoodsOpenAt = social.ClaimGoodsOpenAt;
+        social.StrikeBlocked = () => herd.Blocked();
+        social.Facing = () => herd.Facing();
         herd.ClaimStandingAt = social.ClaimStandingAt;
         AddChild(useKey);
         AddChild(new Hints());
