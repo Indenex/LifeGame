@@ -12,6 +12,7 @@ using SpacetimeDB.Types;
 
 // What to build: "both" (the default: lean-to, clay hut, basket, fence and gate), or one or more of
 // lean-to, clay-hut, basket, fence, brick-house, log-cabin separated by commas. CI runs two parts at once.
+ulong wakeHut = 0;
 string which = args.Length > 0 ? args[0] : "both";
 bool Wants(string part) => which == "both" ? part is "lean-to" or "clay-hut" or "basket" or "fence" or "coop" : which.Split(',').Contains(part);
 string uri = args.Length > 1 ? args[1] : "http://127.0.0.1:3000";
@@ -113,6 +114,7 @@ if (Wants("clay-hut"))
     LayMat(hut);
     UnstuckInHut(hut);
     BuildHearth(hut);
+    wakeHut = hut;
 }
 if (Wants("basket"))
     StoreInBasket(BuildTogether(StructureKind.Basket,
@@ -186,6 +188,9 @@ if (Wants("log-cabin"))
         });
     HangDoor(cabin);
 }
+
+// Last, because dying throws A out to the edge of the wilderness: waking on the chosen mat (survival-23).
+if (wakeHut != 0) WakeAfterDeath(wakeHut);
 
 Console.WriteLine($"All building checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 foreach (var bot in bots) bot.Conn.Disconnect();
@@ -572,6 +577,42 @@ void LayMat(ulong hut)
     WaitFor(() => b.Conn.Db.PlayerRest.PlayerId.Find(me) is null, 10, "A stands up again, seen by B");
 }
 
+// A has set the hut's mat as their waking place (LayMat). Dying wakes them on it; with the mat rolled up the
+// next death says the bed is gone and wakes them at the default place instead. Needs A to be an admin
+// (AdminDie), made through the CLI as the database owner, like CraftCheck's server calls.
+void WakeAfterDeath(ulong hut)
+{
+    Console.WriteLine("--- Waking place after a death");
+    string name = a.Conn.Db.Player.PlayerId.Find(a.MyId)!.Name;
+    var info = new ProcessStartInfo("spacetimedb-cli", new[] { "call", "--no-config", "--server", uri, db, "make_admin", $"\"{name}\"" })
+    {
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+    };
+    using (var p = Process.Start(info) ?? throw new Exception("could not start spacetimedb-cli"))
+    {
+        p.WaitForExit(60_000);
+        Check(p.ExitCode == 0, $"A was made an admin ({(p.ExitCode == 0 ? "-" : p.StandardError.ReadToEnd())})");
+    }
+    WaitFor(() => a.Conn.Db.MyAdmin.Iter().Any(), 10, "A to become an admin");
+
+    var laid = a.Conn.Db.SleepingMat.PlayerId.Find(a.MyId)!;
+    var point = a.Conn.Db.MyRespawnPoint.Iter().First();
+    a.Conn.Reducers.AdminDie();
+    WaitFor(() => a.Conn.Db.MyVitals.Iter().Any(v => v.WakeKind == RestSpots.WokeAtRestSpot), 10, "A to wake on their waking place");
+    var woke = a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId)!;
+    float off = MathF.Sqrt((woke.X - point.X) * (woke.X - point.X) + (woke.Z - point.Z) * (woke.Z - point.Z));
+    Check(off < 0.5f, $"A woke on the mat in the hut ({woke.X:F1}, {woke.Z:F1}), {off:F2} m from it");
+
+    a.Conn.Reducers.RollUpMat();
+    WaitFor(() => a.Conn.Db.SleepingMat.PlayerId.Find(a.MyId) is null, 10, "the mat to be rolled up");
+    a.Conn.Reducers.AdminDie();
+    WaitFor(() => a.Conn.Db.MyVitals.Iter().Any(v => v.WakeKind == RestSpots.WokeBedGone), 10, "A to wake without their bed");
+    Check(!a.Conn.Db.MyRespawnPoint.Iter().Any(), "the forgotten waking place is gone from the list");
+    var edge = a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId)!;
+    Check(MathF.Abs(edge.X - point.X) + MathF.Abs(edge.Z - point.Z) > 5f, $"A woke away from the hut ({edge.X:F1}, {edge.Z:F1})");
+}
+
 // A stands inside the finished hut (A is at the bed after LayMat) and asks to be moved out: the server
 // puts A on free ground within its search radius; a second try inside the cooldown is refused (bugfix-44).
 void UnstuckInHut(ulong hut)
@@ -692,6 +733,8 @@ sealed class Bot
                         "SELECT * FROM chopped_tree",
                         "SELECT * FROM clay_piece",
                         "SELECT * FROM my_inventory",
+                        "SELECT * FROM my_vitals",
+                        "SELECT * FROM my_admin",
                         "SELECT * FROM my_craft_job",
                         "SELECT * FROM claim",
                         "SELECT * FROM claim_member",
