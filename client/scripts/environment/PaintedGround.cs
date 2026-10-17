@@ -22,9 +22,10 @@ public static class PaintedGround
     // muted mid green each blade is tinted with, and the olive-yellow lit tip the
     // shader paints toward (it holds its own copies, in the band code).
     static readonly Color GrassMid = new(0.47f, 0.58f, 0.20f), GrassLit = new(0.81f, 0.79f, 0.44f);
-    // The ground under the carpet, a deep olive matching the blades' shaded base so the
-    // gaps read as shade (as in reference 02), and the pack's sandy path.
-    static readonly Color MeadowTop = new(0.35f, 0.41f, 0.17f), PathSand = new(0.70f, 0.58f, 0.38f);
+    // The ground under the carpet, the pack's warm yellow-green a shade darker than the
+    // blades, matching their shaded base so the carpet reads fully filled, and the
+    // pack's sandy path.
+    static readonly Color MeadowTop = new(0.50f, 0.57f, 0.22f), PathSand = new(0.70f, 0.58f, 0.38f);
 
     static Mesh? twig;
     static ShaderMaterial? grassMaterial;
@@ -57,7 +58,8 @@ public static class PaintedGround
     // the size they are first asked for, so these sizes are the ones Terrain uses.
     public static void Prewarm()
     {
-        _ = BroadTuft; _ = Twig; _ = GrassMaterial; _ = CardMaterial;
+        for (int i = 0; i < TuftVariants; i++) BroadTufts(i);
+        _ = Twig; _ = GrassMaterial; _ = CardMaterial;
         _ = PropMeshes.Stump; _ = Look.BarkSurface;
         for (int i = 0; i < 4; i++) Card(MushroomCards + i, 0.22f);
         for (int i = 0; i < 3; i++) Card(CloverCards + i, 0.3f);
@@ -71,29 +73,32 @@ public static class PaintedGround
 
     public static Mesh Twig => twig ??= BuildTwig();
 
-    // A square metre of the restyled grass: 64 blades in a jittered 8 x 8 grid like
-    // today's 100, but each a broad, arching leaf (full width for the lower half, then
+    // A square metre of the restyled grass: 100 blades in a jittered 10 x 10 grid and
+    // at the same heights as today's (Justin: shorter, denser), but each a broad, arching leaf (full width for the lower half, then
     // a tapered point that bends over) rather than a thin spike, as the pack's tufts
     // are drawn. Each blade's vertex shade varies a little, so neighbours read apart.
-    public static Mesh BroadTuft => broadTuft ??= BuildBroadTuft();
-    static Mesh? broadTuft;
+    public static Mesh BroadTuft => BroadTufts(0);
+    public const int TuftVariants = 3;
+    static readonly Mesh?[] broadTufts = new Mesh?[TuftVariants];
+    public static Mesh BroadTufts(int variant) => broadTufts[variant] ??= BuildBroadTuft(variant);
 
-    static Mesh BuildBroadTuft()
+    static Mesh BuildBroadTuft(int variant)
     {
+        uint v = (uint)variant * 40u;
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
-        const int grid = 8;
+        const int grid = 10;
         for (int gx = 0; gx < grid; gx++)
             for (int gz = 0; gz < grid; gz++)
             {
-                float px = (gx + 0.5f) / grid - 0.5f + (H(gx, gz, 620) - 0.5f) / grid;
-                float pz = (gz + 0.5f) / grid - 0.5f + (H(gx, gz, 621) - 0.5f) / grid;
-                float angle = H(gx, gz, 622) * Mathf.Pi;
-                float height = 0.34f + H(gx, gz, 623) * 0.34f;
-                float half = 0.035f + H(gx, gz, 624) * 0.025f;
+                float px = (gx + 0.5f) / grid - 0.5f + (H(gx, gz, 620u + v) - 0.5f) / grid;
+                float pz = (gz + 0.5f) / grid - 0.5f + (H(gx, gz, 621u + v) - 0.5f) / grid;
+                float angle = H(gx, gz, 622u + v) * Mathf.Pi;
+                float height = 0.2f + H(gx, gz, 623u + v) * 0.22f;
+                float half = 0.032f + H(gx, gz, 624u + v) * 0.022f;
                 var side = new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle)) * half;
-                var lean = new Vector3(H(gx, gz, 625) - 0.5f, 0, H(gx, gz, 626) - 0.5f).Normalized() * (0.08f + H(gx, gz, 627) * 0.16f);
-                var shade = Colors.White.Darkened(H(gx, gz, 628) * 0.18f);
+                var lean = new Vector3(H(gx, gz, 625u + v) - 0.5f, 0, H(gx, gz, 626u + v) - 0.5f).Normalized() * (0.08f + H(gx, gz, 627u + v) * 0.16f);
+                var shade = Colors.White.Darkened(H(gx, gz, 628u + v) * 0.32f);
                 var root = new Vector3(px, -0.02f, pz);
                 var mid = root + lean * 0.35f + Vector3.Up * height * 0.55f;
                 var tip = root + lean + Vector3.Up * height * 0.9f;
@@ -119,7 +124,7 @@ public static class PaintedGround
     // The restyled grass (the same tuft mesh and density as today's).
     public static ShaderMaterial GrassMaterial => grassMaterial ??= MakeGrassMaterial();
 
-    // The ground colour: today's tile colour pulled half way to the deep olive (still
+    // The ground colour: today's tile colour pulled half way to the warm yellow-green (still
     // browner under trees and on the heath), with the deer trails worn to sandy paths.
     public static Color Ground(Color tile, float trail) =>
         tile.Lerp(MeadowTop, 0.5f).Lerp(PathSand, Mathf.SmoothStep(0.25f, 0.7f, trail));
@@ -314,8 +319,8 @@ public static class PaintedGround
         void fragment() {
             // The base matches the ground between the blades (PaintedGround.Ground), so a
             // patch without a tuft never shows as a square.
-            vec3 base = tint * vec3(0.5, 0.52, 0.6);
-            vec3 lit = mix(tint * vec3(1.15, 1.1, 0.9), pow(vec3(0.81, 0.79, 0.44), vec3(2.2)), 0.35 + 0.2 * patch);
+            vec3 base = tint * vec3(0.58, 0.6, 0.66);
+            vec3 lit = mix(tint * vec3(1.2, 1.12, 0.85), pow(vec3(0.84, 0.80, 0.40), vec3(2.2)), 0.45 + 0.2 * patch);
             float low = 0.26 + 0.1 * patch, high = 0.68 + 0.12 * patch;
             vec3 color = mix(base, tint, smoothstep(low - 0.04, low + 0.04, tip));
             color = mix(color, lit, smoothstep(high - 0.04, high + 0.04, tip));

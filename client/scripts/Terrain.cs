@@ -450,13 +450,18 @@ public partial class Terrain : Node3D
                 bool grassy = top >= Look.WaterLevel + 0.2f && World.ClayScore(x, z) < 0.7f;
                 // Under the trees the grass thins and stays short; it is short on the
                 // heath and gives way to moss on wet ground.
-                if (grassy && tufts != null && Hash01(x, z, 40) < 0.93f - 0.5f * density - 0.5f * wet - 0.6f * trail)
+                // The art-reference prototype covers every grassy cell but the paths
+                // (Justin: no open patches); woods and wet ground vary its height instead.
+                bool tufted = PaintedGround.On ? trail < 0.5f : Hash01(x, z, 40) < 0.93f - 0.5f * density - 0.5f * wet - 0.6f * trail;
+                if (grassy && tufts != null && tufted)
                 {
                     // Shear the patch onto the slope so every blade stays rooted.
                     float sx = (TileHeight(x + 1, z) - TileHeight(x - 1, z)) * 0.5f;
                     float sz = (TileHeight(x, z + 1) - TileHeight(x, z - 1)) * 0.5f;
                     var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, (0.75f + Hash01(x, z, 42) * 0.5f) * (1f - 0.35f * density) * (1f - 0.45f * heath) * (1f - 0.5f * trail), 0), new Vector3(0, sz, 1));
                     var g = new Transform3D(slope, new Vector3(x, top, z));
+                    // Painted tufts turn per tile, so the same square never repeats in rows.
+                    if (PaintedGround.On) g = new Transform3D(slope * new Basis(Vector3.Up, Hash01(x, z, 46) * Mathf.Tau), g.Origin);
                     // The art-reference prototype tints the blades in the pack palette.
                     var tuftColor = PaintedGround.On
                         ? PaintedGround.Grass(TileColor(x, z, top, cleared: false, painted: false), World.Noise(x, z, 14f, 31))
@@ -506,7 +511,10 @@ public partial class Terrain : Node3D
         {
             // Justin: the old dense blade carpet stays the grass, restyled in painted
             // tone bands; the pack's cards are only sparse accents in it.
-            if (tufts != null) data.Add(PaintedGround.BroadTuft, tufts, PaintedGround.GrassMaterial, castShadow: false);
+            if (tufts != null)
+                for (int v = 0; v < PaintedGround.TuftVariants; v++)
+                    data.Add(PaintedGround.BroadTufts(v), tufts.FindAll(t => Variant(Mathf.RoundToInt(t.Item1.Origin.X), Mathf.RoundToInt(t.Item1.Origin.Z), 47, PaintedGround.TuftVariants) == v),
+                        PaintedGround.GrassMaterial, castShadow: false);
             data.Add(PaintedGround.Card(PaintedGround.FernCards, 0.75f), PaintedGround.Whiten(ferns), PaintedGround.CardMaterial, castShadow: false);
             data.Add(PaintedGround.Card(PaintedGround.FlowerCards, 0.35f), PaintedGround.Whiten(flowers), PaintedGround.CardMaterial, castShadow: false);
         }

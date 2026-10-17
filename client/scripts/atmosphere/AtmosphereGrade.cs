@@ -70,13 +70,18 @@ public partial class Atmosphere
         // Deeper shade: less fill light and stronger contact shadows, so darks hold their
         // value instead of going milky (Environment's env-13 comparison with reference 02).
         env.AmbientLightEnergy *= 1f - 0.25f * grade;
-        env.SsaoIntensity = 1.8f + 0.8f * grade;
+        env.SsaoIntensity = 1.8f + 1.2f * grade;
+        env.SsaoRadius = 1.6f + 0.6f * grade;
         // Clear air near the camera by day: thinner distance fog and haze, keeping the
         // thicker air at dawn and dusk for the light rays.
         float dayClear = grade * daylight * (1f - lowSun);
         env.FogDensity *= 1f - 0.4f * dayClear;
         env.VolumetricFogDensity *= 1f - 0.5f * dayClear;
         env.VolumetricFogAmbientInject = 0.4f - 0.25f * grade;
+        // The distance fades warm, as in reference 02, rather than to the cool sky: the fog
+        // takes less of the sky's colour and leans toward a soft warm beige by day.
+        env.FogAerialPerspective = 0.5f - 0.3f * grade;
+        env.FogLightColor = env.FogLightColor.Lerp(new Color(0.78f, 0.72f, 0.60f) * (0.6f + 0.4f * daylight), 0.35f * grade * daylight);
         // Gentle bloom: a softer threshold so fire and bright light glow, swelling at low sun.
         env.GlowIntensity += 0.15f * grade + 0.3f * lowSun;
         env.GlowBloom = 0.08f + 0.06f * grade + 0.1f * lowSun;
