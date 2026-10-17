@@ -1,8 +1,8 @@
-# Tool work today on main: chopping the nearest tree with a stone axe until it falls (3 logs).
-# Tree at (14.2,-2.0); the player is moved next to it by SQL. 12 fps movie.
+# Tree fall (env-22, #537): chop the pine at (14.2,-2.0) with a stone axe until it falls (3 logs), then let it lie and sink
+# and show the stump. The player is moved next to it by SQL. 12 fps movie, camera a little back so the whole tree shows.
 client-as-puppet
 client-movie 12
-client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.2 --debug-position=13,-2 --render-cam=4.5,1.8,35,1.6
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.2 --debug-position=13,-2 --render-cam=6,2.2,35,2
 sql UPDATE player_pos SET x = 13.0, z = -2.0, chunk_x = 0, chunk_z = -1
 frames 60
 give 10 1 60
@@ -10,5 +10,6 @@ give 5 4 50
 frames +12
 mark chop-start
 craftloop chop.log +180
+frames +240
 mark chop-end
-frames +36
+frames +12
