@@ -1,7 +1,7 @@
-From 9a506da41537ae1462eb6cf31a1d8e77805644cf Mon Sep 17 00:00:00 2001
+From 9c01eeec73c5fd0d085f4590f804ae8f0ec827d1 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sat, 17 Oct 2026 08:02:42 +0000
-Subject: [PATCH 5/5] atmos-shadows-1: default Medium; measurements in the
+Subject: [PATCH 5/7] atmos-shadows-1: default Medium; measurements in the
  ticket
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

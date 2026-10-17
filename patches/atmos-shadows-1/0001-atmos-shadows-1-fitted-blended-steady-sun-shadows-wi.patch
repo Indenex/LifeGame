@@ -1,7 +1,7 @@
-From 3577a36696bd814a58afc07f8d5c1cb0293d3c6a Mon Sep 17 00:00:00 2001
+From 9040a90f9df16a22068d606a6a3b9f7091b751cd Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sat, 17 Oct 2026 06:51:46 +0000
-Subject: [PATCH 1/5] atmos-shadows-1: fitted, blended, steady sun shadows with
+Subject: [PATCH 1/7] atmos-shadows-1: fitted, blended, steady sun shadows with
  a quality setting
 
 - SunShadows fits the 4 cascades to the follow camera (first ends just past the player),
@@ -15,12 +15,12 @@ Claude-Session: https://claude.ai/code/session_017Weex8fujB3VFsrpg84jEP
 ---
  client/scripts/atmosphere/Atmosphere.cs |   4 +-
  client/scripts/atmosphere/SunShadows.cs | 119 ++++++++++++++++++++++++
- client/scripts/ui/OptionsPage.cs        |  12 +++
- 3 files changed, 134 insertions(+), 1 deletion(-)
+ client/scripts/ui/OptionsPage.cs        |  11 +++
+ 3 files changed, 133 insertions(+), 1 deletion(-)
  create mode 100644 client/scripts/atmosphere/SunShadows.cs
 
 diff --git a/client/scripts/atmosphere/Atmosphere.cs b/client/scripts/atmosphere/Atmosphere.cs
-index 85c03deb..94a9816b 100644
+index 28467c8b..68425101 100644
 --- a/client/scripts/atmosphere/Atmosphere.cs
 +++ b/client/scripts/atmosphere/Atmosphere.cs
 @@ -113,6 +113,7 @@ public partial class Atmosphere : Node3D
@@ -31,7 +31,7 @@ index 85c03deb..94a9816b 100644
  
          AddChild(rain);
          AddChild(fireflies);
-@@ -405,7 +406,8 @@ public partial class Atmosphere : Node3D
+@@ -408,7 +409,8 @@ public partial class Atmosphere : Node3D
          float moonElevation = 16f + Mathf.Max(-sunHeight, 0f) * 32f;
          Vector3 sunDir = Toward(sunHeight * 55f, azimuth), moonDir = Toward(moonElevation, azimuth + 180f);
          float elevation = Mathf.Max(isDay ? sunHeight * 55f : moonElevation, 3f);
@@ -167,21 +167,21 @@ index 00000000..825f4089
 +        0f);
 +}
 diff --git a/client/scripts/ui/OptionsPage.cs b/client/scripts/ui/OptionsPage.cs
-index 7b41f27e..eb85dfd3 100644
+index 230a8dd3..08514355 100644
 --- a/client/scripts/ui/OptionsPage.cs
 +++ b/client/scripts/ui/OptionsPage.cs
-@@ -29,6 +29,7 @@ public partial class OptionsPage : Control
-     readonly Label[] percents = new Label[Levels.Length];
+@@ -30,6 +30,7 @@ public partial class OptionsPage : Control
      Button music = null!;
      Button lightRays = null!;
+     Button softGlow = null!, vignette = null!;
 +    Button shadows = null!;
      HSlider view = null!;
      Button markButton = null!;
      Label viewName = null!;
-@@ -100,6 +101,14 @@ public partial class OptionsPage : Control
+@@ -138,6 +139,14 @@ public partial class OptionsPage : Control
          });
-         lightRays.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
-         column.AddChild(lightRays);
+         reflections.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+         column.AddChild(reflections);
 +        // Sun shadow quality (SunShadows): Low for slower PCs.
 +        shadows = ControlsPage.TextButton(ShadowsText(), () =>
 +        {
@@ -193,19 +193,18 @@ index 7b41f27e..eb85dfd3 100644
  
          // How you look (ui-21): the same picker as at first join.
          var lookButton = ControlsPage.TextButton("Your look", () => LookPicker.OpenFromMenu?.Invoke());
-@@ -118,6 +127,8 @@ public partial class OptionsPage : Control
+@@ -158,6 +167,7 @@ public partial class OptionsPage : Control
  
-     static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
- 
+     static string ReflectText() => $"Water reflections: {new[] { "Off", "Normal", "High" }[Atmosphere.WaterReflections]}";
+     static string OnOff(string name, bool on) => $"{name}: {(on ? "On" : "Off")}";
 +    static string ShadowsText() => $"Shadows: {SunShadows.Names[(int)SunShadows.Setting]}";
-+
+ 
      static string RaysText() => $"Light rays: {new[] { "Off", "Normal", "High" }[Atmosphere.GodRays]}";
  
-     public void Open()
-@@ -132,6 +143,7 @@ public partial class OptionsPage : Control
-         view.SetValueNoSignal((int)ViewDistance.Setting);
-         viewName.Text = ViewDistance.Names[(int)ViewDistance.Setting];
+@@ -175,6 +185,7 @@ public partial class OptionsPage : Control
          lightRays.Text = RaysText();
+         softGlow.Text = OnOff("Soft glow", Atmosphere.SoftGlow);
+         vignette.Text = OnOff("Vignette", Atmosphere.Vignette);
 +        shadows.Text = ShadowsText();
          Visible = true;
      }

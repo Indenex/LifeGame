@@ -1,7 +1,7 @@
-From e4dea7de81350ac17bbb7d4b47100f82affd984d Mon Sep 17 00:00:00 2001
+From aeef79580e7b47e8a61a1e119dd96326905625c9 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sat, 17 Oct 2026 07:00:46 +0000
-Subject: [PATCH 3/5] atmos-shadows-1: --shadows= override for renders and
+Subject: [PATCH 3/7] atmos-shadows-1: --shadows= override for renders and
  benchmarks
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

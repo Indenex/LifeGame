@@ -1,0 +1,70 @@
+From 6618f859f0e6201b25184968c27fadc09669b9e9 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 17 Oct 2026 08:05:08 +0000
+Subject: [PATCH 6/7] atmos-shadows-1: cosy shadows (D-313): softer, rounder
+ penumbra; bias 0.05 / 1.5
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_017Weex8fujB3VFsrpg84jEP
+---
+ client/scripts/atmosphere/SunShadows.cs | 23 +++++++++++++++++------
+ 1 file changed, 17 insertions(+), 6 deletions(-)
+
+diff --git a/client/scripts/atmosphere/SunShadows.cs b/client/scripts/atmosphere/SunShadows.cs
+index 3fe3b5c5..77374bfc 100644
+--- a/client/scripts/atmosphere/SunShadows.cs
++++ b/client/scripts/atmosphere/SunShadows.cs
+@@ -3,7 +3,8 @@ using Godot;
+ 
+ namespace LifeGame;
+ 
+-// Steadier, crisper sun shadows (atmos-shadows-1, after the Unity spike, unity-1).
++// Steady, soft sun shadows (atmos-shadows-1, after the Unity spike, unity-1; cosy
++// look D-313: soft, rounded, no harsh edges, never shimmering).
+ //
+ // - The four cascades are fitted to the follow camera: the first ends just past the
+ //   player, so the player and the ground round them get the sharpest shadow map
+@@ -13,8 +14,11 @@ namespace LifeGame;
+ // - The sun's shadow direction moves in small steps instead of every frame. Godot
+ //   already snaps the cascades to whole texels as the camera moves; a sun that turns
+ //   a little every frame defeats that and makes every edge crawl.
+-// - Lower depth bias and a moderate normal bias: no acne on the painted surfaces,
+-//   and shadows that stay attached to the feet of trees and the player.
++// - A wider, softer penumbra (D-313): shadow edges round off gently instead of
++//   cutting hard; the shade's colour comes from Atmosphere's ambient.
++// - Depth and normal bias a little under Godot's defaults: shadows stay attached
++//   to the feet of trees and the player, with margin against acne where the
++//   painted shader's wrapped light reaches past the terminator.
+ // - Shadows quality (Options page): Low, Medium, High. One setting picks the atlas size,
+ //   the cascades, the reach and the softness filter.
+ public partial class SunShadows : Node
+@@ -61,6 +65,8 @@ public partial class SunShadows : Node
+     // length that is one small step about every 1.5 s; a 10 m tree's shadow tip moves
+     // under 2 cm, within one texel of the nearest cascade.
+     public const float SunStepDegrees = 0.1f;
++    // The sun's apparent size (degrees), which sets how wide the soft shadow edge is.
++    const float PenumbraDegrees = 1.1f;
+     // Splits refit once the zoom settles this many metres from where they were fitted.
+     const float RefitMetres = 1.5f;
+ 
+@@ -77,9 +83,14 @@ public partial class SunShadows : Node
+         sun.DirectionalShadowBlendSplits = true;
+         sun.DirectionalShadowFadeStart = 0.85f;
+         // Godot's defaults (0.1 depth, 2.0 normal) float the shadows off the feet of
+-        // trees; these keep them attached with no acne on the painted ground.
+-        sun.ShadowBias = 0.03f;
+-        sun.ShadowNormalBias = 1.2f;
++        // trees. Lower holds them on; not much lower, or the wrapped light past the
++        // terminator ((N.L + 0.3) / 1.3) shows acne at a low sun (Atmosphere).
++        sun.ShadowBias = 0.05f;
++        sun.ShadowNormalBias = 1.5f;
++        // Soft, rounded edges for the cosy look (D-313): a wider sun disc for the
++        // penumbra and a little extra blur.
++        sun.LightAngularDistance = PenumbraDegrees;
++        sun.ShadowBlur = 1.5f;
+         ApplyLevel();
+     }
+ 
+-- 
+2.43.0
+

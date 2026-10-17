@@ -1,7 +1,7 @@
-From 66b9eeb65113465ec4d09c38c6a6e649e834a5fe Mon Sep 17 00:00:00 2001
+From 7c3dd8bcc4ec6cd342309699dba566d2cb9b97ed Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sat, 17 Oct 2026 06:53:55 +0000
-Subject: [PATCH 2/5] atmos-shadows-1: ticket
+Subject: [PATCH 2/7] atmos-shadows-1: ticket
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_017Weex8fujB3VFsrpg84jEP

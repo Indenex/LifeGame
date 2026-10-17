@@ -1,7 +1,7 @@
-From 6b624d5c76b6e9966b2883244ded4ed9fc97dbcf Mon Sep 17 00:00:00 2001
+From dd2e24d0111c47119322bbfdf96e58adade754cf Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sat, 17 Oct 2026 07:46:43 +0000
-Subject: [PATCH 4/5] atmos-shadows-1: per-level cascade fit; Medium kept tight
+Subject: [PATCH 4/7] atmos-shadows-1: per-level cascade fit; Medium kept tight
  (50 m) to hold its draw calls
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
