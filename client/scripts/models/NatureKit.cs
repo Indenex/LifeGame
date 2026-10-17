@@ -230,6 +230,12 @@ public static class NatureKit
     // The village kit's vines (MI_Vine: its two greens).
     static readonly LeafLook VineLeaves = new(new(0.423f, 0.467f, 0.006f), new(0.257f, 0.398f, 0f), new(0.45f, 0.6f, 0f), 1.5f, 0.1f, false);
 
+    const bool TreesTextured = true;
+
+    static bool IsTreeModel(string model) =>
+        model.StartsWith("CommonTree") || model.StartsWith("Pine") || model.StartsWith("GiantPine")
+        || model.StartsWith("Birch") || model.StartsWith("TwistedTree") || model.StartsWith("DeadTree");
+
     static LeafLook? Leaf(string model) =>
         model.StartsWith("CommonTree") || model.StartsWith("Bush_Common") ? CommonLeaves
         : model.StartsWith("GiantPine") ? GiantPineLeaves
@@ -274,6 +280,15 @@ public static class NatureKit
             Kind.Grass => model.StartsWith("Grass_Wide") ? "wide" : model.StartsWith("Grass_Wispy") ? "wispy" : "common",
             _ => kind.ToString(),
         };
+        // Trees wear the kit's own shading (Justin, 2026-10-17: "I like the middle row better
+        // for trees"): plain light rather than our bands and violet shade, the leaves' own
+        // normals, and only our wind, autumn and day/night on top. Rocks and plants stay blended.
+        bool tree = kind == Kind.Bark || kind == Kind.Leaves && IsTreeModel(model);
+        if (tree) look += "_tree";
+        // The row he picked is the kit's models with their painted textures as they come
+        // (its Standard materials). The kit's Godot shaders paint leaves one flat, lighter
+        // green instead (LeafLook); TreesTextured = false switches to that.
+        bool textured = tree && TreesTextured;
         lock (Materials)
         {
             if (Materials.TryGetValue((texture, look + name), out var done)) return done;
@@ -284,8 +299,8 @@ public static class NatureKit
             m.SetShaderParameter("albedo", name.StartsWith("MI_WoodTrim") ? new Color(0.8f, 0.7f, 0.62f) : standard?.AlbedoColor ?? Colors.White);
             bool cut = kind is Kind.Leaves or Kind.Plant or Kind.Flower;
             m.SetShaderParameter("cutout", cut ? 0.5f : 0f);
-            m.SetShaderParameter("mode", kind switch { Kind.Leaves => 1, Kind.Grass => 2, Kind.Bark => 3, Kind.Plant or Kind.Flower => 4, _ => 0 });
-            if (leaf is { } l)
+            m.SetShaderParameter("mode", textured ? 0 : kind switch { Kind.Leaves => 1, Kind.Grass => 2, Kind.Bark => 3, Kind.Plant or Kind.Flower => 4, _ => 0 });
+            if (leaf is { } l && !textured)
             {
                 m.SetShaderParameter("leaf_top", l.Top);
                 m.SetShaderParameter("leaf_low", l.Low);
@@ -318,7 +333,8 @@ public static class NatureKit
             m.SetShaderParameter("sway_height", kind == Kind.Leaves ? 6f : 0.6f);
             m.SetShaderParameter("autumn", kind == Kind.Leaves ? 1f : 0f);
             // Leaf cards: the crown is lit as one soft mass rather than card by card.
-            m.SetShaderParameter("crown_normals", kind == Kind.Leaves ? 1f : 0f);
+            m.SetShaderParameter("crown_normals", kind == Kind.Leaves && !tree ? 1f : 0f);
+            m.SetShaderParameter("kit_light", tree);
             m.SetShaderParameter("rim", kind is Kind.Rock ? 1f : 0f);
             // Rocks take half the hue of the world's stone tint and each one's own darkening.
             m.SetShaderParameter("tint_blend", kind is Kind.Rock ? 0.5f : 0f);
@@ -385,6 +401,7 @@ public static class NatureKit
         uniform float tint_ref = 0.6;
         uniform vec3 shade_tint : source_color = vec3(0.66, 0.64, 0.8);
         uniform bool see_through = false;
+        uniform bool kit_light = false;
         uniform float fade_size = 1.0;
         global uniform vec3 player_position;
         global uniform vec3 view_camera_position;
@@ -525,11 +542,16 @@ public static class NatureKit
         }
 
         void light() {
+            if (kit_light) {
+                // The kit's own: plain Lambert light, as its M_Leaves and M_Bark have.
+                DIFFUSE_LIGHT += LIGHT_COLOR * ATTENUATION * clamp(dot(NORMAL, LIGHT), 0.0, 1.0) / PI;
+            } else {
             float shade = 1.0;
             float dab = 0.5;
         """ + Painted.Light + """
             if (rim > 0.0) {
         """ + Painted.Rim + """
+            }
             }
             if (mode == 1 && LIGHT_IS_DIRECTIONAL) {
                 // The kit's light through the leaves at the crown's edges, as sunlight rather than

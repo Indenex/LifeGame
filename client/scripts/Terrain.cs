@@ -684,7 +684,7 @@ public partial class Terrain : Node3D
             ghosts.AddChild(new MultiMeshInstance3D { Multimesh = mm, MaterialOverride = ghost, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, VisibilityRangeBegin = range.Begin, VisibilityRangeEnd = range.End });
         }
         // A kit tree (naturekit-1) carries its materials on its surfaces, so its ghost is a
-        // see-through copy of the mesh over the same instances.
+        // see-through copy of the mesh over a copy of the same instances.
         else if (range.Begin == 0f && material == null && NatureKit.GhostOf(mesh) is { } ghostMesh)
         {
             if (root.GetNodeOrNull<Node3D>(GhostsName) is not { } ghosts)
