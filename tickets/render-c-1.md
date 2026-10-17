@@ -20,6 +20,7 @@ Done and sent to the PM: water before/after #517 (renders/water-before-2d9e6e2-*
 2. Animation's three clips from ONE build, branch claude/anim-render (e76b914c, anim-12 to 16 merged; render-only, never push to it): anim-render-b (emotes 24-27 + eat, for Justin's morning), anim-render-c (fire sit, lie, stand), anim-render-a (idle fidgets, walk hop, jumps). Scenes in tools/render/scenes/anim-render-*.txt. Send to the PM and copy Animation (session_019roNRWQBPw4ozNLDhzseig)
 3. anim-11 equip/hold in hand (main): scenes/anim-11-equip.txt; copy Animation
 4. smoke signal #524 (c1fa9240): near, far; copy Atmosphere
+5. atmos-shadows-1 (PR #667 claude/atmos-shadows-1 4e571073; before = main efc00f3b), request from session_014MSnDGYpnGPmnSQ4CjhF7c (Atmosphere): 4 clips (main noon, branch noon, main dusk ~0.725, branch dusk), ~10 s walking past trees in the default follow camera, same path and camera, --shadows=medium on the branch; look at shadow edges near the player and under trees; send to the PM. Queued last; asked them to ask the PM for priority.
 Dropped: painted trees, tree fall, painted items, chibi, anim-10, anim-9 idle, water rain/no-reflect/stream, crafting-29 equip, painted-2 walk-past, anim-14 face close-up (anim-render-b shows faces 3/4). env-30 ambient life went to Render A. Scenes for dropped items exist in tools/render/scenes.
 
 ## Progress log
