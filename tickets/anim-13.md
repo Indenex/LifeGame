@@ -3,7 +3,7 @@ Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
 Status: in_progress
 Branch: claude/anim-13 (stacked on claude/anim-12, #600)
-PR: (not yet)
+PR: #613
 
 ## Goal
 Justin's cutesy picks #15 and #17, kept gentle (D-313).
@@ -23,9 +23,10 @@ Everything is client-side from state every client already has (positions, the fi
 
 ## Progress log
 - 2026-10-17 07:40: built; client builds.
+- 2026-10-17 07:50: pushed e2a67c28, opened #613 (base claude/anim-12); Render C clip requested.
 
 ## Open questions / blockers
 - #16 (blinking and expressions) needs switchable face parts from Modeling. I proposed `PlayerModel.SetFace(figure, Face {Open, Closed, Happy, Sleepy})` to Modeling (session_01JKX3FNjkrEkAqoTaFJiXAm); waiting on their answer. That will be anim-14.
 
 ## Next step
-Push, open the PR (base claude/anim-12), and request a Render C clip: idle chibi near a fire and near another player, walking, a jump landing.
+Wait for #600 to merge, retarget #613 to main, send the green sha; fix anything the clip shows.
