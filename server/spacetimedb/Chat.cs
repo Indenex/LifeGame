@@ -140,6 +140,13 @@ public static partial class Module
         if (state is null) ctx.Db.ChatState.Insert(next);
         else ctx.Db.ChatState.PlayerId.Update(next);
 
+        // ui-38: "/g hi" goes to your group only, wherever they are (Groups.cs).
+        if (Groups.IsGroupLine(text))
+        {
+            string body = Groups.GroupBody(text);
+            if (body.Length > 0) SayToGroup(ctx, player, "/g " + body);
+            return;
+        }
         Deliver(ctx, player.PlayerId, player.Name, text, pos.X, pos.Z, Social.RangeOf(Social.VoiceOf(text)));
     }
 

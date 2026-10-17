@@ -56,6 +56,7 @@ public partial class Main : Node3D
     readonly BuildMenu buildMenu = new();
     readonly MarkPicker markPicker = new();
     readonly Placing placing = new();
+    readonly GroupView groupView = new();
     readonly LookPicker lookPicker = new();
     bool spawned;
     Vector3 velocity;
@@ -198,9 +199,15 @@ public partial class Main : Node3D
             AskTrade = id => conn?.Reducers.AskTrade(id),
             AnswerTrade = yes => trade.Link.Answer(yes),
             InviteToTown = id => conn?.Reducers.InviteToTown(id),
+            InviteToGroup = id => conn?.Reducers.InviteToGroup(id),
+            JoinGroup = id => { if (groupView.Incoming is { } i && i.FromId == id) groupView.Answer(i, true); },
             OpenChat = social.OpenChat,
         };
         AddChild(playerMenu);
+        // ui-38: your group's members, and the invitation waiting for you.
+        groupView.AvatarOf = id => others.GetValueOrDefault(id);
+        groupView.MyId = () => myId;
+        AddChild(groupView);
         var cameraDrag = new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing };
         cameraDrag.Clicked += playerMenu.Clicked;
         AddChild(cameraDrag);
@@ -427,6 +434,7 @@ public partial class Main : Node3D
         conn.OnUnhandledReducerError += (_, e) => { Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
         Use.Busy = () => crafting.Working;
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
+        groupView.Attach(conn);
         trade.Attach(new ServerTradeLink(conn, () => myId));
         admin.Attach(conn);
         equipment.Attach(new ServerEquipLink(conn));
