@@ -74,6 +74,9 @@ public static class Look
         // the fog colour (Atmosphere) over its outer quarter.
         Add("far_land_radius", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("fog_tint", RenderingServer.GlobalShaderParameterType.Color, new Color(0.62f, 0.68f, 0.70f));
+        // How much the ground lifts toward the grass carpet's colour past where the
+        // tufts fade (30 to 48 m); (1, 1, 1) is none. Environment's painted ground sets it.
+        Add("ground_far_lift", RenderingServer.GlobalShaderParameterType.Vec3, Vector3.One);
     }
 
     // Seconds since the game started (from 1), shared with the shaders as
@@ -95,6 +98,7 @@ public static class Look
     static ShaderMaterial WithPuddles(ShaderMaterial material)
     {
         material.SetShaderParameter("puddles_ok", 1f);
+        material.SetShaderParameter("ground_lift_ok", 1f);
         return material;
     }
     public static ShaderMaterial BarkSurface => bark ??= Make(0f, 1f, detailScale: 2.0f, bump: 1.2f, cavity: 0.3f, stretch: new Vector3(4f, 0.35f, 4f));
@@ -287,6 +291,7 @@ public static class Look
         // How far the distant land reaches round the player (0 when off), and the
         // colour of the fog it melts into at its rim.
         global uniform float far_land_radius;
+        global uniform vec3 ground_far_lift;
         global uniform vec3 fog_tint;
         // The season (Atmosphere, D-099): warmth -1 deep winter to 1 high summer,
         // autumn 0 green to 1 leaves fully turned, snow lying on the ground and
@@ -344,6 +349,8 @@ public static class Look
             uniform bool see_through = false;
             // 1 on the ground material only: where puddles may gather after rain.
             uniform float puddles_ok = 0.0;
+            // 1 on the ground material only: lifted toward the grass colour far off.
+            uniform float ground_lift_ok = 0.0;
             global uniform vec3 player_position;
             global uniform vec3 view_camera_position;
 
@@ -496,6 +503,10 @@ public static class Look
                     wet = max(wet, puddle);
                 }
                 ALBEDO = clamp(color, 0.0, 1.0);
+                // Past where the grass tufts fade, the bare ground takes on the
+                // carpet's colour, so far meadows read as grass (Environment).
+                if (ground_lift_ok > 0.5)
+                    ALBEDO = clamp(ALBEDO * mix(vec3(1.0), ground_far_lift, smoothstep(30.0, 48.0, distance(world_pos.xz, player_position.xz))), 0.0, 1.0);
                 shade = cloud_shadow(world_pos);
 
                 vec3 dpdx = dFdx(VERTEX), dpdy = dFdy(VERTEX);

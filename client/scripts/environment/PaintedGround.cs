@@ -21,11 +21,12 @@ public static class PaintedGround
     // The pack's grass tones (Modeling's variant D, from the Golden Skull tiles): the
     // muted mid green each blade is tinted with, and the olive-yellow lit tip the
     // shader paints toward (it holds its own copies, in the band code).
-    static readonly Color GrassMid = new(0.47f, 0.58f, 0.20f), GrassLit = new(0.81f, 0.79f, 0.44f);
+    static readonly Color GrassMid = new(0.48f, 0.54f, 0.24f), GrassLit = new(0.78f, 0.76f, 0.44f);
     // The ground under the carpet, the pack's warm yellow-green a shade darker than the
     // blades, matching their shaded base so the carpet reads fully filled, and the
     // pack's sandy path.
-    static readonly Color MeadowTop = new(0.50f, 0.57f, 0.22f), PathSand = new(0.70f, 0.58f, 0.38f);
+    public static readonly Color MeadowTop = new(0.44f, 0.49f, 0.22f);
+    static readonly Color PathSand = new(0.70f, 0.58f, 0.38f);
 
     static Mesh? twig;
     static ShaderMaterial? grassMaterial;
@@ -59,6 +60,8 @@ public static class PaintedGround
     public static void Prewarm()
     {
         for (int i = 0; i < TuftVariants; i++) BroadTufts(i);
+        // Far ground lifts toward the carpet's colour past where the tufts fade (Look).
+        RenderingServer.GlobalShaderParameterSet("ground_far_lift", new Vector3(1.18f, 1.14f, 1.02f));
         _ = Twig; _ = GrassMaterial; _ = CardMaterial;
         _ = PropMeshes.Stump; _ = Look.BarkSurface;
         for (int i = 0; i < 4; i++) Card(MushroomCards + i, 0.22f);
@@ -319,8 +322,8 @@ public static class PaintedGround
         void fragment() {
             // The base matches the ground between the blades (PaintedGround.Ground), so a
             // patch without a tuft never shows as a square.
-            vec3 base = tint * vec3(0.58, 0.6, 0.66);
-            vec3 lit = mix(tint * vec3(1.2, 1.12, 0.85), pow(vec3(0.84, 0.80, 0.40), vec3(2.2)), 0.45 + 0.2 * patch);
+            vec3 base = tint * vec3(0.52, 0.54, 0.62);
+            vec3 lit = mix(tint * vec3(1.15, 1.1, 0.9), pow(vec3(0.78, 0.76, 0.44), vec3(2.2)), 0.4 + 0.2 * patch);
             float low = 0.26 + 0.1 * patch, high = 0.68 + 0.12 * patch;
             vec3 color = mix(base, tint, smoothstep(low - 0.04, low + 0.04, tip));
             color = mix(color, lit, smoothstep(high - 0.04, high + 0.04, tip));
