@@ -315,6 +315,12 @@ public partial class BagSlotView : PanelContainer
             row.AddChild(by);
             box.AddChild(row);
         }
+        // The warm look's tooltip is already a paper note (ui-44): ink the words, no dark box.
+        if (WarmLook.On)
+        {
+            WarmLook.InkInside(box);
+            return box;
+        }
         var panel = Hud.Panel(box, Vector2.Zero);
         return panel;
     }

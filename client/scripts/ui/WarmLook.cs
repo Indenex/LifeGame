@@ -28,7 +28,39 @@ public partial class WarmLook : Node
     public override void _EnterTree()
     {
         On = !OS.GetCmdlineUserArgs().Contains("--cold");
-        if (On) GetTree().NodeAdded += Added;
+        if (!On) return;
+        GetTree().NodeAdded += Added;
+        GetTree().Root.Theme = Defaults();
+    }
+
+    // The game-wide defaults (ui-44): Nunito for every control that doesn't choose a font, and
+    // hover tooltips as small paper notes in brown ink instead of Godot's grey box.
+    static Theme Defaults()
+    {
+        var theme = new Theme { DefaultFont = Ui.Font(650), DefaultFontSize = 15 };
+        var note = new StyleBoxFlat
+        {
+            BgColor = Paper,
+            BorderColor = new Color(Ink, 0.28f),
+            ShadowColor = new Color(0.15f, 0.08f, 0.05f, 0.25f),
+            ShadowSize = 6,
+            ShadowOffset = new Vector2(0, 2),
+            ContentMarginLeft = 10, ContentMarginRight = 10, ContentMarginTop = 6, ContentMarginBottom = 6,
+        };
+        note.SetBorderWidthAll(2);
+        note.SetCornerRadiusAll(12);
+        theme.SetStylebox("panel", "TooltipPanel", note);
+        theme.SetColor("font_color", "TooltipLabel", Ink);
+        theme.SetColor("font_shadow_color", "TooltipLabel", new Color(0, 0, 0, 0));
+        theme.SetFontSize("font_size", "TooltipLabel", 14);
+        theme.SetFont("font", "TooltipLabel", Ui.Font(700));
+        return theme;
+    }
+
+    // Content already on paper (a tooltip note): ink it like a window's, without a frame.
+    public static void InkInside(Control c)
+    {
+        if (On) c.SetMeta(Mark, true);
     }
 
     // Ui.Window calls this for its frame; panels framed by hand with Ui.Frame are found as they're added.
