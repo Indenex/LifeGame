@@ -297,6 +297,8 @@ public sealed class PlayerAnimator
     // little to hold it out from the leg, and the arm's walking swing is damped. Swap()
     // plays a quick 0.3 s reach down to the hip and back, to draw or stow it.
     public bool Carrying;
+    public bool CarryingHeavy;
+    float heavy;
     public const float SwapSeconds = 0.3f;
     float carry, swapTime = -1f;
 
@@ -312,6 +314,25 @@ public sealed class PlayerAnimator
             pose[Joint.ShoulderR].Z = Mathf.Lerp(pose[Joint.ShoulderR].Z, -0.16f, c);
             pose[Joint.ElbowR].X = Mathf.Lerp(pose[Joint.ElbowR].X, Mathf.Min(pose[Joint.ElbowR].X, -0.85f), c);
             pose[Joint.HandR].X = Mathf.Lerp(pose[Joint.HandR].X, 0.15f, c);
+        }
+        // Something heavy (anim-18: Carry.Weight at least HeavyHold) is hugged in both
+        // arms in front, the chest leaning back against it, with a slow side-to-side
+        // waddle while walking.
+        heavy = Mathf.MoveToward(heavy, CarryingHeavy ? 1f : 0f, dt / 0.3f);
+        if (heavy > 0f)
+        {
+            float h = Mathf.SmoothStep(0f, 1f, heavy) * (1f - workBlend);
+            float waddle = Mathf.Cos(phase) * walkBlend * h;
+            pose[Joint.Spine].X = Mathf.Lerp(pose[Joint.Spine].X, -0.12f, h);
+            pose[Joint.Neck].X = Mathf.Lerp(pose[Joint.Neck].X, 0.1f, h);
+            pose[Joint.ShoulderL] = pose[Joint.ShoulderL].Lerp(new Vector3(-0.8f, 0, 0.02f), h);
+            pose[Joint.ShoulderR] = pose[Joint.ShoulderR].Lerp(new Vector3(-0.8f, 0, -0.02f), h);
+            pose[Joint.ElbowL].X = Mathf.Lerp(pose[Joint.ElbowL].X, -1.35f, h);
+            pose[Joint.ElbowR].X = Mathf.Lerp(pose[Joint.ElbowR].X, -1.35f, h);
+            pose[Joint.Hips].Z += 0.07f * waddle;
+            pose[Joint.HipL].Z -= 0.07f * waddle;
+            pose[Joint.HipR].Z -= 0.07f * waddle;
+            pose[Joint.Spine].Z -= 0.05f * waddle;
         }
         if (swapTime < 0f) return;
         swapTime += dt;
