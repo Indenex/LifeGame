@@ -1153,3 +1153,7 @@ Owner: Claims.
 ## D-283 — 2026-10-17 — One centre panel at a time, walking allowed
 **Decision:** Only one centre panel is open at a time, and the player can keep walking with panels open.
 **Who:** PM default; Justin didn't answer.
+
+## D-284 — 2026-10-17 — Renders get faster with three Render workers
+**Decision:** Renders get faster with three Render workers. Render A (session_015S96hNrEu92FrCoNZqZZjs) does look checks. Render B (session_01AkKLF7VETNCk9bZ7SvfjkG, Sonnet) does UI and stills. Render C (session_01KA7oA899HvQKhMWZhZYnuU, Sonnet) does clips. Justin's requests jump the queue.
+**Who:** Relayed by the PM; no direct quote.
