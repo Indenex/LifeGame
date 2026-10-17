@@ -168,6 +168,13 @@ void Run(string file, string arguments)
     if (p.ExitCode != 0) Console.WriteLine($"puppet: {file} failed: {p.StandardError.ReadToEnd()}");
 }
 
+bool RunOk(string file, string arguments)
+{
+    using var p = Process.Start(new ProcessStartInfo(file, arguments) { RedirectStandardError = true, RedirectStandardOutput = true })!;
+    while (!p.HasExited) Pump(0.05);
+    return p.ExitCode == 0;
+}
+
 bool Step(string line)
 {
     var parts = line.Split(' ', 2);
@@ -216,6 +223,19 @@ bool Step(string line)
             stroll = (x + d[0], z + d[1]);
             break;
         }
+        case "sh":
+        {
+            using var sp = Process.Start(new ProcessStartInfo("bash", new[] { "-c", rest }) { RedirectStandardOutput = true, RedirectStandardError = true })!;
+            while (!sp.HasExited) Pump(0.05);
+            Console.WriteLine($"puppet: sh: {sp.StandardOutput.ReadToEnd()}{sp.StandardError.ReadToEnd()}");
+            break;
+        }
+        case "pos":
+        {
+            var sp = conn.Db.PlayerPos.PlayerId.Find(myId);
+            Console.WriteLine($"puppet: pos mine {x:F1},{z:F1} server {sp?.X:F1},{sp?.Z:F1}");
+            break;
+        }
         case "arrive":
             Pump(60, () => stroll == null);
             break;
@@ -256,7 +276,8 @@ bool Step(string line)
             // inventory_item gained columns over time (wear, slot, on_belt, then maker): try the newest shape first.
             string vals = $"(0, 0x{owner}, {n[0]}, {quality}, {n[1]}, 0, 0, false";
             if (!SqlOk($"INSERT INTO inventory_item (id, owner, item, quality, count, wear, slot, on_belt, maker) VALUES {vals}, 0)")
-                && !SqlOk($"INSERT INTO inventory_item (id, owner, item, quality, count, wear, slot, on_belt) VALUES {vals})"))
+                && !SqlOk($"INSERT INTO inventory_item (id, owner, item, quality, count, wear, slot, on_belt) VALUES {vals})")
+                && !SqlOk($"INSERT INTO inventory_item (id, owner, item, quality, count, wear) VALUES (0, 0x{owner}, {n[0]}, {quality}, {n[1]}, 0)"))
                 Console.WriteLine($"puppet: give {rest} failed (inventory_item columns changed?)");
             Pump(1.0);
             break;

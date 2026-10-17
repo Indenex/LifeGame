@@ -1,0 +1,14 @@
+# claims-19 (#535) optional still: Alda (Mayor) has proposed joining Ash Hollow ("Joining towns" note).
+# Run with RENDER_PATCH=tools/render/patches/seedtown.sh RENDER_TOWN=1 RENDER_TOWN_AT=45 [RENDER_SIZE=1280x720]
+client-as-puppet
+client --time-of-day=0.5 --rain=0 --cloud=0.1
+wait 20
+act SeedTown
+wait 4
+act ProposeTownMerge 2
+wait 35
+snap
+mouse 1000 500
+sh xdotool click --repeat 12 --delay 400 5
+wait 5
+snap

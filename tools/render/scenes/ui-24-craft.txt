@@ -1,0 +1,15 @@
+# ui-24 crafting menu with pictures (#489). Run with
+#   RENDER_PATCH=tools/render/patches/opencraft.sh RENDER_CRAFT=0 RENDER_CRAFT_AT=70 [RENDER_SIZE=1280x720]
+# (a C keypress doesn't reliably reach the game at ~0.5 fps). The camera is the puppet, so the
+# menu shows its inventory. Hover/search come from client flags passed in the scene's client line.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --debug-position=0,0 --screenshot-craft-hover
+wait 45
+give 6 1 60
+give 1 4 50
+give 2 1 50
+give 3 6 50
+wait 45
+snap
+wait 6
+snap

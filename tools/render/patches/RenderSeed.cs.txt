@@ -1,0 +1,51 @@
+using SpacetimeDB;
+
+// Render-tree-only (never committed): reducers that lay out a town for stills, because owner SQL
+// can't write Timestamp columns. Everything is owned by the caller's identity; the client reads
+// names and player ids. SeedTown: the caller is Alda (player 1), Mayor of Willow Run. SeedInvite:
+// the caller is Dee (player 1), on no roster, with an invitation from Alda.
+public static partial class Module
+{
+    static Claim SeedClaim(ReducerContext ctx, ulong structure, uint player, string name, float x, float z) =>
+        ctx.Db.Claim.Insert(new Claim
+        {
+            Owner = ctx.Sender, OwnerPlayerId = player, OwnerName = name, StructureId = structure,
+            X = x, Z = z, ChunkX = (int)System.Math.Floor(x / 16f), ChunkZ = (int)System.Math.Floor(z / 16f),
+            TendedAt = ctx.Timestamp, ExpiresAt = After(ctx.Timestamp, 30L * 24 * 3600), AllowPvp = false,
+        });
+
+    static void SeedSigner(ReducerContext ctx, ulong town, Claim c) =>
+        ctx.Db.TownSigner.Insert(new TownSigner { TownId = town, ClaimId = c.Id, Owner = ctx.Sender, PlayerId = c.OwnerPlayerId, OwnerName = c.OwnerName, SignedAt = ctx.Timestamp });
+
+    static void SeedOffice(ReducerContext ctx, ulong town, byte office, uint id, string name) =>
+        ctx.Db.TownOffice.Insert(new TownOffice { TownId = town, Office = office, Holder = ctx.Sender, HolderId = id, HolderName = name, TermEndsAt = After(ctx.Timestamp, 7L * 24 * 3600) });
+
+    [SpacetimeDB.Reducer]
+    public static void SeedTown(ReducerContext ctx)
+    {
+        var alda = SeedClaim(ctx, 9001, 1, "Alda", 0, 70);
+        var bren = SeedClaim(ctx, 9002, 2, "Bren", 40, 70);
+        var cai = SeedClaim(ctx, 9003, 3, "Cai", 20, 105);
+        SeedClaim(ctx, 9004, 4, "Dee", -38, 100);
+        var eli = SeedClaim(ctx, 9005, 5, "Eli", 62, 105);
+        var willow = ctx.Db.Town.Insert(new Town { Name = "Willow Run", StartedAt = ctx.Timestamp });
+        var ash = ctx.Db.Town.Insert(new Town { Name = "Ash Hollow", StartedAt = ctx.Timestamp });
+        SeedSigner(ctx, willow.Id, alda); SeedSigner(ctx, willow.Id, bren); SeedSigner(ctx, willow.Id, cai);
+        SeedSigner(ctx, ash.Id, eli);
+        SeedOffice(ctx, willow.Id, 0, 1, "Alda");
+        SeedOffice(ctx, willow.Id, 3, 2, "Bren");
+        ctx.Db.TownVote.Insert(new TownVote { TownId = willow.Id, Office = 0, Voter = ctx.Sender, VoterId = 3, CandidateId = 2 });
+    }
+
+    [SpacetimeDB.Reducer]
+    public static void SeedInvite(ReducerContext ctx)
+    {
+        var dee = SeedClaim(ctx, 9004, 1, "Dee", -38, 100);
+        var alda = SeedClaim(ctx, 9001, 2, "Alda", 0, 70);
+        var bren = SeedClaim(ctx, 9002, 3, "Bren", 40, 70);
+        var willow = ctx.Db.Town.Insert(new Town { Name = "Willow Run", StartedAt = ctx.Timestamp });
+        SeedSigner(ctx, willow.Id, alda); SeedSigner(ctx, willow.Id, bren);
+        SeedOffice(ctx, willow.Id, 0, 2, "Alda");
+        ctx.Db.TownInvite.Insert(new TownInvite { TownId = willow.Id, TownName = "Willow Run", Invitee = ctx.Sender, InvitedBy = "Alda", At = ctx.Timestamp });
+    }
+}
