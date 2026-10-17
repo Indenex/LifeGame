@@ -23,8 +23,10 @@ public static partial class StructureModel
         foreach (float x in new[] { -wx, wx })
             foreach (float z in new[] { -wz, wz })
                 Add(list, 0, Stone, Rock(new Vector3(x, 0.03f, z), new Vector3(0.3f, 0.14f, 0.3f), 70 + seed++));
-        foreach (float z in new[] { -wz, wz })
-            Add(list, 0, Wood, Stick(new Vector3(-wx - CabinOverhang, 0.17f, z), new Vector3(wx + CabinOverhang, 0.18f, z), CabinLog * 0.55f));
+        Add(list, 0, Wood, Stick(new Vector3(-wx - CabinOverhang, 0.17f, -wz), new Vector3(wx + CabinOverhang, 0.18f, -wz), CabinLog * 0.55f));
+        // The front sill log stops either side of the doorway, so nothing lies across the way in (building-14).
+        Add(list, 0, Wood, Stick(new Vector3(-wx - CabinOverhang, 0.17f, wz), new Vector3(-HouseDoorHalf - 0.04f, 0.17f, wz), CabinLog * 0.55f));
+        Add(list, 0, Wood, Stick(new Vector3(HouseDoorHalf + 0.04f, 0.17f, wz), new Vector3(wx + CabinOverhang, 0.18f, wz), CabinLog * 0.55f));
 
         // Log walls: alternate courses run along the side walls and the front and back,
         // each log overhanging the corner. The front stops either side of the doorway.

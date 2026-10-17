@@ -51,6 +51,11 @@ namespace LifeGame.Shared
             [Item.StorageJar] = 8f,
             [Item.PotOfBroth] = 4f,
             [Item.PotOfStew] = 4f,
+            [Item.UnfiredLamp] = 0.5f,
+            [Item.ClayLamp] = 0.5f,
+            [Item.UnfiredRoofTile] = 1.5f,
+            [Item.RoofTile] = 1.5f,
+            [Item.Tallow] = 0.3f,
             [Item.Berries] = 0.1f,
             [Basket] = 0.5f,
         };

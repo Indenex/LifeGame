@@ -55,8 +55,8 @@ public static partial class StructureModel
         {
             LifeGame.Shared.StationKind.Table => CraftingTableModel.Pieces(),
             LifeGame.Shared.StationKind.PottersBench => StationMeshes.PottersBench(),
-            LifeGame.Shared.StationKind.Spindle => StationModels.Spindle(),
-            LifeGame.Shared.StationKind.DryingRack => StationModels.DryingRack(),
+            LifeGame.Shared.StationKind.Spindle => StationMeshes.Distaff(),
+            LifeGame.Shared.StationKind.DryingRack => StationMeshes.DryingRack(),
             _ => kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 5 => BrickHouse(), 6 => JarModel.Pieces(), _ when LifeGame.Shared.Structures.IsIndoor(kind) => Hearth(), _ when LifeGame.Shared.Structures.IsRoom(kind) => LogCabin(), _ when LifeGame.Shared.Structures.IsFence(kind) => Fence(LifeGame.Shared.Structures.IsGate(kind)), _ => LeanTo() },
         };
         // A lean-to is all roof: its sloped thatch is the wall between the camera and the player, so

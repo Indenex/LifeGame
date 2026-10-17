@@ -71,6 +71,36 @@ public partial class Avatar : Node3D
     // frame, which would pull a raised Y straight back down.
     public void SetAirHeight(float metres) => figure.Position = new Vector3(0, Mathf.Max(metres, 0f), 0);
 
+    // Shows a garment in a clothing slot (item 0: the slot's default), from worn_item.
+    public void Wear(byte slot, ushort item)
+    {
+        if (slot >= worn.Length || worn[slot] == item) return;
+        worn[slot] = item;
+        PlayerModel.Wear((Skeleton3D)figure, slot, item);
+    }
+    readonly ushort[] worn = new ushort[2];
+
+    // Puts items in the hands (null for empty), in the ToolR and ToolL fist frames.
+    public void Hold(Item? right, Item? left)
+    {
+        Grip("ToolR", right, ref heldRight);
+        Grip("ToolL", left, ref heldLeft);
+    }
+    Item? heldRight, heldLeft;
+
+    void Grip(string hand, Item? item, ref Item? held)
+    {
+        if (item == held) return;
+        held = item;
+        if (figure.FindChild(hand, true, false) is not Node3D fist) return;
+        foreach (var child in fist.GetChildren()) child.QueueFree();
+        if (item is { } it) fist.AddChild(new MeshInstance3D { Mesh = ItemModels.HeldMesh(it) });
+    }
+
+    // This player's own look (skin, hair, cut, beard), from their player id (Modeling).
+    public void SetLook(uint playerId) => PlayerModel.SetLook((Skeleton3D)figure, HumanFigure.Appearance.For(playerId));
+    public void SetLook(HumanFigure.Appearance look) => PlayerModel.SetLook((Skeleton3D)figure, look);
+
     public void SetPlayerName(string name) => nameplate.Text = name;
 
     // Claims tints a name red while that player is marked for striking someone down.

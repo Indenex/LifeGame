@@ -903,3 +903,95 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-222 — 2026-10-16 — Load more chunks, no pop-in LoD (revises D-208, env-9 See further)
 **Decision:** The game loads more of the world's chunks and shows no pop-in LoD. It should be performant enough to run without LoD, or hide things in fog where needed. This revises D-208 (env-9 "See further", low-detail distant terrain). Owner: Environment, with Atmosphere.
 **Who:** Justin ("I want to be able to load more of the chunks in the world. I don't want to see pop-in LoD stuff. The game should be performant enough to deal with no LoD things, or we can hide things in fog etc if we need to.")
+
+## D-223 — 2026-10-16 — Doll tools section has 6 slots; hotbar key moves a tool to the belt (refines D-219)
+**Decision:** The tools section on the player doll has 6 slots (knife, axe, digging stick, spear, bow drill, spindle), and the count can rise later (D-075). Tools in it take no bag space and add no weight but still work. A tool's hotbar key moves it onto the belt, and tools don't auto-fill the hotbar. Bag order has both a Sort button and manual arrangement, as already recorded in D-220.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-224 — 2026-10-16 — Build menu: a centred picture panel with category tabs (ui-20)
+**Decision:** Pressing B opens a centred picture panel with category tabs: Shelter, Storage, Crafting, Fences and gates, Fire. Each tile in its grid shows a picture rendered from the real model, the name, and costs as item icons, greyed when short. Clicking a tile starts the ghost placement. Justin chose this over a strip above the hotbar and a radial wheel. Owner: UX (ui-20).
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-225 — 2026-10-16 — Admin tools are chat commands, not an F10 panel
+**Decision:** Justin asked for an admin interface to add items, and answered with chat commands instead of a panel. The admin tools are chat commands: `/fly` (very fast flying), `/season`, `/time` (time of day), and `/give`, which opens a searchable item menu to spawn items. All of them are server-checked and admin-only. There is no F10 panel. This replaces the earlier PM default (admin-1: a hidden F10 panel).
+**Who:** Justin ("just chat commands to get it done faster, but yes, I want a flying option that's super fast, seasons, time of day, spawn items (give me a menu with a search for that one.)")
+
+## D-226 — 2026-10-16 — CI batching: main pushes share one concurrency group (integration-5)
+**Decision:** Pushes to `main` share one concurrency group, so a burst of merges builds once, and releases take the newest green `main`. Merges and releases stop holding each other up. Owner: Integration (integration-5).
+**Who:** Justin (asked for it so that merges and releases stop holding each other up; relayed by the PM, no direct quote).
+
+## D-227 — 2026-10-16 — View distance is a four-step slider in Settings → Graphics (follows D-222)
+**Decision:** View distance is a slider with four steps: Short (48 m, today), Near (80 m), Far (128 m) and Very far (160 m and up). It lives in Settings → Graphics and is saved per player. The world edge always fades into haze, with no LoD pop-in. Far is the PM's proposed default, not yet confirmed by Justin.
+**Who:** Justin ("yeah, just make a slider of like short (today), near, far, very far for view distances. It can go in the settings menu -> graphics for people to adjust themselves.")
+
+## D-228 — 2026-10-16 — A roof takes 12 roof tiles (follows D-213)
+**Decision:** A roof takes 12 roof tiles. Each tile costs 1 tempered clay and takes 2 kiln firings. This replaces the proposed defaults of 24 tiles and 504 h.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-229 — 2026-10-16 — House-type buildings are claim-only; outside a claim, basics only and fast decay
+**Decision:** House-type buildings must be built inside a claim only. Allowed outside a claim: the lean-to, clay hut, campfire and hearth, crafting table, and storage basket and jar. Everything else is claim-only. Anything outside a claim that sits untouched for 48 h starts falling apart, as extreme weathering that manages server performance and world cleanliness. The idea is that players cooperate and build cities together.
+**Who:** Justin ("House-type buildings HAVE to be built inside of a claim ONLY. Temporrary shelters or the small hut can be built outside, and basic crafting tables, but not much else. Essentialy, basic survival, and anything outside of a claim has extreme weathering applied to manage server performance and world 'cleanliness'. The idea is players can cooperate and build cities and stuff together."), with his picks of what stays allowed outside a claim.
+
+## D-230 — 2026-10-16 — Atmosphere next: falling leaves and blossom
+**Decision:** Atmosphere's next work is falling leaves and blossom: leaves drifting under broadleaf trees in autumn, petals in spring, and more of both in wind. Justin chose it over the dawn valley mist and the sky reflected in still water. Owner: Atmosphere.
+**Who:** Justin, picking falling leaves and blossom (relayed by the PM; no direct quote).
+
+## D-231 — 2026-10-16 — Buildings scale about 25% bigger and doorways become a real opening (building-14)
+**Decision:** All house-type buildings scale by about 1.25 (about 25% bigger) with the same material costs. Doorways become a real opening, at least about 2.1 m clear and with nothing across the floor, that players walk through freely. Owner: House building (building-14).
+**Who:** Justin ("the scale of the buildings probably needs to be a bit bigger, and leave an actual doorway opening so the character can walk in, right now he hits his head and his feet on the entrance"), picking about 25% bigger.
+
+## D-232 — 2026-10-16 — Art direction: low-poly shapes with simple painted material textures, Valheim-like (pending Justin's pick of renders, D-154)
+**Decision:** The direction is low-poly shapes with simple, low-res, painted material textures (Valheim-like), a cutesy warm feel, and lighting and atmosphere carrying the awe. Justin did not want flat colour. This is a direction only: per D-154 it is pending Justin's pick of renders, so no art is built past a prototype yet. Modeling is prototyping 2 to 3 texture variants, and Atmosphere is lighting the test renders.
+**Who:** Justin ("I dont like the textures the models are using; I want things to be less textures, but still very stylized with our pretty low poly look." When offered flat colour: "I want things to have material looks/texture still, closer to valheim I think. I want the game to be cutesy and beautiful/awe inspiring with lighting and stuff.")
+
+## D-233 — 2026-10-16 — Players pick their look at first join, from Modeling's carved parts
+**Decision:** Each player picks skin tone, hair colour, cut and beard at first join, from Modeling's carved parts. The server validates the choice. Justin chose this over an automatic look from the player id or keeping everyone identical. Owner: Modeling.
+**Who:** Justin (relayed by the PM; no direct quote), picking the first-join choice.
+
+## D-234 — 2026-10-16 — Lighting: prototype the colour grade, richer sky and god rays; the original reference screenshots are the target look (D-154)
+**Decision:** Prototype all three lighting options: the time-of-day colour grade, the richer sky, and god rays everywhere at low sun with a quality setting. Renders come before anything ships (D-154). Justin's original reference world, terrain and character screenshots are the target look for the game. Owner: Atmosphere.
+**Who:** Justin ("go look back at our original reference world/terrain/character screenshots I sent you. That's what the game should look like."), with his pick of all three lighting options.
+
+## D-235 — 2026-10-16 — Reference images are stored in docs/art-reference/; every player-visual lane matches against them (follows D-234)
+**Decision:** Justin shared his reference images on 2026-10-16. They are stored in `docs/art-reference/` (#368) with a README style guide, and more are coming. Every player-visual lane matches against them.
+**Who:** Justin (shared the images; relayed by the PM, no direct quote).
+
+## D-236 — 2026-10-17 — Bought art packs from Golden Skull Art; Dofus is a second style reference (follows D-234, D-235)
+**Decision:** Justin bought Golden Skull Art's (Max Heyder) 2D Isometric Foliage Pack and Isometric Starter Pack, with a commercial licence and his stated permission to host them in the public repo temporarily. They are in `docs/art-packs/golden-skull/` (#378). Dofus is now a second style reference alongside `docs/art-reference`.
+**Who:** Justin ("Our other inspiration is a game called Dofus. Beautiful, hand crafted artwork, scenery, etc. It's a similar 2d but 3d engine type thing.")
+
+## D-237 — 2026-10-17 — Activity animations: drinking, crafting, chopping, mining, berries and a light pickup (anim-4)
+**Decision:** Activities get their own animations with seamless transitions. When drinking from a river, the character bends down and scoops the water up with their mouth. Crafting something, chopping wood, mining, picking berries and eating berries get similar animations, and picking things up off the ground gets a very basic one, since it happens constantly. Motions are driven from data, other players see them, and sounds come from Audio. The pickup stays very light and quick. Owner: Animation, ticket anim-4, after anim-3.
+**Who:** Justin ("when drinking from a river, make it so the character bends down and scoops the water up with their mouth with seamless transitions. Other activities should have similar animations; crafting something, chopping wood, mining, picking berries, eating berries, a very basic animation when picking things up off the ground since it happens constantly")
+
+## D-238 — 2026-10-17 — Ceramics next: clay pipes and drain tiles for moving water (ceramics-13)
+**Decision:** Ceramics' next work is clay pipes and drain tiles for moving water (ceramics-13), design first. Justin chose it over slip decoration and a potter's wheel.
+**Who:** Justin, picking clay pipes and drain tiles (relayed by the PM; no direct quote).
+
+## D-239 — 2026-10-17 — Clay pipes and drains: trough only for now (follows D-238)
+**Decision:** For ceramics-13, Justin picked "Trough only": a fired clay trough filled by hand, with no pipe network for now. The network design (stream to cistern, roof gutters) stays on file in `tickets/ceramics-13.md` for later.
+**Who:** Justin, picking "Trough only" (relayed by the PM; no direct quote).
+
+## D-240 — 2026-10-17 — The world's look must read as Golden Skull's and Dofus's hand-painted style in 3D (extends D-234, D-235, D-236)
+**Decision:** The world's look must read as Golden Skull's and Dofus's hand-painted style in 3D, using whatever technique works, with pack sprites only where they fit. Nothing is copied literally unless it fits, but the overall art theme and direction should be very similar to that work and to Dofus. A unique way of getting the hand-painted style in 3D is fine; Dofus does it and Octopath is similar. Every look image shown to Justin is paired side by side with its reference. The art lanes (Modeling, Environment, Atmosphere) are already on Opus.
+**Who:** Justin ("so far the images I've seen from the environment worker are NOTHING like the reference images/packs I gave you." "Nothing literal unless it fits, but the overall art theme and direction, even though it's '3d' should be VERY similar to his work and Dofus. If it has to come up with a unique way to get the hand painted style in 3d, that's fine, and i know it's perfectly do-able. Dofus does it, Octopath is similar, etc. Maybe it needs to be switched to an opus worker if it isnt already.")
+
+## D-241 — 2026-10-17 — Music direction: cute, whimsical and relaxing, in the spirit of Dofus (audio-8)
+**Decision:** The music is cute, whimsical and relaxing in the spirit of Dofus, with a basic main theme in the mood of Grynpyret's "Kites" (original melody, nothing copied) and a lullaby-like song about naps. The goal is to be very cutesy and relaxing in general, and less Valheim-like. Owner: Audio, ticket audio-8; Audio prototypes clips for Justin's pick before converting.
+**Who:** Justin ("I want some music similar to Dofus, and a basic theme similar to Grynpyret's song Kites, and A song about naps. The goal is to be very cutesy and relaxing in general, less valheim-y music.")
+
+## D-242 — 2026-10-17 — Keep the old dense, wind-swept blade grass and restyle it to the new hand-painted look (extends D-240)
+**Decision:** The previous dense, wind-swept blade grass comes back and is restyled to the new hand-painted look (pack palette, tone bands). Sprite-card tufts are not the grass; flowers and mushrooms are only sparse accents. This answers the painted-ground prototype. Owner: Environment.
+**Who:** Justin ("the modeler/environment's grass is HORRIBLE, I want the old grass back, and make it match the new style, it was really good before")
+
+## D-243 — 2026-10-17 — Music comes from Justin, made with Suno; Audio builds a data-driven player (revises D-241)
+**Decision:** The music will be provided by Justin, made with Suno, instead of being synthesized or composed by Audio. Audio builds a data-driven player for recorded tracks, mood-tagged and cross-faded. This revises D-241: the direction there (cute, whimsical, relaxing, Dofus-like) still guides Justin's tracks. Owner: Audio.
+**Who:** Justin ("These all sound super generic and crappy", on the synthesized music tasters)
+
+## D-244 — 2026-10-17 — Painted 2.5D clearing look is acceptable apart from the grass (follows D-242)
+**Decision:** On the Painted 2.5D clearing screenshot, trees, rocks, stumps, the cabin and sheep are acceptable for now. Only the grass was rejected (D-242).
+**Who:** Justin ("The other things look ok so far")
+
+## D-245 — 2026-10-17 — Soundtrack style: soft future bass with folk instruments (follows D-241, D-243)
+**Decision:** The soundtrack style is a blend of soft future-bass production with folk instruments such as flute and harp. The references are Grynpyret's "Kites" (kawaii future bass, B major, about 111 BPM) and "A Song About Naps" (also a Grynpyret track), plus Dofus. Justin generates the tracks in Suno; the PM gave him prompts for the main theme (about 108 BPM), the nap song (about 76 BPM) and a day track (about 96 BPM).
+**Who:** Justin, picking the style blend (relayed by the PM; no direct quote).

@@ -27,7 +27,7 @@ public static class Look
     public static readonly Color FlowerPink = new(0.88f, 0.55f, 0.62f);
     // Heath on the hilltops and birch wetland by the water (Environment's env-4).
     public static readonly Color BirchBark = new(0.86f, 0.84f, 0.78f);
-    public static readonly Color Heather = new(0.45f, 0.30f, 0.40f);
+    public static readonly Color Heather = new(0.42f, 0.38f, 0.33f);
     public static readonly Color Gorse = new(0.30f, 0.36f, 0.14f);
     public static readonly Color Sedge = new(0.46f, 0.48f, 0.22f);
     public static readonly Color HeathGround = new(0.42f, 0.37f, 0.24f);
@@ -40,7 +40,7 @@ public static class Look
     public const float WaterLevel = -1.0f;
 
     static Shader? paintedShader, ghostShader, structureGhostShader, grassShader;
-    static ShaderMaterial? ground, bark, rock, foliage, grass;
+    static ShaderMaterial? ground, bark, rock, foliage, grass, grassTufts;
     static NoiseTexture2D? brush, detail, clouds;
 
     // Weather every surface reads, set each frame by the atmosphere: how soaked the
@@ -70,6 +70,10 @@ public static class Look
         Add("snowing", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("season_year", RenderingServer.GlobalShaderParameterType.Float, 0.1f);
         Add("puddles", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        // Distant land (Environment's FarLand sets the radius, 0 when off) melts into
+        // the fog colour (Atmosphere) over its outer quarter.
+        Add("far_land_radius", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        Add("fog_tint", RenderingServer.GlobalShaderParameterType.Color, new Color(0.62f, 0.68f, 0.70f));
     }
 
     // Seconds since the game started (from 1), shared with the shaders as
@@ -175,12 +179,17 @@ public static class Look
 
     // Grass has its own shader: blades take their tile's color at the root, so the
     // carpet and the ground read as one surface, and rolling gusts sweep across it.
-    public static ShaderMaterial Grass => grass ??= MakeGrass();
+    public static ShaderMaterial Grass => grass ??= MakeGrass(0f);
 
-    static ShaderMaterial MakeGrass()
+    // The same grass for the tufts Environment plants only near the player: they
+    // shrink away between about 31 and 48 m, before the chunks that have none.
+    public static ShaderMaterial GrassTufts => grassTufts ??= MakeGrass(48f);
+
+    static ShaderMaterial MakeGrass(float fadeFar)
     {
         var material = new ShaderMaterial { Shader = GrassShader };
         material.SetShaderParameter("clouds", Clouds);
+        material.SetShaderParameter("fade_far", fadeFar);
         return material;
     }
 
@@ -281,6 +290,10 @@ public static class Look
         global uniform float cloud_cover;
         global uniform vec2 cloud_offset;
         global uniform float world_seconds;
+        // How far the distant land reaches round the player (0 when off), and the
+        // colour of the fog it melts into at its rim.
+        global uniform float far_land_radius;
+        global uniform vec3 fog_tint;
         // The season (Atmosphere, D-099): warmth -1 deep winter to 1 high summer,
         // autumn 0 green to 1 leaves fully turned, snow lying on the ground and
         // snow falling now, all 0 to 1.
@@ -482,10 +495,16 @@ public static class Look
                     turned = mix(turned, vec3(0.30, 0.20, 0.11), smoothstep(0.75, 1.0, season_autumn));
                     color = mix(color, turned * (1.0 + paint * 2.0), smoothstep(0.0, 0.6, season_autumn));
                 }
-                // Heather flowers purple through late summer, in speckles over the bush.
+                // Heather stays a quiet green-brown most of the year; only through late
+                // summer do its flower tips turn a soft, dusty mauve, no brighter than
+                // the grass (Justin: no saturated pink). The tips are found by their
+                // colour (purple-ish vertex paint), so the mesh's own purple is tamed too.
                 if (sway > 0.0 && season_kind > 2.5 && season_kind < 3.5) {
                     float bloom = smoothstep(0.3, 0.38, season_year) * (1.0 - smoothstep(0.48, 0.56, season_year));
-                    color = mix(color, vec3(0.55, 0.22, 0.52) * (1.0 + paint * 2.0), bloom * 0.75 * smoothstep(0.3, 0.6, h));
+                    float tip = smoothstep(0.02, 0.12, min(color.r, color.b) - color.g);
+                    float bright = dot(color, vec3(0.3, 0.59, 0.11));
+                    vec3 muted = mix(vec3(0.40, 0.38, 0.25), vec3(0.47, 0.41, 0.44), bloom * 0.8);
+                    color = mix(color, muted * clamp(bright / 0.5, 0.7, 1.1), tip);
                 }
                 // Snow settles on whatever faces up, filling the hollows first.
                 float snow = snow_cover * smoothstep(0.3, 0.75, world_normal.y) * smoothstep(0.0, 0.5, snow_cover * 1.4 - h * 0.6);
@@ -511,6 +530,14 @@ public static class Look
                 vec3 grad = sign(det) * (dFdx(h) * r1 + dFdy(h) * r2);
                 // Relief height is in tenths of a meter at most, so bumps stay subtle.
                 NORMAL = normalize(abs(det) * NORMAL - grad * bump * 0.035);
+
+                // The rim of the distant land melts into the fog, so its edge never
+                // shows against the sky, even on a clear day.
+                if (far_land_radius > 0.0) {
+                    float rim = smoothstep(0.75 * far_land_radius, far_land_radius, length(world_pos.xz - player_position.xz));
+                    ALBEDO *= 1.0 - rim;
+                    EMISSION = fog_tint * rim;
+                }
 
                 AO = mix(1.0, smoothstep(0.0, 0.6, h), cavity * 0.6);
                 AO_LIGHT_AFFECT = 0.3;
@@ -559,6 +586,12 @@ public static class Look
             shader_type spatial;
             render_mode cull_disabled, specular_disabled;
 
+            // Tufts shrink to nothing between 0.65 x fade_far and fade_far metres
+            // from the player (0 = never), so they are gone before the chunks
+            // that carry none (GrassTufts).
+            uniform float fade_far = 0.0;
+            global uniform vec3 player_position;
+
             varying vec3 tint;
             varying float tip;
             varying float gust;
@@ -566,6 +599,10 @@ public static class Look
             varying float shade;
 
             void vertex() {
+                if (fade_far > 0.0) {
+                    float away = length(MODEL_MATRIX[3].xz - player_position.xz);
+                    VERTEX *= 1.0 - smoothstep(0.65 * fade_far, fade_far, away);
+                }
                 // Flowers (season code 2) bloom only in spring and summer; snow
                 // presses all grass down.
                 float flowering = INSTANCE_CUSTOM.w > 1.5 ? smoothstep(-0.25, 0.1, season_warmth) * (1.0 - smoothstep(0.1, 0.4, season_autumn)) : 1.0;
@@ -642,6 +679,7 @@ public static class Look
         uniform vec4 shallow_color : source_color = vec4(0.30, 0.55, 0.55, 1.0);
         uniform vec4 sky_tint : source_color = vec4(0.62, 0.72, 0.78, 1.0);
         uniform sampler2D depth_texture : hint_depth_texture, filter_linear;
+        global uniform vec3 player_position;
         varying vec3 world_pos;
 
         float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -724,6 +762,19 @@ public static class Look
             ROUGHNESS = mix(0.32, 0.45, rain);
             SPECULAR = 0.12;
             METALLIC = 0.0;
+
+            // Like the land, the water melts into the fog over the outer quarter of
+            // the distant land, and past its edge there is none to see.
+            if (far_land_radius > 0.0) {
+                float reach = length(world_pos.xz - player_position.xz);
+                if (reach > far_land_radius) discard;
+                float rim = smoothstep(0.75 * far_land_radius, far_land_radius, reach);
+                ALBEDO *= 1.0 - rim;
+                EMISSION = fog_tint * rim;
+                ALPHA = mix(ALPHA, 1.0, rim);
+                SPECULAR *= 1.0 - rim;
+                ROUGHNESS = mix(ROUGHNESS, 1.0, rim);
+            }
         }
         """;
 

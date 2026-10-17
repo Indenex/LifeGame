@@ -9,6 +9,7 @@ namespace LifeGame;
 public partial class StructureView : Node3D
 {
     public readonly int Kind;
+    readonly float baseScale = 1f;
     readonly List<(StructureModel.Piece piece, Node3D holder, MeshInstance3D mesh)> pieces = new();
     readonly HashSet<int> solid = new();
     readonly Material? ghost;
@@ -27,6 +28,9 @@ public partial class StructureView : Node3D
     {
         Kind = kind;
         this.ghost = ghost;
+        // Homes are drawn at their design size and scaled up here (building-14); the shape's numbers are already scaled.
+        baseScale = LifeGame.Shared.Structures.ScaleOf(kind);
+        Scale = Vector3.One * baseScale;
         foreach (var piece in StructureModel.Pieces(kind))
         {
             var holder = new Node3D { Position = piece.Anchor, Visible = false };
@@ -205,7 +209,7 @@ public partial class StructureView : Node3D
 
     // The doorway in the building's frame: the door hangs from jamb a and closes
     // onto jamb b, swinging inward when open.
-    const float DoorRadius = 1.7f, DoorHalfAngle = 0.44f, DoorHeight = 1.45f, DoorOpenAngle = 1.75f;
+    const float DoorRadius = 1.7f, DoorHalfAngle = 0.44f, DoorHeight = 1.7f, DoorOpenAngle = 1.75f;
     Node3D? doorHinge, doorBar;
     bool? doorClosed;
 
@@ -284,7 +288,7 @@ public partial class StructureView : Node3D
         foreach (var (_, _, mesh) in pieces)
             mesh.MaterialOverlay = grime;
         // Sag: it settles and leans a little as it gives way.
-        Scale = new Vector3(1f, 1f - 0.12f * amount, 1f);
+        Scale = new Vector3(baseScale, baseScale * (1f - 0.12f * amount), baseScale);
         RotationDegrees = new Vector3(4f * amount, RotationDegrees.Y, -3f * amount);
     }
 

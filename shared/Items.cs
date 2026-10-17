@@ -48,6 +48,13 @@ namespace LifeGame.Shared
         StorageJar = 114,
         PotOfBroth = 115,
         PotOfStew = 116,
+        UnfiredLamp = 117,
+        ClayLamp = 118,
+        // Rendered from mutton fat in a pot (ceramics-9); lamp fuel.
+        Tallow = 119,
+        // Roof tiles (ceramics-10): shaped at the bench, kiln-fired only; House building roofs with them.
+        UnfiredRoofTile = 120,
+        RoofTile = 121,
 
         // House building, 130-159.
         SleepingMat = 130,
@@ -68,6 +75,11 @@ namespace LifeGame.Shared
         WoolCloth = 199,
         WoolTunic = 200,
         LeatherWraps = 201,
+        RawVenison = 202,
+        DeerHide = 203,
+        Antler = 204,
+        CookedVenison = 205,
+        BurntVenison = 206,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -82,8 +94,23 @@ namespace LifeGame.Shared
         public ItemTags Tags;
         // Quality matters for made things; raw materials always come at a flat quality.
         public bool HasQuality;
+        // What pressing its hotbar key does (ui-19). Clothing wears by Clothing.All,
+        // so garments leave this at None; see Items.UseOf.
+        public UseAction Use;
 
         public string Count(uint n) => n == 1 ? Name : Plural;
+    }
+
+    // What using an item does (its hotbar key, a double-click in the bag); the server's
+    // UseItem runs the matching rule.
+    public enum UseAction : byte
+    {
+        None = 0,
+        Eat = 1,
+        Drink = 2,
+        Wear = 3,
+        // A tool: it works from the tools section of the player doll (ui-18), or from the bag.
+        Tool = 4,
     }
 
     [System.Flags]
@@ -114,10 +141,10 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Clay, Name = "Clay", Plural = "Clay" },
             new ItemDef { Id = Item.Tinder, Name = "Tinder bundle", Plural = "Tinder bundles", FuelSeconds = 10, Tags = ItemTags.Kindling },
             new ItemDef { Id = Item.Flake, Name = "Stone flake", Plural = "Stone flakes", Tags = ItemTags.Cutting, HasQuality = true },
-            new ItemDef { Id = Item.HandAxe, Name = "Hand axe", Plural = "Hand axes", Tags = ItemTags.Cutting | ItemTags.Hammer, HasQuality = true },
+            new ItemDef { Id = Item.HandAxe, Name = "Hand axe", Plural = "Hand axes", Tags = ItemTags.Cutting | ItemTags.Hammer, HasQuality = true, Use = UseAction.Tool },
             new ItemDef { Id = Item.Cordage, Name = "Cordage", Plural = "Cordage", Tags = ItemTags.Binding, HasQuality = true },
-            new ItemDef { Id = Item.Spear, Name = "Spear", Plural = "Spears", Tags = ItemTags.Piercing, HasQuality = true },
-            new ItemDef { Id = Item.StoneAxe, Name = "Stone axe", Plural = "Stone axes", Tags = ItemTags.Chopping | ItemTags.Cutting, HasQuality = true },
+            new ItemDef { Id = Item.Spear, Name = "Spear", Plural = "Spears", Tags = ItemTags.Piercing, HasQuality = true, Use = UseAction.Tool },
+            new ItemDef { Id = Item.StoneAxe, Name = "Stone axe", Plural = "Stone axes", Tags = ItemTags.Chopping | ItemTags.Cutting, HasQuality = true, Use = UseAction.Tool },
             new ItemDef { Id = Item.CleanClay, Name = "Clean clay", Plural = "Clean clay" },
             new ItemDef { Id = Item.Grit, Name = "Stone grit", Plural = "Stone grit" },
             new ItemDef { Id = Item.TemperedClay, Name = "Tempered clay", Plural = "Tempered clay" },
@@ -125,28 +152,33 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Grog, Name = "Grog", Plural = "Grog" },
             new ItemDef { Id = Item.PinchPot, Name = "Pinch pot", Plural = "Pinch pots", HasQuality = true },
             new ItemDef { Id = Item.CoilPot, Name = "Coil pot", Plural = "Coil pots", HasQuality = true },
-            new ItemDef { Id = Item.PinchPotOfWater, Name = "Pinch pot of water", Plural = "Pinch pots of water", HasQuality = true },
-            new ItemDef { Id = Item.CoilPotOfWater, Name = "Coil pot of water", Plural = "Coil pots of water", HasQuality = true },
+            new ItemDef { Id = Item.PinchPotOfWater, Name = "Pinch pot of water", Plural = "Pinch pots of water", HasQuality = true, Use = UseAction.Drink },
+            new ItemDef { Id = Item.CoilPotOfWater, Name = "Coil pot of water", Plural = "Coil pots of water", HasQuality = true, Use = UseAction.Drink },
             new ItemDef { Id = Item.Brick, Name = "Sun-dried brick", Plural = "Sun-dried bricks" },
             new ItemDef { Id = Item.Daub, Name = "Daub", Plural = "Daub" },
             new ItemDef { Id = Item.UnfiredPinchPot, Name = "Unfired pinch pot", Plural = "Unfired pinch pots", HasQuality = true },
             new ItemDef { Id = Item.UnfiredCoilPot, Name = "Unfired coil pot", Plural = "Unfired coil pots", HasQuality = true },
             new ItemDef { Id = Item.UnfiredStorageJar, Name = "Unfired storage jar", Plural = "Unfired storage jars", HasQuality = true },
             new ItemDef { Id = Item.StorageJar, Name = "Storage jar", Plural = "Storage jars", HasQuality = true },
-            new ItemDef { Id = Item.PotOfBroth, Name = "Pot of berry broth", Plural = "Pots of berry broth", HasQuality = true },
-            new ItemDef { Id = Item.PotOfStew, Name = "Pot of mutton stew", Plural = "Pots of mutton stew", HasQuality = true },
-            new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true },
-            new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true },
+            new ItemDef { Id = Item.PotOfBroth, Name = "Pot of berry broth", Plural = "Pots of berry broth", HasQuality = true, Use = UseAction.Eat },
+            new ItemDef { Id = Item.PotOfStew, Name = "Pot of mutton stew", Plural = "Pots of mutton stew", HasQuality = true, Use = UseAction.Eat },
+            new ItemDef { Id = Item.UnfiredLamp, Name = "Unfired lamp", Plural = "Unfired lamps", HasQuality = true },
+            new ItemDef { Id = Item.ClayLamp, Name = "Clay lamp", Plural = "Clay lamps", HasQuality = true },
+            new ItemDef { Id = Item.UnfiredRoofTile, Name = "Unfired roof tile", Plural = "Unfired roof tiles", HasQuality = true },
+            new ItemDef { Id = Item.RoofTile, Name = "Roof tile", Plural = "Roof tiles", HasQuality = true },
+            new ItemDef { Id = Item.Tallow, Name = "Tallow", Plural = "Tallow" },
+            new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true, Use = UseAction.Tool },
+            new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true, Use = UseAction.Tool },
             new ItemDef { Id = Item.Basket, Name = "Basket", Plural = "Baskets", Tags = ItemTags.Container, HasQuality = true },
             new ItemDef { Id = Item.BowDrill, Name = "Bow drill", Plural = "Bow drills", Tags = ItemTags.FireBow, HasQuality = true },
             new ItemDef { Id = Item.Log, Name = "Log", Plural = "Logs", FuelSeconds = 360 },
-            new ItemDef { Id = Item.Bow, Name = "Bow", Plural = "Bows", HasQuality = true },
+            new ItemDef { Id = Item.Bow, Name = "Bow", Plural = "Bows", HasQuality = true, Use = UseAction.Tool },
             new ItemDef { Id = Item.Arrow, Name = "Arrow", Plural = "Arrows", HasQuality = true },
             new ItemDef { Id = Item.SleepingMat, Name = "Sleeping mat", Plural = "Sleeping mats" },
-            new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries" },
+            new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries", Use = UseAction.Eat },
             new ItemDef { Id = Item.RawMutton, Name = "Raw mutton", Plural = "Raw mutton", HasQuality = true },
-            new ItemDef { Id = Item.CookedMutton, Name = "Roast mutton", Plural = "Roast mutton", HasQuality = true },
-            new ItemDef { Id = Item.BurntMutton, Name = "Burnt mutton", Plural = "Burnt mutton" },
+            new ItemDef { Id = Item.CookedMutton, Name = "Roast mutton", Plural = "Roast mutton", HasQuality = true, Use = UseAction.Eat },
+            new ItemDef { Id = Item.BurntMutton, Name = "Burnt mutton", Plural = "Burnt mutton", Use = UseAction.Eat },
             new ItemDef { Id = Item.Wool, Name = "Raw wool", Plural = "Raw wool", HasQuality = true },
             new ItemDef { Id = Item.SheepHide, Name = "Sheep hide", Plural = "Sheep hides", HasQuality = true },
             new ItemDef { Id = Item.ScrapedHide, Name = "Scraped hide", Plural = "Scraped hides", HasQuality = true },
@@ -155,11 +187,21 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Yarn, Name = "Wool yarn", Plural = "Wool yarn", HasQuality = true },
             new ItemDef { Id = Item.WoolCloth, Name = "Wool cloth", Plural = "Wool cloth", HasQuality = true },
             new ItemDef { Id = Item.WoolTunic, Name = "Wool tunic", Plural = "Wool tunics", HasQuality = true },
-            new ItemDef { Id = Item.LeatherWraps, Name = "Leather foot wraps", Plural = "Leather foot wraps", HasQuality = true });
+            new ItemDef { Id = Item.LeatherWraps, Name = "Leather foot wraps", Plural = "Leather foot wraps", HasQuality = true },
+            new ItemDef { Id = Item.RawVenison, Name = "Raw venison", Plural = "Raw venison", HasQuality = true },
+            new ItemDef { Id = Item.DeerHide, Name = "Deer hide", Plural = "Deer hides", HasQuality = true },
+            new ItemDef { Id = Item.Antler, Name = "Antler", Plural = "Antlers", HasQuality = true },
+            new ItemDef { Id = Item.CookedVenison, Name = "Roast venison", Plural = "Roast venison", HasQuality = true },
+            new ItemDef { Id = Item.BurntVenison, Name = "Burnt venison", Plural = "Burnt venison" });
 
         public static ItemDef Def(Item item) => All[item];
 
         public static bool IsKnown(ushort id) => All.ContainsKey((Item)id);
+
+        // What using one does: a garment is worn, everything else says on its Def.
+        public static UseAction UseOf(Item item) =>
+            Clothing.Find((ushort)item) != null ? UseAction.Wear
+            : All.TryGetValue(item, out var def) ? def.Use : UseAction.None;
 
         static Dictionary<Item, ItemDef> Build(params ItemDef[] defs)
         {

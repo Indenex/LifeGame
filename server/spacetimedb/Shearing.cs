@@ -18,7 +18,7 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         var animal = ctx.Db.Animal.Id.Find(animalId) ?? throw new Exception("That sheep has wandered off");
-        if (animal.Species != AnimalSpecies.Sheep) throw new Exception("You can only shear sheep");
+        if (!AnimalDefs.Get((byte)animal.Species).Shearable) throw new Exception("You can only shear sheep");
         RequireReach(RequirePos(ctx, player), animal.X, animal.Z);
         var mind = ctx.Db.AnimalMind.AnimalId.Find(animalId) ?? throw new Exception("That sheep has wandered off");
 

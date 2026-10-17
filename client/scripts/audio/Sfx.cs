@@ -1,3 +1,4 @@
+using System;
 using Godot;
 
 namespace LifeGame;
@@ -35,6 +36,29 @@ public static class Sfx
     public static void PlayAt(Cue cue, Vector3 worldPosition)
     {
         if (Place(worldPosition, out float gain, out float pan)) scape?.Play(cue, gain, pan);
+    }
+
+    // A blow landing on an animal at `target`, struck from `attacker`. Yours (you are within a
+    // couple of metres of where it came from) plays at full volume; someone else's plays
+    // from where it happened, quieter with distance.
+    public static void PlayHit(Cue cue, Vector3 target, Vector3 attacker)
+    {
+        var offset = new Vector3(attacker.X - listener.X, 0, attacker.Z - listener.Z);
+        if (offset.LengthSquared() < 2.5f * 2.5f) Play(cue);
+        else PlayAt(cue, target);
+    }
+
+    // A bow shot from `from` to `to`: the twang and whoosh now, `impact` after `delay` seconds
+    // (the arrow's flight). Your own shot (you are within a couple of metres of `from`) is full
+    // volume; someone else's comes from where it happened, quieter with distance.
+    public static void PlayShot(Vector3 from, Vector3 to, Cue impact, float delay, SceneTree tree)
+    {
+        bool mine = new Vector3(from.X - listener.X, 0, from.Z - listener.Z).LengthSquared() < 2.5f * 2.5f;
+        if (mine) Play(Cue.BowShot); else PlayAt(Cue.BowShot, from);
+        tree.CreateTimer(Math.Max(0.02f, delay)).Timeout += () =>
+        {
+            if (mine) Play(impact); else PlayAt(impact, to);
+        };
     }
 
     // Touching down after a jump: strength 0 (a hop) to 1 (a long fall), and the ground underfoot.
