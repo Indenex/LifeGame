@@ -150,7 +150,9 @@ WaitFor(() => MyPos() is { } p && p.X > stepX - 0.5f, 10, "can walk on after rec
             if (MathF.Abs(seen.X - cxw) + MathF.Abs(seen.Z - czw) < 0.8f)
             {
                 float step = MathF.Min(d, 0.3f);
+                float ox0 = cxw, oz0 = czw;
                 cxw += dx / d * step; czw += dz2 / d * step;
+                (cxw, czw) = new BotGround(conn).Slide(ox0, oz0, cxw, czw);
             }
             conn.Reducers.Move(cxw, czw, MathF.Atan2(dx, dz2));
             Pump(100);

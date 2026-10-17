@@ -73,9 +73,9 @@ public static class Controls
         new("eat", new[] { Key.X }, "Eat", "{key} eats the best food you carry"),
         new("drink", None, "Drink"),
         new("build_mode", new[] { Key.B }, "Build", "{key} to lay out a shelter"),
-        new("journal", None, "Journal", "{key} opens your journal"),
-        new("claim_open", None, "Your claim", "{key} shows the land you claim"),
-        new("chat", None, "Speak", "{key} to speak"),
+        new("journal", new[] { Key.J }, "Journal", "{key} opens your journal"),
+        new("claim_open", new[] { Key.K }, "Your claim", "{key} shows the land you claim"),
+        new("chat", new[] { Key.Enter, Key.KpEnter }, "Speak", "{key} to speak"),
         new("toggle_music", new[] { Key.M }, "Music on or off"),
         // The equipment panel (ui-10, D-074, D-094); its hint waits until you first carry clothes.
         new("equipment", new[] { Key.I }, "What you carry and wear", "{key} shows what you carry and wear", OnRequest: true),
