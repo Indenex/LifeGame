@@ -97,6 +97,11 @@ public partial class OptionsPage : Control
         Hud.Soft(viewName, 16, 0.7f);
         view.GetParent().AddChild(viewName);
 
+        // How you look (ui-21): the same picker as at first join.
+        var lookButton = ControlsPage.TextButton("Your look", () => LookPicker.OpenFromMenu?.Invoke());
+        lookButton.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(lookButton);
+
         var back = ControlsPage.TextButton("Back", () => Back());
         back.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(back);

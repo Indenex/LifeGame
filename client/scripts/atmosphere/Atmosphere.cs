@@ -185,8 +185,11 @@ public partial class Atmosphere : Node3D
         conn.Db.Animal.OnUpdate += (_, _, a) => HearAnimal(a);
         conn.Db.Animal.OnDelete += (_, a) => { Sheep.Gone(a.Id); Deer.Gone(a.Id); };
         // A blow landing on an animal: a thud, or a crack for a sneak-attack crit (audio-4).
-        conn.Db.AnimalHit.OnInsert += (_, h) =>
-            Sfx.PlayHit(h.Crit ? Cue.Crit : Cue.Hit, new Vector3(h.X, 0f, h.Z), new Vector3(h.FromX, 0f, h.FromZ));
+        conn.Db.AnimalHit.OnInsert += (_, h) => HearHit(h);
+        // A bow shot: the twang now, the arrow's thunk when it lands (audio-6).
+        conn.Db.ArrowShot.OnInsert += (_, shot) => HearArrow(shot);
+        // Drinking, eating, plucking and picking up, for everyone, timed to the motions (audio-7).
+        conn.Db.PlayerAct.OnInsert += (_, act) => HearAct(conn, act);
         // Campfires crackle; FireView subscribes to the fires near the player.
         conn.Db.Fire.OnInsert += (_, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
         conn.Db.Fire.OnUpdate += (_, _, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);

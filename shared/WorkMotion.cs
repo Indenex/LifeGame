@@ -12,5 +12,8 @@ namespace LifeGame.Shared
         Station,
         // Two-handed axe swing at a trunk.
         Chop,
+        // Quick actions, played once (anim-4, server PlayerAct): scoop water to the mouth
+        // at a bank, food to the mouth, pluck from a bush, grab something off the ground.
+        Drink, Eat, Pluck, PickUp,
     }
 }

@@ -278,7 +278,7 @@ public partial class ClaimPanel : CanvasLayer
         if (stash.Count == 0) content.AddChild(Note("Empty. Anything you leave here is safe from outsiders."));
         foreach (var s in stash)
         {
-            var row = Row($"{Name(s.Item, s.Quality)}  {s.Count}");
+            var row = Row($"{Name(s.Item, s.Quality, s.Wear)}  {s.Count}");
             row.AddChild(Small("Take", () => Conn.Reducers.TakeFromStash(claim.Id, s.Item, s.Quality, 1)));
             content.AddChild(row);
         }
@@ -300,7 +300,7 @@ public partial class ClaimPanel : CanvasLayer
             row.AddThemeConstantOverride("h_separation", 6);
             row.AddThemeConstantOverride("v_separation", 6);
             foreach (var item in carried)
-                row.AddChild(Small($"Leave {Name(item.Item, item.Quality).ToLowerInvariant()}", () => Conn.Reducers.StashItem(claim.Id, item.Item, item.Quality, 1)));
+                row.AddChild(Small($"Leave {Name(item.Item, item.Quality, item.Wear).ToLowerInvariant()}", () => Conn.Reducers.StashItem(claim.Id, item.Item, item.Quality, 1)));
             content.AddChild(row);
         }
 
@@ -322,11 +322,12 @@ public partial class ClaimPanel : CanvasLayer
     }
 
     // "Hand axe (fine)" for made things, just "Stick" for raw materials.
-    static string Name(ushort item, byte quality)
+    static string Name(ushort item, byte quality, uint wear = 0)
     {
         if (!Items.IsKnown(item)) return "Something";
         var def = Items.Def((Item)item);
-        return def.HasQuality ? $"{def.Name} ({Processes.Grade(quality).ToLowerInvariant()})" : def.Name;
+        string worn = ItemLook.Condition(item, quality, wear);
+        return def.HasQuality ? $"{def.Name} ({Processes.Grade(quality).ToLowerInvariant()}{(worn == "" ? "" : ", " + worn)})" : def.Name;
     }
 
     // "just now", "4 min ago", "2 h ago", "3 days ago".

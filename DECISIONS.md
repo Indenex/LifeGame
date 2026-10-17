@@ -991,3 +991,39 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-244 — 2026-10-17 — Painted 2.5D clearing look is acceptable apart from the grass (follows D-242)
 **Decision:** On the Painted 2.5D clearing screenshot, trees, rocks, stumps, the cabin and sheep are acceptable for now. Only the grass was rejected (D-242).
 **Who:** Justin ("The other things look ok so far")
+
+## D-245 — 2026-10-17 — Soundtrack style: soft future bass with folk instruments (follows D-241, D-243)
+**Decision:** The soundtrack style is a blend of soft future-bass production with folk instruments such as flute and harp. The references are Grynpyret's "Kites" (kawaii future bass, B major, about 111 BPM) and "A Song About Naps" (also a Grynpyret track), plus Dofus. Justin generates the tracks in Suno; the PM gave him prompts for the main theme (about 108 BPM), the nap song (about 76 BPM) and a day track (about 96 BPM).
+**Who:** Justin, picking the style blend (relayed by the PM; no direct quote).
+
+## D-246 — 2026-10-17 — Restyled grass is a little shorter and denser; the PM sends Justin every screenshot directly (follows D-242)
+**Decision:** (1) The restyled grass is slightly shorter and denser, with no big bare patches. (2) The PM sends Justin every screenshot and render directly. Lanes route images to the PM (or Render to the PM) and never expect Justin to read lane threads. A one-line note to the same effect is added to the Render lane section of `WORKER_LOOP.md`.
+**Who:** Justin ("The grass I saw was better... I want the grass to be a little shorter, and denser, no patch giant open spots" and "I also need you to be sending me screenshots. I dont want to go to its chat.")
+
+## D-247 — 2026-10-17 — New Character concepts lane: 10 fast character mockups (Opus)
+**Decision:** A new Character concepts lane (Opus) makes about 10 fast character model proposals: shorter models, cutesy, maybe even creature-type characters. They are quick mockups, basically storyboarding, with a lineup for Justin, who picks 1 to 3 to develop. This follows D-154: no player model style is built past a rough prototype until Justin picks.
+**Who:** Justin ("can you make a new worker that can create like..10 different new character model proposals? I want shorter models, cutesy, maybe even some kind of creature type things? I want FAST mockups though, dont spend all day on them. This is basically storyboarding, and use opus.")
+
+## D-248 — 2026-10-17 — Speed up merges, CI, builds and releases: all four measures approved
+**Decision:** To speed up merges, CI, builds and releases, Justin approved all four of: (1) a GitHub merge queue plus auto-merge (integration-8); (2) splitting the hot shared files into per-lane files with fixed ids (integration-9); (3) smarter, parallel CI with path filters, parallel server tests and caching (integration-10); (4) a flaky-test rule. The flaky-test rule and a no-push-after-green rule are added to Section 2 of `WORKER_LOOP.md`. Owner: Integration.
+**Who:** Justin (asked how to speed these up and approved all four options; relayed by the PM, no direct quote).
+
+## D-249 — 2026-10-17 — Character concepts round 2: 10 more, with multiple themes on one shared skeleton and base body (follows D-247)
+**Decision:** After seeing the 10 round-1 concepts (Kit, Capling, Bramble, Clover, Pip, Mossle, Puddle, Sprout, Dumpling, Hearthling), Justin wants another 10. Multiple player themes or races are welcome, built on one shared skeleton and base body with swappable parts (ears, tails, hats, heads, colours), so animation and modelling are shared and modelling work is minimised. Round 2 is 10 more concepts on a shared base. Owner: Character concepts.
+**Who:** Justin ("give me another 10. Multiple character models/themes would be nice too I think. I do want a shared model/skeleton etc. though as much as possible to minimize modeling work etc.")
+
+## D-250 — 2026-10-17 — New player characters: chibi proportions at about 1.3 to 1.4 m tall (follows D-247, D-249)
+**Decision:** New player characters keep cute, big-head chibi proportions but are about 1.3 to 1.4 m tall in game, so the 1.75 m-built world (stations, doors, tools, camera) still works with small tweaks. Justin chose this over shrinking the world or truly tiny characters.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-251 — 2026-10-17 — StructureKind ids get explicit values with lane ranges (integration-9)
+**Decision:** `StructureKind` ids get explicit values with lane ranges: House building 100+, Crafting stations 200+, Animals 300+, Claims 400+. Existing kinds keep their values. Owner: Integration (integration-9).
+**Who:** PM technical decision.
+
+## D-252 — 2026-10-17 — Merge queue CI design: doc-only PRs skip their steps; world-wipe PRs are merged by hand (#403)
+**Decision:** In the merge queue's CI design (#403), doc-only PRs run the three checks but skip their steps. World-wipe PRs are merged by hand, outside the queue.
+**Who:** PM technical decision.
+
+## D-253 — 2026-10-17 — Trees stay 3D, restyled to read about 85% like the painted card pines (follows D-240)
+**Decision:** Trees stay 3D (scalloped pines), restyled to read about 85% like the artist's painted card pines: silhouette, colour bands, outline and painted strokes. Modeling iterates with side-by-side renders against the card pines.
+**Who:** Justin ("Can you make the 3d ones look more like the painted card pines? Like, 85% the same or something?")
