@@ -1,0 +1,10 @@
+# env-30 (PR #656): ambient life. Static camera on a flower meadow, --life=1 (butterflies, pollen,
+# dandelion seeds at full). 12 fps because the software renderer is slow.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.42 --season=0.25 --rain=0 --cloud=0.2 --wind=0.3 --life=1 --debug-position=-6,-10 --camera-zoom=-3
+frames 120
+mark life-start
+frames +120
+mark life-end
+frames +12
