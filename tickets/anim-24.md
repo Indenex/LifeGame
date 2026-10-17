@@ -18,9 +18,10 @@ Crushing stone into grit and potsherds into grog (clay.grit, clay.grog) now look
 ## Progress log
 - 2026-10-17 11:05: built; server and client build.
 - 2026-10-17 11:15: moved the grit/grog motion onto their ProcessDefs (`Motion = Pound`, D-206) instead of a special case in `WorkMotions.For`; `hide.scrape_deer` (a hand craft) now scrapes instead of falling back to Gather. Both build.
+- 2026-10-17 11:18: CI green at 1a8beefa, run https://github.com/Indenex/LifeGame/actions/runs/39027446215; sent to the PM to merge.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for CI and send the PM the green sha. Tell Atmosphere and Audio about WorkMotion.Pound impacts.
+Wait for the PM to merge #732; then pick the next per-tool polish (e.g. hide.waterskin sewing motion).
