@@ -963,3 +963,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-237 — 2026-10-17 — Activity animations: drinking, crafting, chopping, mining, berries and a light pickup (anim-4)
 **Decision:** Activities get their own animations with seamless transitions. When drinking from a river, the character bends down and scoops the water up with their mouth. Crafting something, chopping wood, mining, picking berries and eating berries get similar animations, and picking things up off the ground gets a very basic one, since it happens constantly. Motions are driven from data, other players see them, and sounds come from Audio. The pickup stays very light and quick. Owner: Animation, ticket anim-4, after anim-3.
 **Who:** Justin ("when drinking from a river, make it so the character bends down and scoops the water up with their mouth with seamless transitions. Other activities should have similar animations; crafting something, chopping wood, mining, picking berries, eating berries, a very basic animation when picking things up off the ground since it happens constantly")
+
+## D-238 — 2026-10-17 — Ceramics next: clay pipes and drain tiles for moving water (ceramics-13)
+**Decision:** Ceramics' next work is clay pipes and drain tiles for moving water (ceramics-13), design first. Justin chose it over slip decoration and a potter's wheel.
+**Who:** Justin, picking clay pipes and drain tiles (relayed by the PM; no direct quote).
